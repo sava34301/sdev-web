@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: The plan exposes an unincorporated student developer to fatal regulatory vetting hurdles and personal civil liability by mandating OV/EV code signing and multi-platform binary distribution without establishing a legal entity, Apple notarization compliance, or liability disclaimers.
-DECIDING FACT: The plan tasks a "Single solo creator / student developer (Sava Milanov)" with purchasing an "OV/EV code signing certificate (~$200–$400/year)" and distributing desktop installers across Windows and macOS.
-WOULD FLIP IF: The case eliminated commercial binary distribution and code-signing certificate acquisition from the scope until a formal legal entity and liability protection structure are established.

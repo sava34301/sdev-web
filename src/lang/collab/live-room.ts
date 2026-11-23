@@ -12,15 +12,11 @@
  *    explicit user invocation).
  */
 
-import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import { lazyModuleRunner } from '../runtime/sdev-module';
 import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
 import SDEV_NOTEBOOK_SRC from '../../../lang/runtime/notebook.sdev?raw';
 
-let collabRunner: SdevModuleRunner | null = null;
-function getCollabRunner(): SdevModuleRunner {
-  if (!collabRunner) collabRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_NOTEBOOK_SRC);
-  return collabRunner;
-}
+const getCollabRunner = lazyModuleRunner(SDEV_TEXT_SRC, SDEV_NOTEBOOK_SRC);
 
 export type RoomRole = 'peer' | 'teacher' | 'student';
 

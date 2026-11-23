@@ -16,8 +16,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { WebState } from '@/lang/web';
-import { renderWebDocument, stripSafeMarkers } from '@/lang/web';
+import type { WebState } from '@/lang/stdlib/web';
+import { renderWebDocument, stripSafeMarkers } from '@/lang/stdlib/web';
 
 interface Props {
   state: WebState | null;

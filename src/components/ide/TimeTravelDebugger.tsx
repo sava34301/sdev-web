@@ -20,7 +20,7 @@ import {
   type StudioRunResult,
   type ChronoStep,
 } from '@/studio/runner';
-import type { GraphicsCommand } from '@/lang/graphics';
+import type { GraphicsCommand } from '@/lang/stdlib/graphics';
 
 export interface TimeTravelDebuggerProps {
   source: string;

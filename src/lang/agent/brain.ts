@@ -2,7 +2,17 @@
  * Thin bridge for the AI brain (endpoint normalization, output sanitization,
  * reply parsing, Doctor fix parsing, and server probing live in `lang/agent/brain.sdev`).
  */
-import type { BrainMode } from './directives';
+import type {
+  BrainMode,
+  BrainRequest,
+  BrainReply,
+  FixResult,
+  NormalizedEndpoints,
+  BrainSettings,
+  LocalProbeResult,
+  BrainOutcome,
+} from './types';
+import { brainInstructions, brainInput } from './brain-prompt';
 import {
   sdevNormalizeLocalEndpoints,
   sdevSanitizeBrainOutput,
@@ -14,39 +24,18 @@ import {
   sdevProbeCorsHint,
 } from './sdev-engine';
 
-export interface BrainRequest {
-  source: string;
-  draft: string;
-  unresolved: number[];
-  vocabulary: Record<string, string>;
-  problems?: string[];
-  format?: 'canonical' | 'ai';
-}
-
-export interface BrainReply {
-  canonical: string;
-  words?: Record<string, string>;
-  notes?: string;
-}
-
-export interface FixResult {
-  fixed_code: string;
-  explanation: string;
-  changes: string;
-  how_it_works: string;
-  confidence: 'high' | 'medium' | 'low';
-}
+export type {
+  BrainRequest,
+  BrainReply,
+  FixResult,
+  NormalizedEndpoints,
+  BrainSettings,
+  LocalProbeResult,
+  BrainOutcome,
+};
 
 export const DEFAULT_LOCAL_URL = 'http://127.0.0.1:11434/v1/chat/completions';
 export const DEFAULT_LOCAL_MODEL = 'qwen2.5-coder:7b';
-
-export interface NormalizedEndpoints {
-  baseUrl: string;
-  chatUrl: string;
-  modelsUrl: string;
-  tagsUrl: string;
-  isOllamaNative: boolean;
-}
 
 export function normalizeLocalEndpoints(rawInput?: string): NormalizedEndpoints {
   return (
@@ -81,14 +70,6 @@ function env(name: string): string | null {
 
 function stored(key: string): string | null {
   try { return typeof localStorage === 'undefined' ? null : localStorage.getItem(key); } catch { return null; }
-}
-
-export interface BrainSettings {
-  localUrl: string;
-  localModel: string;
-  browser: boolean;
-  customLocal: boolean;
-  allowOnline: boolean;
 }
 
 export const BRAIN_KEYS = {
@@ -175,7 +156,6 @@ async function callLocal(req: BrainRequest, url: string, model: string): Promise
         }
       } catch { /* fall back to chat endpoint */ }
     }
-    const { brainInstructions, brainInput } = await import('./brain-prompt');
     const text = await chatWithLocalServer(endpoints, model, [
       { role: 'system', content: brainInstructions(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
       { role: 'user', content: brainInput(req) },
@@ -184,18 +164,6 @@ async function callLocal(req: BrainRequest, url: string, model: string): Promise
   } catch {
     return null;
   }
-}
-
-export interface LocalProbeResult {
-  ok: boolean;
-  models: string[];
-  activeModel?: string;
-  baseUrl: string;
-  chatUrl: string;
-  serverType?: 'LM Studio' | 'Ollama' | 'llama.cpp' | 'LocalAI' | 'OpenAI-Compatible';
-  error?: string;
-  isCors?: boolean;
-  hint?: string;
 }
 
 export async function probeLocalServer(url = brainSettings().localUrl): Promise<LocalProbeResult> {
@@ -275,11 +243,6 @@ async function callOnline(req: BrainRequest): Promise<BrainReply | null> {
   } catch {
     return null;
   }
-}
-
-export interface BrainOutcome {
-  reply: BrainReply | null;
-  used: 'none' | 'local' | 'online';
 }
 
 export let lastBrainMissing = false;

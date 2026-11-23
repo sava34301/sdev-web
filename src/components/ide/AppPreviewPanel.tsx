@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { UiState, UiNode } from '@/lang/ui';
+import type { UiState, UiNode } from '@/lang/stdlib/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

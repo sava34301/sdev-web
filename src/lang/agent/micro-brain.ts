@@ -1,7 +1,7 @@
 /**
  * Thin bridge for the SDEV Pre-Baked WebGPU Micro-Brain (`lang/agent/brain.sdev`).
  */
-import type { BrainRequest, BrainReply } from './brain';
+import type { BrainRequest, BrainReply, IntentCategory } from './types';
 import { parses, unknownNames } from './sense';
 import {
   sdevClassifyLineIntent,
@@ -10,6 +10,8 @@ import {
   sdevRunMicroBrainTranslation,
   sdevMicroBrainAccepts,
 } from './sdev-engine';
+
+export type { IntentCategory };
 
 export const MICRO_BRAIN_CACHE_KEY = 'sdev-micro-brain-v1';
 export const MICRO_BRAIN_VERSION = '1.0.0';
@@ -22,11 +24,6 @@ export interface MicroBrainStats {
   translationsCompleted: number;
   lastLatencyMs: number;
 }
-
-export type IntentCategory =
-  | 'PRINT' | 'LET' | 'ASSIGN' | 'FUNC_DEF' | 'RETURN'
-  | 'IF' | 'ELIF' | 'ELSE' | 'WHILE' | 'FOR_EACH' | 'FOR_RANGE'
-  | 'CLASS_DEF' | 'LIST_MAP' | 'LIST_FILTER' | 'COMMENT' | 'BLOCK_END';
 
 const WEIGHT_BYTES = 12 * 64 * 4;
 let cachedInStorage = false;

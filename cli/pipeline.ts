@@ -1,59 +1,44 @@
 /**
- * The CLI execution pipeline — identical in behaviour to the web IDE.
- *
- *   source file
- *     -> strip the hidden signature line
- *     -> canonicalize through the active dialect (words, operators, style)
- *     -> apply enabled extensions (prelude + operator desugaring)
- *     -> resolve `use "@user/lib"` libraries into a module map
- *     -> run on v1 (interpreter) or v2 (self-hosted compiler + seed VM)
+ * The CLI execution pipeline — mirrors the web IDE pipeline:
+ *   strip signature -> resolve `#!dialect` / active dialect -> apply extensions
+ *   -> resolve `use` libraries -> execute on v1 or v2 (WASM seed VM).
  */
 import './env';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, isAbsolute } from 'node:path';
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
-import { Interpreter } from '@/lang/interpreter';
-import type { WebState } from '@/lang/web';
+import { Lexer } from '@/lang/core/lexer';
+import { Parser } from '@/lang/core/parser';
+import { Interpreter } from '@/lang/runtime/interpreter';
+import type { WebState } from '@/lang/stdlib/web';
 import { stripBoardBlocks } from '@/lang/hardware/strip';
-import { resolveLinks, type LinkableFile } from '@/lang/linker';
-import { canonicalize } from '@/lang/dialect/canonicalize';
+import { resolveLinks, type LinkableFile } from '@/lang/tools/linker';
 import { applyExtensions } from '@/lang/dialect/extensions';
 import { resolveLibraries } from '@/lang/dialect/registry';
-import { readSignature, stripSignature, type FileSignature } from '@/lang/dialect/signature';
+import { resolveDialectSource } from '@/lang/dialect/resolve';
 import { extractDialectDirective, isDialectSdevFile, parseDialectFromSdev } from '@/lang/dialect/sdev-format';
+import { readSignature, stripSignature, type FileSignature } from '@/lang/dialect/signature';
 import type { DialectSpec } from '@/lang/dialect/spec';
 import { senseFile, understand, understandAsync, wordsNeedReading, type AgentMode, type BrainMode, type UnderstandResult } from '@/lang/agent';
 import { activeDialect, findDialect, runtimePreference } from './store';
 
 export interface PrepareOptions {
-  /** dialect slug, or "none" to force canonical sdev */
   dialect?: string;
-  /** skip enabled extensions */
   noExt?: boolean;
-  /** source natural language for the built-in translator */
   lang?: string;
-  /** force a runtime */
   runtime?: 'v1' | 'v2';
-  /** understanding agent: off | auto | on | strict */
   agent?: AgentMode;
-  /** where the agent's AI brain runs */
   brain?: BrainMode;
-  /** print what the agent understood */
   explain?: boolean;
 }
 
 export interface Prepared {
-  /** canonical sdev, ready to run */
   code: string;
   signature: FileSignature | null;
   dialect: DialectSpec | null;
   runtime: 'v1' | 'v2';
-  /** what the understanding agent made of the file */
   agent: UnderstandResult | null;
 }
 
-/** Print, once, what the agent changed. */
 export function explainAgent(result: UnderstandResult | null): void {
   if (!result || !result.notes.length) return;
   process.stdout.write(`agent (${result.mode}${result.brainUsed !== 'none' ? `, ${result.brainUsed} AI` : ''}) understood:\n`);
@@ -71,10 +56,9 @@ function shebangRuntime(source: string): 'v1' | 'v2' | null {
 }
 
 function loadDialectFile(ref: string): DialectSpec | null {
-  const candidates = isAbsolute(ref) ? [ref] : [resolve(process.cwd(), ref)];
-  const hit = candidates.find((p) => existsSync(p));
-  if (!hit) return null;
-  const src = stripSignature(readFileSync(hit, 'utf8'));
+  const p = isAbsolute(ref) ? ref : resolve(process.cwd(), ref);
+  if (!existsSync(p)) return null;
+  const src = stripSignature(readFileSync(p, 'utf8'));
   if (!isDialectSdevFile(src)) {
     throw new Error(`"${ref}" is not a valid .sdev dialect file (expected "to dialect_meta" or "to dialect_words").`);
   }
@@ -107,99 +91,92 @@ function shouldSkipUnderstander(
 ): boolean {
   if (agentMode === 'off') return true;
   if (agentMode === 'on') return false;
-  // Dialects translate deterministically straight into canonical sdev v2 without the AI understander.
   if (dialect) return true;
   if (runtime === 'v2' && !wordsNeedReading(code)) return true;
   const quick = senseFile(code);
   return !quick.suspicious && quick.parses;
 }
 
-export function prepare(rawSource: string, opts: PrepareOptions = {}): Prepared {
+function prepareStage(rawSource: string, opts: PrepareOptions) {
   const signature = readSignature(rawSource);
-  let body = stripBoardBlocks(stripSignature(rawSource));
-  const directive = extractDialectDirective(body);
-  if (directive) body = directive.stripped;
-  const dialect = resolveDialect(signature, opts.dialect ?? directive?.target);
+  const body = stripBoardBlocks(stripSignature(rawSource));
+  const fallbackDialect = resolveDialect(signature, opts.dialect);
 
-  let code = dialect ? canonicalize(body, dialect).source : body;
-  const runtime =
-    opts.runtime ??
-    shebangRuntime(body) ??
-    (signature?.rt === 'v2' ? 'v2' : null) ??
-    (dialect ? 'v2' : null) ??
-    runtimePreference();
+  let code: string;
+  let dialect: DialectSpec | null;
 
-  let agent: UnderstandResult | null = null;
-  if (!shouldSkipUnderstander(code, dialect, runtime, opts.agent)) {
-    agent = understand(code, { mode: opts.agent, brain: opts.brain, dialect });
-    code = agent.source;
-  }
-
-  if (!opts.noExt) code = applyExtensions(code);
-
-  return { code, signature, dialect, runtime, agent };
-}
-
-/** Same as `prepare`, but the agent may also consult its AI brain when needed. */
-export async function prepareAsync(rawSource: string, opts: PrepareOptions = {}): Promise<Prepared> {
-  const signature = readSignature(rawSource);
-  let body = stripBoardBlocks(stripSignature(rawSource));
-  const directive = extractDialectDirective(body);
-  if (directive) body = directive.stripped;
-  const dialect = resolveDialect(signature, opts.dialect ?? directive?.target);
-
-  let code = dialect ? canonicalize(body, dialect).source : body;
-  const runtime =
-    opts.runtime ??
-    shebangRuntime(body) ??
-    (signature?.rt === 'v2' ? 'v2' : null) ??
-    (dialect ? 'v2' : null) ??
-    runtimePreference();
-
-  let agent: UnderstandResult | null = null;
-  if (!shouldSkipUnderstander(code, dialect, runtime, opts.agent)) {
-    agent = await understandAsync(code, { mode: opts.agent, brain: opts.brain, dialect });
-    code = agent.source;
-  }
-
-  if (!opts.noExt) code = applyExtensions(code);
-
-  return { code, signature, dialect, runtime, agent };
-}
-
-/** Local `use "path"` modules, read relative to the file then the CWD. */
-export function localModules(entryPath: string, source: string): Record<string, string> {
-  const modules: Record<string, string> = {};
-  const dir = dirname(resolve(entryPath));
-  const seen = new Set<string>();
-
-  const walk = (src: string) => {
-    const re = /\buse\s+"([^"@][^"]*)"/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(src))) {
-      const spec = m[1];
-      if (seen.has(spec)) continue;
-      seen.add(spec);
-      const candidates = isAbsolute(spec) ? [spec] : [resolve(dir, spec), resolve(process.cwd(), spec)];
-      const hit = candidates.find((c) => existsSync(c));
-      if (!hit) continue;
-      const text = stripSignature(readFileSync(hit, 'utf8'));
-      modules[spec] = text;
-      walk(text);
+  if (opts.dialect) {
+    // Explicit `--dialect` flag overrides `#!dialect` file directives.
+    const directive = extractDialectDirective(body);
+    const cleaned = directive ? directive.stripped : body;
+    const resolved = opts.dialect === 'none'
+      ? { source: cleaned, dialect: null }
+      : resolveDialectSource(cleaned, fallbackDialect, [], findDialect);
+    code = resolved.source;
+    dialect = resolved.dialect;
+  } else {
+    const directive = extractDialectDirective(body);
+    const directiveFiles: Array<{ name: string; content: string }> = [];
+    if (directive) {
+      const candidate = isAbsolute(directive.target) ? directive.target : resolve(process.cwd(), directive.target);
+      if (existsSync(candidate)) {
+        directiveFiles.push({ name: directive.target, content: stripSignature(readFileSync(candidate, 'utf8')) });
+      }
     }
-  };
-  walk(source);
-  return modules;
+    const resolved = resolveDialectSource(body, fallbackDialect, directiveFiles, (target) => findDialect(target));
+    code = resolved.source;
+    dialect = resolved.dialect;
+  }
+
+  const runtime =
+    opts.runtime ??
+    shebangRuntime(body) ??
+    (signature?.rt === 'v2' ? 'v2' : null) ??
+    (dialect ? 'v2' : null) ??
+    runtimePreference();
+
+  const needsUnderstand = !shouldSkipUnderstander(code, dialect, runtime, opts.agent);
+  return { signature, dialect, runtime, code, needsUnderstand };
 }
 
-/** Local `link "path"` files, read relative to the file then the CWD. */
-export function localLinkFiles(entryPath: string | null, source: string): LinkableFile[] {
-  const files: LinkableFile[] = [];
+function finishPrepare(
+  stage: ReturnType<typeof prepareStage>,
+  opts: PrepareOptions,
+  agent: UnderstandResult | null,
+): Prepared {
+  let code = agent ? agent.source : stage.code;
+  if (!opts.noExt) code = applyExtensions(code);
+  return { code, signature: stage.signature, dialect: stage.dialect, runtime: stage.runtime, agent };
+}
+
+export function prepare(rawSource: string, opts: PrepareOptions = {}): Prepared {
+  const stage = prepareStage(rawSource, opts);
+  const agent = stage.needsUnderstand
+    ? understand(stage.code, { mode: opts.agent, brain: opts.brain, dialect: stage.dialect })
+    : null;
+  return finishPrepare(stage, opts, agent);
+}
+
+/** Same as `prepare`, but may also consult the configured AI brain when needed. */
+export async function prepareAsync(rawSource: string, opts: PrepareOptions = {}): Promise<Prepared> {
+  const stage = prepareStage(rawSource, opts);
+  const agent = stage.needsUnderstand
+    ? await understandAsync(stage.code, { mode: opts.agent, brain: opts.brain, dialect: stage.dialect })
+    : null;
+  return finishPrepare(stage, opts, agent);
+}
+
+function collectReferencedPaths(
+  entryPath: string | null,
+  source: string,
+  pattern: RegExp,
+): Array<{ spec: string; content: string }> {
+  const out: Array<{ spec: string; content: string }> = [];
   const dir = entryPath ? dirname(resolve(entryPath)) : process.cwd();
   const seen = new Set<string>();
 
   const walk = (src: string) => {
-    const re = /^[ \t]*link\b[^\n"']*["']([^"'\n]+)["'](?:\s+as\s+[A-Za-z_][A-Za-z0-9_]*)?[ \t]*;?[ \t]*$/gm;
+    const re = new RegExp(pattern.source, pattern.flags);
     let m: RegExpExecArray | null;
     while ((m = re.exec(src))) {
       const spec = m[1];
@@ -209,12 +186,30 @@ export function localLinkFiles(entryPath: string | null, source: string): Linkab
       const hit = candidates.find((c) => existsSync(c));
       if (!hit) continue;
       const content = stripSignature(readFileSync(hit, 'utf8'));
-      files.push({ name: spec, content });
+      out.push({ spec, content });
       walk(content);
     }
   };
   walk(source);
-  return files;
+  return out;
+}
+
+/** Local `use "path"` modules, read relative to the file then the CWD. */
+export function localModules(entryPath: string, source: string): Record<string, string> {
+  const modules: Record<string, string> = {};
+  for (const { spec, content } of collectReferencedPaths(entryPath, source, /\buse\s+"([^"@][^"]*)"/g)) {
+    modules[spec] = content;
+  }
+  return modules;
+}
+
+/** Local `link "path"` files, read relative to the file then the CWD. */
+export function localLinkFiles(entryPath: string | null, source: string): LinkableFile[] {
+  return collectReferencedPaths(
+    entryPath,
+    source,
+    /^[ \t]*link\b[^\n"']*["']([^"'\n]+)["'](?:\s+as\s+[A-Za-z_][A-Za-z0-9_]*)?[ \t]*;?[ \t]*$/gm,
+  ).map(({ spec, content }) => ({ name: spec, content }));
 }
 
 export interface RunOutcome {
@@ -224,7 +219,6 @@ export interface RunOutcome {
   webHtml?: string | null;
 }
 
-/** Run prepared code, streaming output to stdout as it is produced. */
 export async function runPrepared(
   prepared: Prepared,
   entryPath: string | null,

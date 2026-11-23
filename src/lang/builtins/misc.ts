@@ -1,5 +1,5 @@
 import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevError } from '../core/errors';
 
 export function registerMisc(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
 
@@ -132,8 +132,6 @@ export function registerMisc(builtins: Map<string, SdevFunction>, output: Output
     },
   });
 
-  // erase is handled by advanced.ts (supports both tome and file FS)
-
   // difference(a, b) - set difference
   builtins.set('difference', {
     type: 'builtin',
@@ -237,20 +235,6 @@ export function registerMisc(builtins: Map<string, SdevFunction>, output: Output
       if (args.length !== 1) throw new SdevError('degrees() takes 1 argument', line);
       if (typeof args[0] !== 'number') throw new SdevError('Argument must be a number', line);
       return args[0] * (180 / Math.PI);
-    },
-  });
-
-  // random(min?, max?) - random with optional range
-  builtins.set('random', {
-    type: 'builtin',
-    call: (args: unknown[], line: number) => {
-      if (args.length === 0) return Math.random();
-      if (args.length === 2) {
-        const min = args[0] as number;
-        const max = args[1] as number;
-        return Math.random() * (max - min) + min;
-      }
-      throw new SdevError('random() takes 0 or 2 arguments', line);
     },
   });
 
@@ -460,19 +444,6 @@ export function registerMisc(builtins: Map<string, SdevFunction>, output: Output
         result.push(args[0].slice(i, i + size));
       }
       return result;
-    },
-  });
-
-  // debounce - not useful in sync context, but included for API completeness
-  // tap(value, fn) - execute fn with value, return value (for debugging)
-  builtins.set('tap', {
-    type: 'builtin',
-    call: (args: unknown[], line: number) => {
-      if (args.length !== 2) throw new SdevError('tap() takes 2 arguments (value, fn)', line);
-      const fn = args[1] as SdevFunction;
-      if (!fn || typeof fn !== 'object' || !('call' in fn)) throw new SdevError('Second argument must be a function', line);
-      fn.call([args[0]], line);
-      return args[0];
     },
   });
 
@@ -790,6 +761,62 @@ export function registerMisc(builtins: Map<string, SdevFunction>, output: Output
         h |= 0; // Convert to 32bit integer
       }
       return h;
+    },
+  });
+
+  builtins.set('invoke', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length < 1) throw new SdevError('invoke() takes at least 1 argument (url)', line);
+      const url = args[0] as string;
+      const options = (args[1] as Record<string, unknown>) ?? {};
+      return {
+        type: 'promise',
+        url,
+        options,
+        resolve: async () => {
+          try {
+            const response = await fetch(url, {
+              method: (options.method as string) ?? 'GET',
+              headers: options.headers as Record<string, string>,
+              body: options.body ? JSON.stringify(options.body) : undefined,
+            });
+            const text = await response.text();
+            try { return JSON.parse(text); } catch { return text; }
+          } catch (e) {
+            throw new SdevError(`Network error: ${e}`, line);
+          }
+        },
+      };
+    },
+  });
+
+  builtins.set('pause', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('pause() takes 1 argument (ms)', line);
+      return { type: 'delay', ms: args[0] as number };
+    },
+  });
+
+  builtins.set('assert', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length < 1) throw new SdevError('assert() takes at least 1 argument', line);
+      const message = (args[1] as string) ?? 'Assertion failed';
+      if (!args[0]) throw new SdevError(message, line);
+      return true;
+    },
+  });
+
+  builtins.set('asserteq', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 2) throw new SdevError('asserteq() takes 2 arguments', line);
+      const a = JSON.stringify(args[0]);
+      const b = JSON.stringify(args[1]);
+      if (a !== b) throw new SdevError(`Assertion failed: ${a} differs ${b}`, line);
+      return true;
     },
   });
 }

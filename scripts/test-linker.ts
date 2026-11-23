@@ -1,4 +1,4 @@
-import { resolveLinks, type LinkableFile } from '../src/lang/linker';
+import { resolveLinks, type LinkableFile } from '../src/lang/tools/linker';
 
 let pass = 0;
 const failures: string[] = [];

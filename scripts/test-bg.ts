@@ -1,4 +1,4 @@
-import { translateSource } from '../src/lang/translator';
+import { translateSource } from '../src/lang/tools/translator';
 import { execute } from '../src/lang/index';
 
 const src = `направи съобщение да_бъде "Здравей Свят"

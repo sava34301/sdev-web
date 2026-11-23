@@ -1,21 +1,8 @@
 #!/usr/bin/env node
-// ------------------------------------------------------------------
-// sdev Arduino build server
-// ------------------------------------------------------------------
-// A tiny, dependency-free HTTP bridge around `arduino-cli` so the sdev
-// IDE's Hardware panel can compile firmware.
-//
-//   node tools/arduino-build-server/server.mjs            # port 8765
-//   PORT=9000 ARDUINO_CLI=/usr/bin/arduino-cli node ... 
-//
+// Local HTTP bridge around `arduino-cli` for the SDEV IDE Hardware panel.
 // Protocol (matches supabase/functions/compile-firmware):
-//   POST /              { fqbn, ino, libraries[] }
-//     -> 200 { ok: true, hex, format: "ihex" | "base64-bin" }
-//     -> 200 { ok: false, error, log }
-//   GET  /health        -> { ok: true, arduinoCli: "<version>" }
-//
-// CORS is wide open on purpose: this runs on localhost and is only ever
-// reached from the browser IDE on your own machine.
+//   POST /        { fqbn, ino, libraries[] } -> { ok, hex?, format?, error?, log }
+//   GET  /health  -> { ok, arduinoCli? }
 import http from 'node:http';
 import { execFile, execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
@@ -23,11 +10,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const PORT = Number(process.env.PORT || 8765);
+const HOST = process.env.HOST || '127.0.0.1';
 const CLI = process.env.ARDUINO_CLI || 'arduino-cli';
+const API_KEY = (process.env.ARDUINO_BUILD_KEY || '').trim();
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, authorization',
+  'Access-Control-Allow-Headers': 'content-type, authorization, x-api-key',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
@@ -35,6 +25,14 @@ function send(res, status, body) {
   const payload = JSON.stringify(body);
   res.writeHead(status, { ...CORS, 'Content-Type': 'application/json' });
   res.end(payload);
+}
+
+function authorized(req) {
+  if (!API_KEY) return true;
+  const auth = String(req.headers.authorization || '');
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const xKey = String(req.headers['x-api-key'] || '').trim();
+  return bearer === API_KEY || xKey === API_KEY;
 }
 
 function cliVersion() {
@@ -53,18 +51,21 @@ function run(cmd, args, opts = {}) {
   });
 }
 
-/** Make sure the core for a given fqbn (e.g. arduino:avr:uno) is installed. */
 async function ensureCore(fqbn, log) {
   const core = fqbn.split(':').slice(0, 2).join(':');
   const r = await run(CLI, ['core', 'install', core]);
   log.push(`$ arduino-cli core install ${core}\n${r.stdout}${r.stderr}`);
+  if (r.code !== 0) return `failed to install core ${core} (exit ${r.code})`;
+  return null;
 }
 
 async function ensureLibraries(libraries, log) {
   for (const lib of libraries) {
     const r = await run(CLI, ['lib', 'install', lib]);
     log.push(`$ arduino-cli lib install ${lib}\n${r.stdout}${r.stderr}`);
+    if (r.code !== 0) return `failed to install library ${lib} (exit ${r.code})`;
   }
+  return null;
 }
 
 async function compile({ fqbn, ino, libraries = [] }) {
@@ -77,8 +78,11 @@ async function compile({ fqbn, ino, libraries = [] }) {
   const outDir = path.join(root, 'out');
 
   try {
-    await ensureCore(fqbn, log);
-    await ensureLibraries(libraries, log);
+    const coreErr = await ensureCore(fqbn, log);
+    if (coreErr) return { ok: false, error: coreErr, log: log.join('\n') };
+
+    const libErr = await ensureLibraries(libraries, log);
+    if (libErr) return { ok: false, error: libErr, log: log.join('\n') };
 
     const r = await run(CLI, ['compile', '--fqbn', fqbn, '--output-dir', outDir, sketchDir]);
     log.push(`$ arduino-cli compile --fqbn ${fqbn}\n${r.stdout}${r.stderr}`);
@@ -106,6 +110,7 @@ async function compile({ fqbn, ino, libraries = [] }) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, CORS); res.end(); return; }
+  if (!authorized(req)) return send(res, 401, { ok: false, error: 'unauthorized' });
 
   if (req.method === 'GET') {
     const v = cliVersion();
@@ -116,14 +121,24 @@ const server = http.createServer((req, res) => {
 
   if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'method not allowed' });
 
-  let body = '';
-  req.on('data', (c) => {
-    body += c;
-    if (body.length > 8 * 1024 * 1024) { req.destroy(); }
+  const chunks = [];
+  let totalBytes = 0;
+  let tooLarge = false;
+  req.on('data', (chunk) => {
+    totalBytes += chunk.length;
+    if (totalBytes > MAX_BODY_BYTES) {
+      if (!tooLarge) {
+        tooLarge = true;
+        send(res, 413, { ok: false, error: 'request body exceeds 8 MiB limit' });
+      }
+      return;
+    }
+    chunks.push(chunk);
   });
   req.on('end', async () => {
+    if (tooLarge) return;
     let payload;
-    try { payload = JSON.parse(body); } catch { return send(res, 400, { ok: false, error: 'invalid json' }); }
+    try { payload = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return send(res, 400, { ok: false, error: 'invalid json' }); }
     if (!payload?.fqbn || !payload?.ino) return send(res, 400, { ok: false, error: 'fqbn and ino are required' });
     if (!cliVersion()) {
       return send(res, 503, { ok: false, error: `arduino-cli not found (looked for "${CLI}").` });
@@ -137,8 +152,8 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   const v = cliVersion();
-  console.log(`sdev arduino build server → http://localhost:${PORT}`);
+  console.log(`sdev arduino build server -> http://${HOST}:${PORT}`);
   console.log(v ? `arduino-cli: ${v}` : `WARNING: arduino-cli not found (set ARDUINO_CLI=/path/to/arduino-cli)`);
 });

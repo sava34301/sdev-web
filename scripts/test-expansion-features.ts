@@ -22,7 +22,7 @@ import {
   classifyLineIntent,
 } from '../src/lang/agent/micro-brain';
 import { execute } from '../src/lang';
-import { buildWasiComponentBundle } from '../src/lang/wasi-component';
+import { buildWasiComponentBundle } from '../src/lang/runtime/wasi-component';
 import {
   CrdtDocument,
   LiveRoomSession,

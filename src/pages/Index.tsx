@@ -22,13 +22,13 @@ import {
   Recycle, Globe2, Layers, UserCircle, History, ExternalLink,
   GraduationCap, Rocket, Download,
 } from 'lucide-react';
-import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/graphics';
-import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/web';
+import { GraphicsCommand, TurtleState, createGraphicsBuiltins } from '@/lang/stdlib/graphics';
+import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/stdlib/web';
 import { WebPreviewPanel } from '@/components/ide/WebPreviewPanel';
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
-import { Interpreter } from '@/lang/interpreter';
-import { SdevError } from '@/lang/errors';
+import { Lexer } from '@/lang/core/lexer';
+import { Parser } from '@/lang/core/parser';
+import { Interpreter } from '@/lang/runtime/interpreter';
+import { SdevError } from '@/lang/core/errors';
 import sdevLogo from '@/assets/sdev-logo.png';
 
 const DEFAULT_CODE = `// Welcome to sdev!

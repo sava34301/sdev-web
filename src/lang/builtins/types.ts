@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerTypes(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export function registerTypes(builtins: Map<string, SdevFunction>): void {
 
   // ============= Type Checking =============
   builtins.set('isNum', {

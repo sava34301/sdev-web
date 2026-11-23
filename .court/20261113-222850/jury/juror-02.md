@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: Hearing this pitch for the first time, I would not bet a V–VII grade student's competition entry on unverified promises when they have no practice test score for the 50%-weighted XI–XII exam, no existing AI logs under a disqualification rule, and safer age categories available.
-DECIDING FACT: Even the Defense admits there is no XI–XII practice test result, no confirmation of online availability or test accounts for all roles, and no exact share or existing records for the large portion of AI-written code—leaving success resting solely on promises.
-WOULD FLIP IF: The record included a passing XI–XII practice test score (around 79+ points), completed Appendix 5 (Sections A, B, and C) AI-contribution logs, and verified online deployment with test accounts for all roles.

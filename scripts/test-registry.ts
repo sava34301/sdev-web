@@ -23,7 +23,7 @@ import {
   exportApiManifest,
   type ApiModule,
 } from '@/lang/registry/api-registry';
-import { lintSdevSource, applyQuickFix } from '@/lang/linter';
+import { lintSdevSource, applyQuickFix } from '@/lang/tools/linter';
 import { runStudioCode, runStudioCodeAsync } from '@/studio/runner';
 import {
   getStudioState,

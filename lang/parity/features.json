@@ -4,7 +4,7 @@
     {
       "id": "v1",
       "label": "sdev v1 (TypeScript interpreter)",
-      "sources": "src/lang/keywords.ts,src/lang/tokens.ts,src/lang/builtins.ts,src/lang/builtins/io.ts,src/lang/builtins/list.ts,src/lang/builtins/string.ts,src/lang/builtins/math.ts,src/lang/builtins/dict.ts,src/lang/builtins/host.ts,src/lang/builtins/types.ts,src/lang/builtins/misc.ts,src/lang/builtins/functional.ts,src/lang/builtins/text.ts,src/lang/builtins/time.ts,src/lang/builtins/json.ts,src/lang/builtins/regex.ts,src/lang/builtins/buffer.ts,src/lang/builtins/utils.ts,src/lang/pyparity.ts,src/lang/lexer.ts,src/lang/parser.ts,src/lang/interpreter.ts"
+      "sources": "src/lang/core/keywords.ts,src/lang/core/tokens.ts,src/lang/builtins/core.ts,src/lang/builtins/index.ts,src/lang/builtins/io.ts,src/lang/builtins/list.ts,src/lang/builtins/string.ts,src/lang/builtins/math.ts,src/lang/builtins/dict.ts,src/lang/builtins/host.ts,src/lang/builtins/types.ts,src/lang/builtins/misc.ts,src/lang/builtins/functional.ts,src/lang/builtins/text.ts,src/lang/builtins/time.ts,src/lang/builtins/json.ts,src/lang/builtins/regex.ts,src/lang/builtins/buffer.ts,src/lang/builtins/utils.ts,src/lang/stdlib/pyparity.ts,src/lang/core/lexer.ts,src/lang/core/parser.ts,src/lang/runtime/interpreter-core.ts,src/lang/runtime/interpreter.ts"
     },
     {
       "id": "v2",

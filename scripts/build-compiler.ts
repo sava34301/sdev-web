@@ -14,14 +14,14 @@ import { build } from 'esbuild';
 import { writeFileSync, readFileSync } from 'fs';
 
 const ENTRY = `
-import { Lexer } from '../src/lang/lexer';
-import { Parser } from '../src/lang/parser';
-import { Compiler } from '../src/lang/compiler';
-import { VM } from '../src/lang/vm';
-import { Interpreter } from '../src/lang/interpreter';
-import { disassemble } from '../src/lang/bytecode';
-import { SdevError } from '../src/lang/errors';
-import { translateSource, detectLanguage, SUPPORTED_LANGUAGES } from '../src/lang/translator';
+import { Lexer } from '../src/lang/core/lexer';
+import { Parser } from '../src/lang/core/parser';
+import { Compiler } from '../src/lang/runtime/compiler';
+import { VM } from '../src/lang/runtime/vm';
+import { Interpreter } from '../src/lang/runtime/interpreter';
+import { disassemble } from '../src/lang/runtime/bytecode';
+import { SdevError } from '../src/lang/core/errors';
+import { translateSource, detectLanguage, SUPPORTED_LANGUAGES } from '../src/lang/tools/translator';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve, extname } from 'path';
 import { createInterface } from 'readline';

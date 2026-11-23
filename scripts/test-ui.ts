@@ -1,4 +1,4 @@
-import { createUiBuiltins, setUiValue, type UiState } from '../src/lang/ui';
+import { createUiBuiltins, setUiValue, type UiState } from '../src/lang/stdlib/ui';
 
 let passed = 0;
 let failed = 0;

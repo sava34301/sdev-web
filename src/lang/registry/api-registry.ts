@@ -8,14 +8,13 @@
 // ============================================================================
 
 import { createBuiltins } from '../builtins';
-import { createAdvancedBuiltins } from '../advanced';
-import { createMatrixBuiltins } from '../matrix';
-import { createGraphicsBuiltins } from '../graphics';
-import { createUiBuiltins } from '../ui';
-import { createWebBuiltins } from '../web';
-import { createKernelBuiltins } from '../kernel';
+import { createMatrixBuiltins } from '../stdlib/matrix';
+import { createGraphicsBuiltins } from '../stdlib/graphics';
+import { createUiBuiltins } from '../stdlib/ui';
+import { createWebBuiltins } from '../stdlib/web';
+import { createKernelBuiltins } from '../stdlib/kernel';
 import { ARDUINO_FUNCTIONS } from '../hardware/arduino-api';
-import { SDEV_BUILTINS } from '../../components/ide/languageData';
+import { SDEV_BUILTINS } from './builtin-docs';
 
 export type ApiModule =
   | 'core'
@@ -35,18 +34,12 @@ export type ApiModule =
   | 'ffi'
   | 'webgpu';
 
-import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import { lazyModuleRunner } from '../runtime/sdev-module';
 import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
 import SDEV_LINTER_SRC from '../../../lang/linter/linter.sdev?raw';
 import SDEV_REGISTRY_SRC from '../../../lang/registry/registry.sdev?raw';
 
-let registryRunner: SdevModuleRunner | null = null;
-function getRegistryRunner(): SdevModuleRunner {
-  if (!registryRunner) {
-    registryRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_LINTER_SRC, SDEV_REGISTRY_SRC);
-  }
-  return registryRunner;
-}
+const getRegistryRunner = lazyModuleRunner(SDEV_TEXT_SRC, SDEV_LINTER_SRC, SDEV_REGISTRY_SRC);
 
 export type ApiTarget =
   | 'v1'
@@ -1265,10 +1258,14 @@ function buildRegistry(): ApiEntry[] {
     upsert(name, classifyCoreBuiltinModule(name));
   }
 
-  // 2. Harvest advanced builtins (createAdvancedBuiltins)
-  const advBuiltins = createAdvancedBuiltins(() => {});
-  for (const name of advBuiltins.keys()) {
-    upsert(name, classifyCoreBuiltinModule(name));
+  // 2. Constants registered directly on globalEnv by Interpreter
+  for (const constantName of ['PI', 'TAU', 'E', 'INFINITY']) {
+    upsert(constantName, 'math', {
+      targets: V1_CORE_TARGETS,
+      returns: 'number',
+      signature: constantName,
+      description: `Mathematical constant \`${constantName}\`.`,
+    });
   }
 
   // 3. Harvest matrix builtins (createMatrixBuiltins)

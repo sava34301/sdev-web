@@ -482,26 +482,26 @@
   .reveal { opacity: 0; transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); }
   .reveal:not(.reveal-left):not(.reveal-right) { transform: translateY(20px); }
   .reveal.is-visible { opacity: 1; transform: none; }
+}
 
-  @media (max-width: 1023px) {
-    .how { height: auto; }
-    .how-stage { position: relative; height: auto; padding: 6rem 0; }
-    .how-step-body { max-height: none !important; opacity: 1 !important; margin-top: .4rem; }
-    .how-step:not([data-active]) .font-display { color: hsl(var(--foreground)); }
-    .how-scene { display: none; }
-    .hero-demo { transform: none; }
-  }
+@media (max-width: 1023px) {
+  .how { height: auto; }
+  .how-stage { position: relative; height: auto; padding: 6rem 0; }
+  .how-step-body { max-height: none !important; opacity: 1 !important; margin-top: .4rem; }
+  .how-step:not([data-active]) .font-display { color: hsl(var(--foreground)); }
+  .how-scene { display: none; }
+  .hero-demo { transform: none; }
+}
 
-  @media (prefers-reduced-motion: reduce) {
-    .enter, .hero-light, .hero-out, .hero-caret { animation: none; }
-    .hero-copy, .hero-demo { transform: none; opacity: 1; }
-    .reveal, .reveal-left, .reveal-right { opacity: 1 !important; transform: none !important; transition: none; }
-    .how { height: auto; }
-    .how-stage { position: relative; height: auto; padding: 6rem 0; }
-    .how-step-body { max-height: none !important; opacity: 1 !important; }
-    .how-scene { display: none; }
-    .kw { transition: none; }
-  }
+@media (prefers-reduced-motion: reduce) {
+  .enter, .hero-light, .hero-out, .hero-caret { animation: none; }
+  .hero-copy, .hero-demo { transform: none; opacity: 1; }
+  .reveal, .reveal-left, .reveal-right { opacity: 1 !important; transform: none !important; transition: none; }
+  .how { height: auto; }
+  .how-stage { position: relative; height: auto; padding: 6rem 0; }
+  .how-step-body { max-height: none !important; opacity: 1 !important; }
+  .how-scene { display: none; }
+  .kw { transition: none; }
 }
 
 @layer utilities {
@@ -631,13 +631,14 @@
   .demo-output { height: 6rem; overflow: auto; }
   .hero-demo { border-radius: 8px; }
   .hero-light { display: none; }
-  @media (max-width: 1023px), (prefers-reduced-motion: reduce) {
-    .scroll-depth { transform: none; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .kw, .kw[data-active] { transition: none; }
-    .feature, .path, .hero-demo { transition: none; }
-  }
+}
+
+@media (max-width: 1023px), (prefers-reduced-motion: reduce) {
+  .scroll-depth { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kw, .kw[data-active] { transition: none; }
+  .feature, .path, .hero-demo { transition: none; }
 }
 
 /* Full-bleed scroll-scrubbed 3D compiler world. */
@@ -649,16 +650,17 @@
   .how-stage { overflow: hidden; }
   .how-stage:has(.compiler-world[data-ready="true"]) .how-scene { visibility: hidden; }
   .how-stage:has(.compiler-world[data-ready="true"]) .compiler-copy > :first-child { background: hsl(var(--background) / .9); }
-  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
-    .how { height: 360vh; }
-    .how-stage { position: sticky; top: 0; height: 100svh; padding-top: 4rem; }
-    .how-scene { display: block; }
-    .how-step-body { max-height: 0 !important; opacity: 0 !important; margin-top: 0; }
-    .how-step[data-active] .how-step-body { max-height: 10rem !important; opacity: 1 !important; margin-top: .4rem; }
-    .how-step:not([data-active]) .font-display { color: hsl(var(--muted-foreground)); }
-  }
-  @media (max-width: 767px), (prefers-reduced-motion: reduce) {
-    .compiler-world { display: none; }
-    .compiler-copy { pointer-events: auto; }
-  }
+}
+
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .how { height: 360vh; }
+  .how-stage { position: sticky; top: 0; height: 100svh; padding-top: 4rem; }
+  .how-scene { display: block; }
+  .how-step-body { max-height: 0 !important; opacity: 0 !important; margin-top: 0; }
+  .how-step[data-active] .how-step-body { max-height: 10rem !important; opacity: 1 !important; margin-top: .4rem; }
+  .how-step:not([data-active]) .font-display { color: hsl(var(--muted-foreground)); }
+}
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .compiler-world { display: none; }
+  .compiler-copy { pointer-events: auto; }
 }

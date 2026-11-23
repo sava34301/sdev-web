@@ -1,5 +1,5 @@
 import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevError } from '../core/errors';
 
 export function registerIo(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
 
@@ -256,5 +256,56 @@ export function registerIo(builtins: Map<string, SdevFunction>, output: OutputCa
       }
       return 'mystery';
     },
+  });
+
+  const virtualFS = new Map<string, string>();
+
+  builtins.set('inscribe', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 2) throw new SdevError('inscribe() takes 2 arguments (path, content)', line);
+      const path = args[0] as string;
+      const content = stringify(args[1]);
+      virtualFS.set(path, content);
+      output(`📝 Written to ${path}`);
+      return true;
+    },
+  });
+
+  builtins.set('decipher', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('decipher() takes 1 argument (path)', line);
+      const path = args[0] as string;
+      const content = virtualFS.get(path);
+      if (content === undefined) {
+        throw new SdevError(`File not found: ${path}`, line);
+      }
+      return content;
+    },
+  });
+
+  builtins.set('erase', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length === 2) {
+        if (args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+          const key = String(args[1]);
+          const obj = args[0] as Record<string, unknown>;
+          const existed = key in obj;
+          delete obj[key];
+          return existed;
+        }
+      }
+      if (args.length === 1 && typeof args[0] === 'string') {
+        return virtualFS.delete(args[0]);
+      }
+      throw new SdevError('erase() takes 1 argument (path) or 2 arguments (tome, key)', line);
+    },
+  });
+
+  builtins.set('scroll', {
+    type: 'builtin',
+    call: () => Array.from(virtualFS.keys()),
   });
 }

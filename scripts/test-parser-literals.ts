@@ -3,8 +3,8 @@
  * Run: node scripts/run-ts.mjs scripts/test-parser-literals.ts
  */
 import { execute } from '@/lang';
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
+import { Lexer } from '@/lang/core/lexer';
+import { Parser } from '@/lang/core/parser';
 
 let pass = 0, fail = 0;
 const check = (name: string, ok: boolean, detail = '') => {

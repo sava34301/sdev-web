@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: Deploying peer-to-peer classroom rooms with shared execution creates catastrophic student privacy and remote execution liability for a solo developer, especially when the record is entirely silent on regulatory compliance, terms of service, and security sandboxing.
-DECIDING FACT: Feature 5 mandates "real-time P2P WebRTC / CRDT multi-cursor rooms into the IDE for simultaneous editing, shared execution, and classroom teacher broadcast" for a "Single solo creator / student developer (Sava Milanov), self-funded, pre-launch" while the record is completely silent on data privacy regulations, terms of service, and execution sandboxing.
-WOULD FLIP IF: Feature 5 was removed from the pre-launch scope or restricted to local environments with explicit student privacy compliance, liability disclaimers, and robust execution sandboxing.

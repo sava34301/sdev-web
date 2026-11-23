@@ -1,10 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import { expect, test } from "bun:test";
-import { VM } from '../vm';
-import { ReturnException, SdevError } from '../errors';
-import { FunctionDef, OpCode } from '../bytecode';
-import { Environment } from '../environment';
+import { VM } from '../runtime/vm';
+import { ReturnException, SdevError } from '../core/errors';
+import { FunctionDef, OpCode } from '../runtime/bytecode';
+import { Environment } from '../core/environment';
 
 test("VM exception propagates out of callFunction", () => {
   const vm = new VM(() => {});

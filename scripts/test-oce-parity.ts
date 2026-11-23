@@ -10,7 +10,7 @@ import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execute, executeAsync } from '../src/lang/index';
-import { pickRuntime } from '../src/lang/executor';
+import { pickRuntime } from '../src/lang/runtime/executor';
 
 let pass = 0, fail = 0;
 const check = (name: string, ok: boolean, detail = '') => {

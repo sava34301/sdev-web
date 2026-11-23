@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, stringify } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerString(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export function registerString(builtins: Map<string, SdevFunction>): void {
 
   // String operations
   builtins.set('upper', {

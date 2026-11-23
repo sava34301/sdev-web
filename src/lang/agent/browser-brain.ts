@@ -4,7 +4,8 @@
  * once into the browser's cache, then runs on the user's own graphics chip —
  * also offline.
  */
-import type { BrainRequest, BrainReply } from './brain';
+import type { BrainRequest, BrainReply } from './types';
+import { sdevSanitizeBrainOutput } from './sdev-engine';
 
 export const BROWSER_MODEL = 'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC';
 
@@ -85,7 +86,6 @@ export async function callBrowser(req: BrainRequest, parse: (text: string, forma
   if (!engine) return null;
   try {
     const { brainInstructions, brainInput } = await import('./brain-prompt');
-    const { sanitizeBrainOutput } = await import('./brain');
     const r = await engine.chat.completions.create({
       messages: [
         { role: 'system', content: brainInstructions(req.format) + '\n\nAnswer with JSON only: {"canonical": "<the whole program>", "notes": "<one short sentence>"}' },
@@ -99,7 +99,7 @@ export async function callBrowser(req: BrainRequest, parse: (text: string, forma
     const rawContent = r.choices[0]?.message?.content ?? '';
     const reply = parse(rawContent, req.format);
     if (reply?.canonical) {
-      reply.canonical = sanitizeBrainOutput(reply.canonical, req.format);
+      reply.canonical = sdevSanitizeBrainOutput(reply.canonical, req.format) ?? reply.canonical;
       return reply;
     }
     return null;

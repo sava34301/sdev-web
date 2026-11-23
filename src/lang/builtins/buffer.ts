@@ -1,17 +1,13 @@
-import { SdevFunction, OutputCallback, toNumber } from './utils';
-import { SdevError } from '../errors';
-import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import { SdevFunction, toNumber } from './utils';
+import { SdevError } from '../core/errors';
+import { lazyModuleRunner } from '../runtime/sdev-module';
 import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
 import SDEV_BITS_SRC from '../../../lang/stdlib/v2/bits.sdev?raw';
 import SDEV_BUFFER_SRC from '../../../lang/stdlib/v2/buffer.sdev?raw';
 
-let bufRunner: SdevModuleRunner | null = null;
-function getBufRunner(): SdevModuleRunner {
-  if (!bufRunner) bufRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_BITS_SRC, SDEV_BUFFER_SRC);
-  return bufRunner;
-}
+const getBufRunner = lazyModuleRunner(SDEV_TEXT_SRC, SDEV_BITS_SRC, SDEV_BUFFER_SRC);
 
-export function registerBuffer(builtins: Map<string, SdevFunction>, _output: OutputCallback): void {
+export function registerBuffer(builtins: Map<string, SdevFunction>): void {
   builtins.set('buffer', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {

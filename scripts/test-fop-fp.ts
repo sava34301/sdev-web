@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { execute, Lexer, Parser, Compiler } from '../src/lang';
-import { VM } from '../src/lang/vm';
-import { lintSdevSource } from '../src/lang/linter';
+import { VM } from '../src/lang/runtime/vm';
+import { lintSdevSource } from '../src/lang/tools/linter';
 
 let passed = 0;
 let failed = 0;

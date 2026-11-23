@@ -36,9 +36,9 @@ const IdeProblems = lazy(() => import('@/components/ide/IdeProblems').then(m => 
 import { IdeBreadcrumbs } from '@/components/ide/IdeBreadcrumbs';
 import { IdeGoToLine } from '@/components/ide/IdeGoToLine';
 const IdeAssistantPanel = lazy(() => import('@/components/ide/IdeAssistantPanel').then(m => ({ default: m.IdeAssistantPanel })));
-import { formatSdev } from '@/components/ide/formatSdev';
+import { formatSdev } from '@/lang/tools/formatter';
 import { CanvasPanel, CanvasHandle } from '@/components/CanvasPanel';
-import type { GraphicsCommand, TurtleState } from '@/lang/graphics';
+import type { GraphicsCommand, TurtleState } from '@/lang/stdlib/graphics';
 
 
 
@@ -67,8 +67,8 @@ import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
 import { toast } from 'sonner';
 
 import type { IdeFile, IdeFolder, SidePanel, IdeSettings } from '@/components/ide/types';
-import type { UiState, UiCallback } from '@/lang/ui';
-import type { WebState } from '@/lang/web';
+import type { UiState, UiCallback } from '@/lang/stdlib/ui';
+import type { WebState } from '@/lang/stdlib/web';
 const AppPreviewPanel = lazy(() => import('@/components/ide/AppPreviewPanel').then(m => ({ default: m.AppPreviewPanel })));
 const WebPreviewPanel = lazy(() => import('@/components/ide/WebPreviewPanel').then(m => ({ default: m.WebPreviewPanel })));
 import { useWorkspaceSync } from '@/hooks/useWorkspaceSync';
@@ -994,7 +994,7 @@ export default function IDEPage() {
     // only fires when foreign-script words remain after stage 1.
     if (selectedLanguage !== 'English') {
       try {
-        const { translateSource } = await import('@/lang/translator');
+        const { translateSource } = await import('@/lang/tools/translator');
         const stage1 = translateSource(code, selectedLanguage, { target: 'v1', dialect: activeDialect });
         const humanLangDetected = stage1.detectedLanguage && stage1.detectedLanguage !== 'English' ? stage1.detectedLanguage : null;
         const stripped = stage1.translated
@@ -1042,7 +1042,7 @@ export default function IDEPage() {
     // Resolve `link "file.sdev"` directives by inlining other workspace files.
     if (/\blink\s+["']/.test(code)) {
       try {
-        const { resolveLinks } = await import('@/lang/linker');
+        const { resolveLinks } = await import('@/lang/tools/linker');
         code = resolveLinks(
           code,
           files.map(f => ({ name: f.name, content: f.content })),
@@ -1058,8 +1058,8 @@ export default function IDEPage() {
 
     try {
       const [{ Lexer }, { Parser }, { Interpreter }, { createGraphicsBuiltins }, { createUiBuiltins }, { createWebBuiltins, bindWebBuiltinsToEnv }] = await Promise.all([
-        import('@/lang/lexer'), import('@/lang/parser'), import('@/lang/interpreter'),
-        import('@/lang/graphics'), import('@/lang/ui'), import('@/lang/web'),
+        import('@/lang/core/lexer'), import('@/lang/core/parser'), import('@/lang/runtime/interpreter'),
+        import('@/lang/stdlib/graphics'), import('@/lang/stdlib/ui'), import('@/lang/stdlib/web'),
       ]);
       const lexer = new Lexer(code, lexerOpts);
       const tokens = lexer.tokenize();

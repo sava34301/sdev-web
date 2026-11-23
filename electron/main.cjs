@@ -128,8 +128,8 @@ ipcMain.handle('sdev:compileNative', async (_e, { source, outPath }) => {
       outPath = r.filePath;
     }
     // Dynamic import — codegen + linker are ESM.
-    const codegenUrl = pathToFileURL(path.join(__dirname, '..', 'lang', 'native', 'codegen-x64.mjs')).href;
-    const linkUrl    = pathToFileURL(path.join(__dirname, '..', 'lang', 'native', 'link.mjs')).href;
+    const codegenUrl = pathToFileURL(path.join(__dirname, '..', 'src', 'lang-bridge', 'native', 'codegen-x64.mjs')).href;
+    const linkUrl    = pathToFileURL(path.join(__dirname, '..', 'src', 'lang-bridge', 'native', 'link.mjs')).href;
     const { generateAsm } = await import(codegenUrl);
     const { link }        = await import(linkUrl);
 

@@ -12,7 +12,7 @@
  *   -> public/downloads/    sdev.mjs, sdev-seed.wasm, runtime.s, sdev-language.vsix
  *   -> public/releases.json what every installed tool checks to update itself
  */
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,14 +37,19 @@ const extPkgPath = at('extension/package.json');
 const extPkg = JSON.parse(readFileSync(extPkgPath, 'utf8'));
 extPkg.version = v;
 writeFileSync(extPkgPath, JSON.stringify(extPkg, null, 2) + '\n');
-const manPath = at('extension-vsix-meta/extension.vsixmanifest');
+const manPath = at('extension/vsix-meta/extension.vsixmanifest');
 writeFileSync(manPath, readFileSync(manPath, 'utf8').replace(/(Id="sdev-language" Version=")[^"]+/, `$1${v}`));
 
 // 2. CLI from the current language code
 execFileSync(process.execPath, [at('scripts/build-cli.mjs')], { stdio: 'inherit' });
 
-// 3. the extension ships that exact CLI
-for (const [from, to] of [['bin/sdev.mjs', 'sdev-cli.mjs'], ['bin/sdev-seed.wasm', 'sdev-seed.wasm'], ['bin/runtime.s', 'runtime.s']]) {
+// 3. the extension ships that exact CLI and the current Python interpreter
+for (const [from, to] of [
+  ['bin/sdev.mjs', 'sdev-cli.mjs'],
+  ['bin/sdev-seed.wasm', 'sdev-seed.wasm'],
+  ['bin/runtime.s', 'runtime.s'],
+  ['public/sdev-interpreter.py', 'sdev-interpreter.py'],
+]) {
   if (existsSync(at(from))) copyFileSync(at(from), at('extension/interpreter', to));
 }
 
@@ -59,13 +64,13 @@ const files = [];
 const walk = (dir) => {
   for (const n of readdirSync(dir)) {
     const p = join(dir, n);
-    if (n === 'node_modules' || n === '.vscodeignore') continue;
+    if (n === 'node_modules' || n === '.vscodeignore' || n === 'vsix-meta') continue;
     statSync(p).isDirectory() ? walk(p) : files.push(p);
   }
 };
 walk(at('extension'));
 const entries = [
-  ['[Content_Types].xml', at('extension-vsix-meta/[Content_Types].xml')],
+  ['[Content_Types].xml', at('extension/vsix-meta/[Content_Types].xml')],
   ['extension.vsixmanifest', manPath],
   ...files.map((f) => ['extension/' + relative(at('extension'), f).split('\\').join('/'), f]),
 ];
@@ -78,9 +83,13 @@ const tmpJson = join(tmpdir(), '_sdev_vsix.json');
 writeFileSync(tmpJson, JSON.stringify(entries));
 const pyBin = process.platform === 'win32' ? 'python' : 'python3';
 try {
-  execFileSync(pyBin, ['-c', py, tmpJson, vsix], { stdio: 'inherit' });
-} catch {
-  execFileSync('python', ['-c', py, tmpJson, vsix], { stdio: 'inherit' });
+  try {
+    execFileSync(pyBin, ['-c', py, tmpJson, vsix], { stdio: 'inherit' });
+  } catch {
+    execFileSync('python', ['-c', py, tmpJson, vsix], { stdio: 'inherit' });
+  }
+} finally {
+  try { unlinkSync(tmpJson); } catch { /* ignore */ }
 }
 copyFileSync(vsix, at(`public/sdev-language-${v}.vsix`));
 

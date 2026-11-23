@@ -11,7 +11,7 @@
 // the sign of the dividend. An arena is a plain list of 0..255 numbers.
 // ============================================================
 import type { SdevFunction } from './utils';
-import { SdevError } from '../errors';
+import { SdevError } from '../core/errors';
 
 type Arena = number[];
 type Row = number[];

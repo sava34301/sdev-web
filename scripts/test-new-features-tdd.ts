@@ -1,7 +1,7 @@
 import assert from 'node:assert';
-import { evaluateLiveScratchpad } from '../src/lang/eval-live';
-import { runBenchmark, formatBenchmarkReport } from '../src/lang/benchmark';
-import { parseNotebook, executeNotebook } from '../src/lang/notebook';
+import { evaluateLiveScratchpad } from '../src/studio/eval-live';
+import { runBenchmark, formatBenchmarkReport } from '../src/lang/tools/benchmark';
+import { parseNotebook, executeNotebook } from '../src/lang/tools/notebook';
 
 console.log('=== SDEV TDD Expansion Test Suite ===\n');
 

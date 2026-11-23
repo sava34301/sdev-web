@@ -1,4 +1,4 @@
-import { createMatrixBuiltins } from '../src/lang/matrix';
+import { createMatrixBuiltins } from '../src/lang/stdlib/matrix';
 
 const builtins = createMatrixBuiltins();
 let passed = 0;

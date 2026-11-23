@@ -1,22 +1,18 @@
 /**
- * Cloud access for the CLI — the same backend the web IDE uses.
- * Sessions live in ~/.sdev/session.json and are restored by cli/auth.ts.
+ * Cloud access helpers for the CLI, backed by `~/.sdev/session.json`.
  */
 import './env';
 import { supabase } from '@/integrations/supabase/client';
-import { currentUser, requireUser, signInWithPassword, signOut } from './auth';
+import { currentUser, requireUser, signOut } from './auth';
 
-/* Dialect/library/extension tables ship ahead of the generated types. */
+/* Dialect/library/extension tables ship ahead of generated Supabase types. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const db = supabase as any;
 
 export { currentUser, requireUser, signOut };
 
-export async function signIn(email: string, password: string) {
-  return signInWithPassword(email, password);
-}
-
 export async function myUsername(userId: string): Promise<string | null> {
-  const { data } = await db.from('usernames').select('username').eq('user_id', userId).maybeSingle();
+  const { data, error } = await db.from('usernames').select('username').eq('user_id', userId).maybeSingle();
+  if (error) return null;
   return data?.username ?? null;
 }

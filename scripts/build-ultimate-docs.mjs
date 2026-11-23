@@ -599,7 +599,7 @@ const KEYWORD_DOCS = {
 };
 
 function keywordTable() {
-  const src = read('src/lang/tokens.ts');
+  const src = read('src/lang/core/tokens.ts');
   const block = /export const KEYWORDS[^{]*{([\s\S]*?)\n};/.exec(src);
   if (!block) return '';
   const rows = [...block[1].matchAll(/^\s*'?([A-Za-z_][\w]*)'?\s*:\s*TokenType\.([A-Z_]+),?\s*(?:\/\/\s*(.*))?$/gm)]

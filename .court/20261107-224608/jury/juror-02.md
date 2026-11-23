@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: As a first-time user, I would never switch from my current tools to an unreleased language that prioritizes rewriting its own working build scripts and test runners into pure SDEV over delivering a stable, finished tool I can actually run on my system this week.
-DECIDING FACT: The project is in "Pre-launch stage; no established user base or external contributor community yet" while the native backend "currently produces Linux x86-64 ELF executables only", yet the roadmap prioritizes rewriting working Node.js/TypeScript test runners and build scripts into pure SDEV.
-WOULD FLIP IF: The roadmap shelved internal bootstrapping rewrites (Milestones C–J) to focus entirely on delivering a stable, zero-cost VS Code extension and a working compiler distribution that a new developer can install and use immediately.

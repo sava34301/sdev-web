@@ -57,16 +57,13 @@ function buildRunner(context, sourceFile) {
     return { cmd: py, args: [interpreter, sourceFile] };
   }
 
-  // bundled & node run the bundled sdev CLI — identical to the website.
   const node = cfg.get('nodePath', 'node');
   const cli = path.join(ext, 'interpreter', 'sdev-cli.mjs');
-  if (fs.existsSync(cli)) return { cmd: node, args: [cli, 'run', sourceFile], env: cliEnv(ext) };
-  const interpreter = path.join(ext, 'interpreter', 'sdev-interpreter.js');
-  if (!fs.existsSync(interpreter)) {
-    vscode.window.showErrorMessage('Bundled sdev interpreter is missing from the extension package.');
+  if (!fs.existsSync(cli)) {
+    vscode.window.showErrorMessage('Bundled sdev CLI (sdev-cli.mjs) is missing from the extension package.');
     return null;
   }
-  return { cmd: node, args: [interpreter, sourceFile] };
+  return { cmd: node, args: [cli, 'run', sourceFile], env: cliEnv(ext) };
 }
 
 async function runSource(context, source, label) {
@@ -109,13 +106,12 @@ async function runV2(context, file) {
   out.appendLine(`──── sdev v2: ${path.basename(file)} ────`);
   const node = getConfig().get('nodePath', 'node');
   const ext = context.extensionPath;
-  const full = path.join(ext, 'interpreter', 'sdev-cli.mjs');
-  const legacy = path.join(ext, 'interpreter', 'sdev-v2.cjs');
-  const args = fs.existsSync(full) ? [full, 'run', file, '--runtime', 'v2'] : [legacy, file];
-  if (!fs.existsSync(args[0])) {
-    vscode.window.showErrorMessage('Bundled v2 runtime is missing from the extension package.');
+  const cli = path.join(ext, 'interpreter', 'sdev-cli.mjs');
+  if (!fs.existsSync(cli)) {
+    vscode.window.showErrorMessage('Bundled v2 runtime (sdev-cli.mjs) is missing from the extension package.');
     return;
   }
+  const args = [cli, 'run', file, '--runtime', 'v2'];
   const start = Date.now();
   const child = spawn(node, args, { shell: false, env: cliEnv(ext) });
   child.stdout.on('data', (c) => out.append(c.toString()));
@@ -131,16 +127,15 @@ async function buildNative(context, file) {
   out.show(true);
   out.appendLine(`──── sdev native: ${path.basename(file)} ────`);
   const node = cfg.get('nodePath', 'node');
-  const full = path.join(context.extensionPath, 'interpreter', 'sdev-cli.mjs');
-  const cli = fs.existsSync(full) ? full : path.join(context.extensionPath, 'interpreter', 'sdev-native.cjs');
+  const cli = path.join(context.extensionPath, 'interpreter', 'sdev-cli.mjs');
   if (!fs.existsSync(cli)) {
-    vscode.window.showErrorMessage('Bundled native backend is missing from the extension package.');
+    vscode.window.showErrorMessage('Bundled native backend (sdev-cli.mjs) is missing from the extension package.');
     return;
   }
   const outDir = cfg.get('native.outputDir', '') || path.dirname(file);
   const target = path.join(outDir, path.basename(file).replace(/\.(sdev|sdv)$/, ''));
-  const args = [cli, ...(cli === full ? ['native'] : []), file, '-o', target, '--as', cfg.get('native.assembler', 'as'), '--ld', cfg.get('native.linker', 'ld')];
-  const env = { ...process.env, SDEV_RUNTIME_S: path.join(context.extensionPath, 'interpreter', 'runtime.s') };
+  const args = [cli, 'native', file, '-o', target, '--as', cfg.get('native.assembler', 'as'), '--ld', cfg.get('native.linker', 'ld')];
+  const env = cliEnv(context.extensionPath);
   const child = spawn(node, args, { shell: false, env });
   child.stdout.on('data', (c) => out.append(c.toString()));
   child.stderr.on('data', (c) => out.append(c.toString()));

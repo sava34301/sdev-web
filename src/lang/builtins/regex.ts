@@ -1,6 +1,6 @@
-import { SdevFunction, OutputCallback } from './utils';
-import { SdevError } from '../errors';
-import { createSdevModuleRunner, type SdevModuleRunner } from '../sdev-module';
+import { SdevFunction } from './utils';
+import { SdevError } from '../core/errors';
+import { lazyModuleRunner } from '../runtime/sdev-module';
 import SDEV_TEXT_SRC from '../../../lang/stdlib/v2/text.sdev?raw';
 import SDEV_REGEX_SRC from '../../../lang/stdlib/v2/regex.sdev?raw';
 import { regexProblem } from './regex-guard';
@@ -10,17 +10,13 @@ function guard(text: string, pattern: string, line: number) {
   if (p) throw new SdevError(p, line);
 }
 
-let regexRunner: SdevModuleRunner | null = null;
-function getRegexRunner(): SdevModuleRunner {
-  if (!regexRunner) regexRunner = createSdevModuleRunner(SDEV_TEXT_SRC, SDEV_REGEX_SRC);
-  return regexRunner;
-}
+const getRegexRunner = lazyModuleRunner(SDEV_TEXT_SRC, SDEV_REGEX_SRC);
 
 function usesHostOnlyRegex(pat: string): boolean {
   return /[()|{}]/.test(pat) || /\\[pPDWSbB1-9]/.test(pat);
 }
 
-export function registerRegex(builtins: Map<string, SdevFunction>, _output: OutputCallback): void {
+export function registerRegex(builtins: Map<string, SdevFunction>): void {
   // match(text, pattern) - regex match, returns list of match or null
   builtins.set('match', {
     type: 'builtin',

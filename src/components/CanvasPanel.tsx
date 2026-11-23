@@ -1,5 +1,5 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import type { GraphicsCommand, TurtleState, SpriteData } from '@/lang/graphics';
+import type { GraphicsCommand, TurtleState, SpriteData } from '@/lang/stdlib/graphics';
 import { X } from 'lucide-react';
 
 interface CanvasPanelProps {

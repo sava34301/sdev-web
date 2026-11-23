@@ -16,13 +16,17 @@ import BRAIN from '../../../lang/agent/brain.sdev?raw';
 import MATH from '../../../lang/agent/math.sdev?raw';
 import TASKS from '../../../lang/agent/tasks.sdev?raw';
 import MEMORY from '../../../lang/agent/memory.sdev?raw';
-import { Lexer } from '../lexer';
-import { Parser } from '../parser';
-import { Interpreter } from '../interpreter';
-import type { AgentNote } from './types';
-import type { AgentMode, BrainMode } from './directives';
-import type { BrainRequest, FixResult } from './brain';
-import type { IntentCategory } from './micro-brain';
+import { Lexer } from '../core/lexer';
+import { Parser } from '../core/parser';
+import { Interpreter } from '../runtime/interpreter';
+import type {
+  AgentNote,
+  AgentMode,
+  BrainMode,
+  BrainRequest,
+  FixResult,
+  IntentCategory,
+} from './types';
 
 type Callable = { call: (args: unknown[], line: number) => unknown };
 type Engine = {
@@ -48,9 +52,6 @@ type Engine = {
   brainCandidateScore: Callable;
   brainNeedsOnlineFallback: Callable;
   reconsiderBrainMode: Callable;
-  translationHasDiff: Callable;
-  translationDownloadName: Callable;
-  translationBannerText: Callable;
   mathRequest: Callable;
   taskRequest: Callable;
   memoryUnderstandKey: Callable;
@@ -102,9 +103,6 @@ function load(): Engine | false {
       brainCandidateScore: env.get('brain_candidate_score', 0) as Callable,
       brainNeedsOnlineFallback: env.get('brain_needs_online_fallback', 0) as Callable,
       reconsiderBrainMode: env.get('reconsider_brain_mode', 0) as Callable,
-      translationHasDiff: env.get('translation_has_diff', 0) as Callable,
-      translationDownloadName: env.get('translation_download_name', 0) as Callable,
-      translationBannerText: env.get('translation_banner_text', 0) as Callable,
       mathRequest: env.get('math_request', 0) as Callable,
       taskRequest: env.get('task_request', 0) as Callable,
       memoryUnderstandKey: env.get('memory_understand_key', 0) as Callable,
@@ -227,7 +225,7 @@ export function sdevCloseBlocks(source: string): string | null {
 export function sdevCloseAiBraces(source: string): string {
   const e = load();
   if (!e) return source;
-  try { return String(e.closeAi.call([source], 0)); } catch { return source; }
+  try { return String(e.closeAi.call([source], 0)); } catch (err) { engineError = err instanceof Error ? err.message : String(err); return source; }
 }
 
 /** Blocks that never close or close twice: [line, message]. */
@@ -237,7 +235,7 @@ export function sdevCheckBlocks(source: string): [number, string][] {
   try {
     const r = e.check.call([source], 0);
     return Array.isArray(r) ? (r as [number, string][]).map(([l, m]) => [Number(l), String(m)]) : [];
-  } catch { return []; }
+  } catch (err) { engineError = err instanceof Error ? err.message : String(err); return []; }
 }
 
 /**
@@ -495,46 +493,8 @@ export function sdevReconsiderBrainMode(
   if (!e) return null;
   try {
     return String(e.reconsiderBrainMode.call([prepBrain, lastUsedBrain, allowOnline, isOnline], 0)) as BrainMode;
-  } catch {
-    return null;
-  }
-}
-
-export function sdevTranslationHasDiff(writtenBody: string, translatedSource: string | null | undefined): boolean | null {
-  if (!translatedSource) return false;
-  const e = load();
-  if (!e) return null;
-  try {
-    return e.translationHasDiff.call([writtenBody, translatedSource ?? null], 0) === true;
-  } catch {
-    return null;
-  }
-}
-
-export function sdevTranslationDownloadName(
-  fileName: string,
-  variant: 'written' | 'translated',
-  hasDiff: boolean,
-): string | null {
-  const e = load();
-  if (!e) return null;
-  try {
-    return String(e.translationDownloadName.call([fileName, variant, hasDiff], 0));
-  } catch {
-    return null;
-  }
-}
-
-export function sdevTranslationBannerText(
-  fromCache: boolean,
-  detectedLang: string | null | undefined,
-  brainUsed: 'none' | 'local' | 'online' | undefined,
-): string | null {
-  const e = load();
-  if (!e) return null;
-  try {
-    return String(e.translationBannerText.call([fromCache, detectedLang ?? null, brainUsed ?? 'none'], 0));
-  } catch {
+  } catch (err) {
+    engineError = err instanceof Error ? err.message : String(err);
     return null;
   }
 }

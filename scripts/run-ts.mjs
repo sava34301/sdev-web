@@ -36,7 +36,7 @@ const tmpFile = resolve(root, `node_modules/.cache-run-${process.pid}-${Date.now
 try {
   await build({
     plugins: [rawPlugin],
-    external: ['@mlc-ai/web-llm'],
+    external: ['@mlc-ai/web-llm', 'typescript'],
     entryPoints: [resolve(root, entry)],
     outfile: tmpFile,
     bundle: true,
@@ -65,7 +65,7 @@ try {
     stdio: 'inherit',
     cwd: root,
   });
-  process.exit(res.status ?? 1);
+  process.exitCode = res.status ?? 1;
 } finally {
   try { unlinkSync(tmpFile); } catch { /* ignore */ }
 }

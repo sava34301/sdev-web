@@ -1,6 +1,82 @@
 /** Shared types for the understanding agent. */
-import type { AgentMode, BrainMode } from './directives';
 import type { Intent } from './vocabulary';
+
+export type AgentMode = 'off' | 'auto' | 'on' | 'strict';
+export type BrainMode = 'auto' | 'local' | 'online' | 'none';
+
+export interface AgentDirectives {
+  mode: AgentMode | null;
+  brain: BrainMode | null;
+  learn: boolean | null;
+}
+
+export interface DirectiveScan extends AgentDirectives {
+  /** the source with every directive line removed (line count preserved) */
+  source: string;
+  found: boolean;
+}
+
+export interface BrainRequest {
+  source: string;
+  draft: string;
+  unresolved: number[];
+  vocabulary: Record<string, string>;
+  problems?: string[];
+  format?: 'canonical' | 'ai';
+}
+
+export interface BrainReply {
+  canonical: string;
+  words?: Record<string, string>;
+  notes?: string;
+}
+
+export interface FixResult {
+  fixed_code: string;
+  explanation: string;
+  changes: string;
+  how_it_works: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface NormalizedEndpoints {
+  baseUrl: string;
+  chatUrl: string;
+  modelsUrl: string;
+  tagsUrl: string;
+  isOllamaNative: boolean;
+}
+
+export interface BrainSettings {
+  localUrl: string;
+  localModel: string;
+  browser: boolean;
+  customLocal: boolean;
+  allowOnline: boolean;
+}
+
+export interface LocalProbeResult {
+  ok: boolean;
+  models: string[];
+  activeModel?: string;
+  baseUrl: string;
+  chatUrl: string;
+  serverType?: 'LM Studio' | 'Ollama' | 'llama.cpp' | 'LocalAI' | 'OpenAI-Compatible';
+  error?: string;
+  isCors?: boolean;
+  hint?: string;
+}
+
+export interface BrainOutcome {
+  reply: BrainReply | null;
+  used: 'none' | 'local' | 'online';
+}
+
+export type IntentCategory =
+  | 'PRINT' | 'LET' | 'ASSIGN' | 'FUNC_DEF' | 'RETURN'
+  | 'IF' | 'ELIF' | 'ELSE' | 'WHILE' | 'FOR_EACH' | 'FOR_RANGE'
+  | 'CLASS_DEF' | 'LIST_MAP' | 'LIST_FILTER' | 'COMMENT' | 'BLOCK_END';
+
 /** Anything that carries dialect words — the full spec, or the lexer's view. */
 export interface DialectWords {
   names?: Record<string, string>;

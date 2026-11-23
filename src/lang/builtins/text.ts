@@ -3,8 +3,8 @@
  * starting with the self-hosted understander (lang/agent/understander.sdev) —
  * can be written in sdev itself. Mirrored in the Python interpreter.
  */
-import { SdevFunction, OutputCallback } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction } from './utils';
+import { SdevError } from '../core/errors';
 import { regexProblem } from './regex-guard';
 
 function text(v: unknown, fn: string, line: number): string {

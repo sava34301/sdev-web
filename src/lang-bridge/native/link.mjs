@@ -5,15 +5,14 @@
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// Resolve runtime.s next to this module. When this file is bundled to CJS
-// (the VS Code extension does that), import.meta.url is unavailable, so fall
-// back to __dirname or an explicit SDEV_RUNTIME_S override.
+// Resolve runtime.s next to this module; CJS extension bundles fall back to __dirname.
 const RUNTIME_S = (() => {
   if (process.env.SDEV_RUNTIME_S) return resolve(process.env.SDEV_RUNTIME_S);
   try {
     const u = import.meta.url;
-    if (u) return resolve(new URL('./runtime.s', u).pathname);
+    if (u) return resolve(dirname(fileURLToPath(u)), 'runtime.s');
   } catch { /* bundled */ }
   return resolve(typeof __dirname !== 'undefined' ? __dirname : '.', 'runtime.s');
 })();

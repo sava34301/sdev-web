@@ -77,4 +77,5 @@ Every guide lives here once under a categorized, structured path and is served d
 | Document | Description |
 | --- | --- |
 | [complete-project-history.md](09-project/complete-project-history.md) | **Complete Project History** — full chronological record from December 2025 through November 2026 (Edition v7). |
+| [roadmap.md](09-project/roadmap.md) | **Roadmap** — pure-SDEV milestones (A–J), feature/IDE tracking, and self-hosting status. |
 | [launch/README.md](09-project/launch/README.md) | **Launch Playbook** — archived July 12, 2026 launch campaign materials. |

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import {
   buildWasiComponentBundle,
-} from '@/lang/wasi-component';
+} from '@/lang/runtime/wasi-component';
 import { toast } from 'sonner';
 import { useClipboard } from '@/hooks/useClipboard';
 

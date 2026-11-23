@@ -1,5 +1,5 @@
-import { SdevFunction, OutputCallback, isTruthy, stringify } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, isTruthy, stringify } from './utils';
+import { SdevError } from '../core/errors';
 
 export interface FopFeatureRefinement {
   targetName: string;

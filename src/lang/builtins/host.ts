@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, toNumber } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerHost(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export function registerHost(builtins: Map<string, SdevFunction>): void {
 
   // ============= ML host bindings (Milestone 13) =============
   // The ML stdlib (lang/stdlib/ml/*.sdev) is written entirely in sdev but

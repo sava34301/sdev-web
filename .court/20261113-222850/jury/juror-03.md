@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: As an XI–XII competitor, I would beat this entry tomorrow without matching its feature list because it enters a 50% test and a 50% defense—plus strict Appendix 5 disqualification rules—armed only with promises instead of proven XI–XII test readiness or verified mastery of its largely AI-written codebase.
-DECIDING FACT: The record shows a V–VII grade contestant with "доста голяма част от кода" written with AI, while the XI–XII test is 50% of the grade (2026 laureates scored 79–96) and the file contains no practice test scores, no existing Appendix 5 records, and no verification of defense readiness—only commitments.
-WOULD FLIP IF: The record demonstrated proven XI–XII practice test scores at laureate level (79+), completed Appendix 5 (Sections A, B, and C) records for the AI-generated code, and a verified 20-minute defense dry-run.

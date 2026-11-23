@@ -13,7 +13,8 @@
 // cleans up. Return value in %rax. All values are 64-bit signed integers.
 // Local slot N lives at -8*(N+1)(%rbp). We reserve up to 16 locals per fn.
 
-import { parseWithKinds } from '../oracle/compile.mjs';
+import { parseWithKinds } from '../v2-parser.mjs';
+import { collectSets as collectSetNames, resolveMethodReturnType } from '../v2-types.mjs';
 
 const LOCAL_SLOTS = 32;
 
@@ -102,16 +103,7 @@ function typeOf(e, tys, fnTypes) {
 // method of that name that returns text makes the call string-typed.
 function methodRetType(fnTypes, key) {
   if (!fnTypes) return 'int';
-  const classes = fnTypes._classes;
-  if (!classes) return 'int';
-  for (const ms of classes.values()) {
-    for (const mm of ms) {
-      if (mm.key !== key) continue;
-      const t = fnTypes.get(mm.fn);
-      if (t && t !== 'int') return t;
-    }
-  }
-  return 'int';
+  return resolveMethodReturnType(fnTypes._classes, (fn) => fnTypes.get(fn), key);
 }
 
 
@@ -1084,27 +1076,8 @@ function emitStmt(s, em, locals, ctx) {
   }
 }
 
-function collectSets(body, locals) {
-  for (const s of body) {
-    // Only `set name to` makes a local; `set g[i] to` writes into an existing
-    // (possibly global) list, as in the VM.
-    if (s.k === 'set' && !locals.has(s.name)) locals.set(s.name, locals.size);
-    if (s.k === 'if') { collectSets(s.then_, locals); if (s.else_) collectSets(s.else_, locals); }
-    if (s.k === 'while') collectSets(s.body, locals);
-    if (s.k === 'attempt') {
-      collectSets(s.body, locals);
-      if (s.errName && !locals.has(s.errName)) locals.set(s.errName, locals.size);
-      collectSets(s.rescue_, locals);
-    }
-    if (s.k === 'foreach') {
-      for (const nm of [s.name, `@fe_i${s.d}`, `@fe_s${s.d}`]) {
-        if (!locals.has(nm)) locals.set(nm, locals.size);
-      }
-      collectSets(s.body, locals);
-    }
-  }
-
-}
+const collectSets = (body, locals) =>
+  collectSetNames(body, locals, (s) => [s.name, `@fe_i${s.d}`, `@fe_s${s.d}`]);
 
 export function generateAsm(source, opts = {}) {
   // Milestone 6g: modules (`use "path"`) are prelinked by the shared pass;

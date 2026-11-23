@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, stringify, isTruthy, toNumber } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerFunctional(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export function registerFunctional(builtins: Map<string, SdevFunction>): void {
 
   // ============= Functional Programming =============
 
@@ -271,12 +271,11 @@ export function registerFunctional(builtins: Map<string, SdevFunction>, output: 
     },
   });
 
-  // identity(x) / identity_fn(x) / id_fn(x)
+  // identity_fn(x) / id_fn(x) (matrix identity(size) lives in stdlib/matrix.ts)
   const identityBuiltin: SdevFunction = {
     type: 'builtin',
     call: (args: unknown[]) => (args.length > 0 ? args[0] : null),
   };
-  builtins.set('identity', identityBuiltin);
   builtins.set('identity_fn', identityBuiltin);
   builtins.set('id_fn', identityBuiltin);
 

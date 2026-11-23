@@ -555,7 +555,7 @@ Then: "Add everything left in the plan. Redesign the whole IDE and add some of y
 
 **11 Sep — "Fix the translator. I want it updated and integrated in the language source code, and I want it to work with dialects."** The translator now targets v1 or v2 words (`forge`→`set`, `speak`→`say`, `ponder`→`if`, `cycle`→`while`, plus `end`, `each`, `with`, `more`, `less`), respects a dialect's own words (`translateForDialect`), knows when "is" means compare versus assign, and the self-hosted lexer accepts names in any alphabet (Cyrillic, Greek, Japanese). Works in the IDE, CLI and v2 engine. **Built.**
 
-**11 Sep — "Now we need to start removing the JavaScript or .mjs files and replacing all of them with SDEV."** You chose: **literally everything**; approach — "whatever you judge best"; pace — **one big sweep first, the rest as milestones**. The honest limit: a tiny JavaScript host must stay (browsers, Node and Electron need it to start SDEV at all). Built: `bin/sdevhost.mjs` (the single host kernel that compiles and runs any `.sdev` program and gives it files, shell, compiler and exit codes); `lang/stdlib/testkit.sdev`; three scripts rewritten in SDEV (`test-self-toolchain.sdev`, `test-driver-artifact.sdev`, `probe-self-lexer.sdev`) with their `.mjs` versions deleted. A real bug was found: `is` on two separately built strings compares identity, not text (fixed in **Antigravity** as Milestone A — see Era 19). **Milestones A–J** were written into `roadmap.md` (with Milestones A and B completed in **Antigravity** — see section 9.3).
+**11 Sep — "Now we need to start removing the JavaScript or .mjs files and replacing all of them with SDEV."** You chose: **literally everything**; approach — "whatever you judge best"; pace — **one big sweep first, the rest as milestones**. The honest limit: a tiny JavaScript host must stay (browsers, Node and Electron need it to start SDEV at all). Built: `bin/sdevhost.mjs` (the single host kernel that compiles and runs any `.sdev` program and gives it files, shell, compiler and exit codes); `lang/stdlib/testkit.sdev`; three scripts rewritten in SDEV (`test-self-toolchain.sdev`, `test-driver-artifact.sdev`, `probe-self-lexer.sdev`) with their `.mjs` versions deleted. A real bug was found: `is` on two separately built strings compares identity, not text (fixed in **Antigravity** as Milestone A — see Era 19). **Milestones A–J** were written into `docs/09-project/roadmap.md` (with Milestones A and B completed in **Antigravity** — see section 9.3).
 
 **11 Sep — "Update the CLI — I have a problem with logging in and everything; also add a code editor/IDE."** Saved sessions with refresh, sign-up, email one-time code, token login, password reset, `whoami`, `logout`; `sdev edit` / `sdev ide` — an in-terminal editor with highlighting, line numbers, save, run, find, go-to-line, cut, format, quit. **Built.**
 
@@ -1319,7 +1319,7 @@ What will always stay JavaScript: `bin/sdevhost.mjs`, the generated bridge files
 | `public/` | docs, books, interpreters, WASM, downloads, samples, Arduino index, firmware |
 | `docs/` | `SDEV_Complete_Project_History.md` (v4) and `docs/launch/` |
 | `scripts/` | build, release, `run-ts.mjs`, `test-all.mjs`, `gen-hardware-docs.ts`, and test scripts (`.sdev` and `.ts`) |
-| `release.json`, `roadmap.md`, `AGENTS.md` | version, roadmap, architecture rules |
+| `release.json`, `docs/09-project/roadmap.md`, `AGENTS.md` | version, roadmap, architecture rules |
 
 ### 12.3 Test suites and gates
 

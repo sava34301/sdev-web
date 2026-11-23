@@ -5,9 +5,9 @@
 import { presetList } from '../src/lang/dialect/presets';
 import { validateDialect } from '../src/lang/dialect/spec';
 import { canonicalize } from '../src/lang/dialect/canonicalize';
-import { Lexer } from '../src/lang/lexer';
-import { Parser } from '../src/lang/parser';
-import { Interpreter } from '../src/lang/interpreter';
+import { Lexer } from '../src/lang/core/lexer';
+import { Parser } from '../src/lang/core/parser';
+import { Interpreter } from '../src/lang/runtime/interpreter';
 
 let pass = 0;
 const failures: string[] = [];

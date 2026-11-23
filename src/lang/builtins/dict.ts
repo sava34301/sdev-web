@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerDict(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export function registerDict(builtins: Map<string, SdevFunction>): void {
 
   // Dict operations
   builtins.set('inscriptions', {

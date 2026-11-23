@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: Proceeding with a V–VII grade student in the XI–XII grade category on the strength of formal eligibility and technical scope alone is hope dressed up as fact when the record contains zero evidence of XI–XII test readiness or verifiable Appendix 5 AI-contribution records.
-DECIDING FACT: The record states that 50% of the national round score comes from the XI–XII grade IT test (where laureates scored 79–96) and that a large portion of the code was written with AI under mandatory Appendix 5 disqualification rules, yet the file is completely silent on the student's test preparation, AI-separation logs, and oral defense readiness.
-WOULD FLIP IF: The record included concrete evidence of the student's competence on XI–XII grade test material (around 74+ points) alongside verifiable Appendix 5 logs separating the student's own contribution from AI-generated code.

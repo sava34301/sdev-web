@@ -1,19 +1,7 @@
 import { sdevScanDirectives } from './sdev-engine';
+import type { AgentMode, BrainMode, AgentDirectives, DirectiveScan } from './types';
 
-export type AgentMode = 'off' | 'auto' | 'on' | 'strict';
-export type BrainMode = 'auto' | 'local' | 'online' | 'none';
-
-export interface AgentDirectives {
-  mode: AgentMode | null;
-  brain: BrainMode | null;
-  learn: boolean | null;
-}
-
-export interface DirectiveScan extends AgentDirectives {
-  /** the source with every directive line removed (line count preserved) */
-  source: string;
-  found: boolean;
-}
+export type { AgentMode, BrainMode, AgentDirectives, DirectiveScan };
 
 export function scanDirectives(source: string): DirectiveScan {
   if (!source.includes('!#')) {

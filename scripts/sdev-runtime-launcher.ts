@@ -3,12 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
-import { Lexer } from '../src/lang/lexer';
-import { Parser } from '../src/lang/parser';
-import { Interpreter } from '../src/lang/interpreter';
-import { createGraphicsBuiltins, type GraphicsCommand, type TurtleState } from '../src/lang/graphics';
-import { createUiBuiltins, type UiCallback, type UiState } from '../src/lang/ui';
-import { createWebBuiltins, renderWebDocument, type WebState } from '../src/lang/web';
+import { Lexer } from '../src/lang/core/lexer';
+import { Parser } from '../src/lang/core/parser';
+import { Interpreter } from '../src/lang/runtime/interpreter';
+import { createGraphicsBuiltins, type GraphicsCommand, type TurtleState } from '../src/lang/stdlib/graphics';
+import { createUiBuiltins, type UiCallback, type UiState } from '../src/lang/stdlib/ui';
+import { createWebBuiltins, renderWebDocument, type WebState } from '../src/lang/stdlib/web';
 
 const MAGIC = Buffer.from('SDEVPACK', 'ascii');
 

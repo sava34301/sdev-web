@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, stringify, isTruthy } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerSql(builtins: Map<string, SdevFunction>, _output: OutputCallback): void {
+export function registerSql(builtins: Map<string, SdevFunction>): void {
   // sql_select(records, cols) - project specific columns
   builtins.set('sql_select', {
     type: 'builtin',

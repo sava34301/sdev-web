@@ -13,7 +13,8 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — plain JS module
 import { compile as selfCompile, setSeedLoader } from './compile-self.mjs';
-import { translateSource, type TranslatorDialect } from '@/lang/translator';
+import { applyFmath, writeBlobToMemory, readSliceFromMemory } from './seed-vm.mjs';
+import { translateSource, type TranslatorDialect } from '@/lang/tools/translator';
 
 export class WasmSubsetError extends Error {}
 
@@ -192,39 +193,22 @@ export async function runWasm(
       return true;
     } catch { return false; }
   };
-  const putBlob = (bytes: Uint8Array): number => {
-    const dst = allocStr(bytes.length);
-    new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
-    return dst;
-  };
-
   const instance = await WebAssembly.instantiate(module, {
     env: {
       host_say_i32: (n: number) => output.push(String(n)),
       host_say_str: (ptr: number, len: number) => {
-        const bytes = new Uint8Array(mem.buffer, ptr, len);
-        output.push(decoder.decode(bytes));
+        output.push(decoder.decode(readSliceFromMemory(mem, ptr, len)));
       },
       host_say_f64: (x: number) => output.push(String(x)),
-      host_fmath: (op: number, a: number, b: number): number => {
-        switch (op) {
-          case 0: return Math.sin(a);
-          case 1: return Math.cos(a);
-          case 2: return Math.tan(a);
-          case 3: return Math.exp(a);
-          case 4: return Math.log(a);
-          case 5: return Math.pow(a, b);
-          default: return NaN;
-        }
-      },
+      host_fmath: (op: number, a: number, b: number): number => applyFmath(op, a, b),
       host_read_file: (ptr: number, len: number): number => {
-        const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        const path = decoder.decode(readSliceFromMemory(mem, ptr, len));
         const bytes = readVfs(path) ?? new Uint8Array(0);
-        return putBlob(bytes);
+        return writeBlobToMemory(mem, allocStr, bytes);
       },
       host_write_file: (pPtr: number, pLen: number, dPtr: number, dLen: number): number => {
-        const path = decoder.decode(new Uint8Array(mem.buffer, pPtr, pLen));
-        const data = new Uint8Array(mem.buffer, dPtr, dLen).slice();
+        const path = decoder.decode(readSliceFromMemory(mem, pPtr, pLen));
+        const data = readSliceFromMemory(mem, dPtr, dLen).slice();
         return writeVfs(path, data) ? 0 : -1;
       },
       // Networking in the browser is best-effort and gated on CORS. Fetch is
@@ -232,7 +216,7 @@ export async function runWasm(
       // and log a hint. Programs that need HTTP should run under Node.
       host_http_get: (_ptr: number, _len: number): number => {
         console.warn('[sdev] http_get is unavailable in the browser runtime; use the Node CLI.');
-        return putBlob(new Uint8Array(0));
+        return writeBlobToMemory(mem, allocStr, new Uint8Array(0));
       },
     },
   });

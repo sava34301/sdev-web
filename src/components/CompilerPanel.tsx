@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Cpu, Download, Play, ChevronDown, ChevronRight, Code2, Zap } from 'lucide-react';
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
-import { Compiler } from '@/lang/compiler';
-import { VM } from '@/lang/vm';
-import { disassemble, Chunk, serializeChunk } from '@/lang/bytecode';
-import { SdevError } from '@/lang/errors';
+import { Lexer } from '@/lang/core/lexer';
+import { Parser } from '@/lang/core/parser';
+import { Compiler } from '@/lang/runtime/compiler';
+import { VM } from '@/lang/runtime/vm';
+import { disassemble, Chunk, serializeChunk } from '@/lang/runtime/bytecode';
+import { SdevError } from '@/lang/core/errors';
 
 interface CompilerPanelProps {
   code: string;

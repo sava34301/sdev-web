@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: You do not bet the whole shop on the toughest XI–XII category when half the score rides on an upper-grade test you have shown no readiness for and most of the stock was built with AI without the paperwork to keep you from getting disqualified.
-DECIDING FACT: The record states that a large part of the code was written with AI and that incomplete Appendix 5 records separating own work from AI lead to disqualification, while 50% of the final score comes from the XI–XII IT test, yet the file contains no evidence of either those Appendix 5 records or the V–VII student's readiness for that test.
-WOULD FLIP IF: The record included verified Appendix 5 logs distinguishing the student's own contribution from AI, demonstrated readiness for the V–VII student to score competitively on the XI–XII IT test, and confirmed online availability with test accounts for all roles.

@@ -18,6 +18,7 @@
 // build produces compiles itself to the very same bytes (stage 2 == stage 3).
 
 import { DRIVER_BYTECODE_HEX, DRIVER_POOL_HEX } from './driver-artifact.mjs';
+import { applyFmath, writeBlobToMemory, readSliceFromMemory } from './seed-vm.mjs';
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -96,13 +97,13 @@ export async function compileWith(driver, userSrc, modules = null) {
     env: {
       host_say_i32: (n) => dumped.push(n),
       host_say_str: (ptr, len) => {
-        const msg = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        const msg = decoder.decode(readSliceFromMemory(mem, ptr, len));
         compilerErr = compilerErr ? `${compilerErr}\n${msg}` : msg;
       },
       host_say_f64: () => {},
-      host_fmath: (op, a, b) => [Math.sin, Math.cos, Math.tan, Math.exp, Math.log, (x, y) => Math.pow(x, y)][op](a, b),
+      host_fmath: (op, a, b) => applyFmath(op, a, b),
       host_read_file: (ptr, len) => {
-        const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
+        const path = decoder.decode(readSliceFromMemory(mem, ptr, len));
         let bytes = srcBytes;
         if (path !== '<stdin>') {
           let text = modules && Object.prototype.hasOwnProperty.call(modules, path) ? modules[path] : null;
@@ -111,9 +112,7 @@ export async function compileWith(driver, userSrc, modules = null) {
           }
           bytes = encoder.encode(text ?? '');
         }
-        const dst = allocStr(bytes.length);
-        new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
-        return dst;
+        return writeBlobToMemory(mem, allocStr, bytes);
       },
       host_write_file: () => -1,
       host_http_get: () => 0,

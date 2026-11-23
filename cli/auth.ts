@@ -13,6 +13,7 @@
  */
 import './env';
 import { SDEV_HOME } from './env';
+import { SITE } from './version';
 import { readFileSync, writeFileSync, existsSync, rmSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Session, User } from '@supabase/supabase-js';
@@ -199,7 +200,7 @@ export async function signInWithTokens(accessToken: string, refreshToken: string
 
 export async function sendPasswordReset(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: 'https://web.sdev.codes/reset-password',
+    redirectTo: `${SITE}/reset-password`,
   });
   if (error) throw new Error(explain(error.message));
 }

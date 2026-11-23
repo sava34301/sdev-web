@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { execute } from '../src/lang';
-import { lintSdevSource } from '../src/lang/linter';
+import { lintSdevSource } from '../src/lang/tools/linter';
 
 let passed = 0;
 let failed = 0;

@@ -12,37 +12,33 @@
  *      canonical linter diagnostics (`lintSdevSource`).
  */
 
-import {
-  Lexer,
-  Parser,
-  Interpreter,
-  SdevError,
-  execute,
-  executeAsync,
-  executeV2,
-  detectLanguage,
-  translateSource,
-  type Token,
-} from '@/lang';
+import { Lexer, type Token } from '@/lang/core/lexer';
+import { Parser } from '@/lang/core/parser';
+import { Interpreter, type InterpreterTraceHook } from '@/lang/runtime/interpreter';
+import { SdevError } from '@/lang/core/errors';
+import { Environment } from '@/lang/core/environment';
+import { execute, executeAsync, executeV2 } from '@/lang/runtime/executor';
+import { detectLanguage, translateSource } from '@/lang/tools/translator';
+import type { Program } from '@/lang/core/ast';
 // The studio inspects nodes from several parser generations, so it reads them loosely.
 type LooseNode = { type: string; [key: string]: any };
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace AST {
   type ASTNode = LooseNode;
-  type Program = import("@/lang/ast").Program;
+  type Program = import('@/lang/core/ast').Program;
   type AssignStatement = LooseNode;
   type LetStatement = LooseNode;
 }
-import { stringify } from '@/lang/builtins';
+import { stringify } from '@/lang/builtins/utils';
 import {
   createGraphicsBuiltins,
   type GraphicsCommand,
   type TurtleState,
-} from '@/lang/graphics';
-import { createUiBuiltins, type UiState } from '@/lang/ui';
-import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/web';
+} from '@/lang/stdlib/graphics';
+import { createUiBuiltins, type UiState } from '@/lang/stdlib/ui';
+import { createWebBuiltins, bindWebBuiltinsToEnv, type WebState } from '@/lang/stdlib/web';
 import { stripSignature } from '@/lang/dialect/signature';
-import { lintSdevSource, type LintDiagnostic } from '@/lang/linter';
+import { lintSdevSource, type LintDiagnostic } from '@/lang/tools/linter';
 import { understand } from '@/lang/agent';
 import type { ApiTarget } from '@/lang/registry/api-registry';
 
@@ -215,14 +211,9 @@ function formatShortValue(val: unknown, maxLen = 64): string {
   }
 }
 
-interface InternalEnv {
-  values?: Map<string, unknown>;
-  parent?: InternalEnv;
-}
-
 function captureEnvVariables(
-  env: InternalEnv,
-  globalEnv: InternalEnv,
+  env: Environment,
+  globalEnv: Environment,
   initialGlobals: Map<string, unknown>,
   prevVars: Record<string, string>
 ): { map: Record<string, string>; list: ChronoVariable[] } {
@@ -230,17 +221,15 @@ function captureEnvVariables(
   const list: ChronoVariable[] = [];
   const seen = new Set<string>();
 
-  // Walk from inner-most environment out to globalEnv
-  const chain: { env: InternalEnv; isGlobal: boolean }[] = [];
-  let cursor: InternalEnv | undefined = env;
+  const chain: { env: Environment; isGlobal: boolean }[] = [];
+  let cursor: Environment | undefined = env;
   while (cursor) {
     chain.push({ env: cursor, isGlobal: cursor === globalEnv });
-    cursor = cursor.parent;
+    cursor = cursor.getParent();
   }
 
   for (const { env: frame, isGlobal } of chain) {
-    if (!frame.values) continue;
-    for (const [name, rawVal] of frame.values.entries()) {
+    for (const [name, rawVal] of frame.ownEntries()) {
       if (seen.has(name)) continue;
       if (
         isGlobal &&
@@ -461,41 +450,7 @@ function executeWithTracing(
   };
 
   let lastOutputOnCurrentStep: string | null = null;
-  const interpreter = new Interpreter((msg: string) => {
-    outputs.push(msg);
-    lastOutputOnCurrentStep = msg;
-  });
-
-  const globalEnv = interpreter.getGlobalEnv();
-  const gfxBuiltins = createGraphicsBuiltins(
-    (cmd: GraphicsCommand) => canvasCommands.push(cmd),
-    () => turtle,
-    (patch: Partial<TurtleState>) => {
-      turtle = { ...turtle, ...patch };
-    }
-  );
-  gfxBuiltins.forEach((fn, name) => globalEnv.define(name, fn));
-
-  const uiBuiltins = createUiBuiltins(
-    (st: UiState) => uiStates.push(st),
-    () => 0
-  );
-  uiBuiltins.forEach((fn, name) => globalEnv.define(name, fn));
-
-  const webBuiltins = createWebBuiltins((st: WebState) => webStates.push(st));
-  bindWebBuiltinsToEnv(globalEnv, webBuiltins, {
-    hasUiRoot: () => uiStates.length > 0 && uiStates[uiStates.length - 1].rootId != null,
-  });
-
-  // Snapshot initial globals so Chrono only displays user-created/modified bindings
   const initialGlobals = new Map<string, unknown>();
-  const internalGlobal = globalEnv as unknown as InternalEnv;
-  if (internalGlobal.values) {
-    for (const [k, v] of internalGlobal.values.entries()) {
-      initialGlobals.set(k, v);
-    }
-  }
-
   const callStack: string[] = ['<main>'];
   let prevVars: Record<string, string> = {};
 
@@ -523,30 +478,21 @@ function executeWithTracing(
     }
   }
 
-  // Hook into Interpreter's generator evaluator `ev` to capture Chrono & Live Lens
-  const interpAny = interpreter as unknown as {
-    ev: (node: AST.ASTNode, env: InternalEnv) => Generator<unknown, unknown, unknown>;
-    callFunction?: (fn: unknown, args: unknown[], line: number) => unknown;
-  };
-  const origEv = interpAny.ev.bind(interpreter);
-
-  interpAny.ev = function* tracedEv(
-    node: AST.ASTNode,
-    env: InternalEnv
-  ): Generator<unknown, unknown, unknown> {
-    const isStatement = TRACED_STATEMENT_TYPES.has(node.type);
-    const prevOutputLen = outputs.length;
-    lastOutputOnCurrentStep = null;
-
-    const result = yield* origEv(node, env);
-
-    if (isStatement && node.line >= 1) {
+  let globalEnvRef: Environment | null = null;
+  const traceHook: InterpreterTraceHook<number> = {
+    beforeNode: () => {
+      const prevOutputLen = outputs.length;
+      lastOutputOnCurrentStep = null;
+      return prevOutputLen;
+    },
+    afterNode: (node, env, result, prevOutputLen) => {
+      if (!TRACED_STATEMENT_TYPES.has(node.type) || node.line < 1) return;
       const lineIdx = node.line - 1;
       const codeLine = sourceLines[lineIdx] ?? '';
+      const looseNode = node as AST.ASTNode;
 
-      // Update Live Lens for this line
       if (node.type === 'LetStatement' || node.type === 'AssignStatement') {
-        const varName = (node as AST.LetStatement | AST.AssignStatement).name;
+        const varName = (looseNode as AST.LetStatement | AST.AssignStatement).name;
         recordLens(node.line, `${varName} = ${formatShortValue(result)}`, 'assign');
       } else if (node.type === 'AugAssignStatement') {
         recordLens(node.line, `→ ${formatShortValue(result)}`, 'assign');
@@ -562,14 +508,13 @@ function executeWithTracing(
         node.type === 'ForEachStatement' ||
         node.type === 'ForInStatement'
       ) {
-        recordLens(node.line, buildStepSummary(node, result, codeLine), 'condition');
+        recordLens(node.line, buildStepSummary(looseNode, result, codeLine), 'condition');
       }
 
-      // Record Chrono step (up to maxSteps)
-      if (chrono.length < maxSteps) {
+      if (chrono.length < maxSteps && globalEnvRef) {
         const { map: varsMap, list: varsList } = captureEnvVariables(
           env,
-          internalGlobal,
+          globalEnvRef,
           initialGlobals,
           prevVars
         );
@@ -579,7 +524,7 @@ function executeWithTracing(
           line: node.line,
           nodeType: node.type,
           code: codeLine.trim(),
-          summary: buildStepSummary(node, result, codeLine),
+          summary: buildStepSummary(looseNode, result, codeLine),
           variables: varsMap,
           variableList: varsList,
           callStack: [...callStack],
@@ -590,10 +535,43 @@ function executeWithTracing(
           elapsedMs: Number((performance.now() - startTime).toFixed(2)),
         });
       }
-    }
-
-    return result;
+    },
   };
+
+  const interpreter = new Interpreter(
+    (msg: string) => {
+      outputs.push(msg);
+      lastOutputOnCurrentStep = msg;
+    },
+    { traceHook },
+  );
+
+  const globalEnv = interpreter.getGlobalEnv();
+  globalEnvRef = globalEnv;
+  const gfxBuiltins = createGraphicsBuiltins(
+    (cmd: GraphicsCommand) => canvasCommands.push(cmd),
+    () => turtle,
+    (patch: Partial<TurtleState>) => {
+      turtle = { ...turtle, ...patch };
+    }
+  );
+  gfxBuiltins.forEach((fn, name) => globalEnv.define(name, fn));
+
+  const uiBuiltins = createUiBuiltins(
+    (st: UiState) => uiStates.push(st),
+    () => 0
+  );
+  uiBuiltins.forEach((fn, name) => globalEnv.define(name, fn));
+
+  const webBuiltins = createWebBuiltins((st: WebState) => webStates.push(st));
+  bindWebBuiltinsToEnv(globalEnv, webBuiltins, {
+    hasUiRoot: () => uiStates.length > 0 && uiStates[uiStates.length - 1].rootId != null,
+  });
+
+  // Snapshot initial globals so Chrono only displays user-created/modified bindings
+  for (const [k, v] of globalEnv.ownEntries()) {
+    initialGlobals.set(k, v);
+  }
 
   try {
     interpreter.interpret(ast);

@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { execute } from '../src/lang';
-import { resolveLinks, type LinkableFile } from '../src/lang/linker';
+import { resolveLinks, type LinkableFile } from '../src/lang/tools/linker';
 
 const resolveHostPath = (p: string) =>
   p.startsWith('/tmp/') ? join(tmpdir(), p.slice(5)) : p;

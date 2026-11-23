@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Gauge, BookOpen, Play, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { evaluateLiveScratchpad, type LiveScratchpadResult } from '@/lang/eval-live';
-import { runBenchmark, formatBenchmarkReport, type BenchmarkResult } from '@/lang/benchmark';
-import { executeNotebook, type NotebookExecutionResult } from '@/lang/notebook';
+import { evaluateLiveScratchpad, type LiveScratchpadResult } from '@/studio/eval-live';
+import { runBenchmark, formatBenchmarkReport, type BenchmarkResult } from '@/lang/tools/benchmark';
+import { executeNotebook, type NotebookExecutionResult } from '@/lang/tools/notebook';
 
 interface Props {
   source: string;

@@ -1,4 +1,0 @@
-VOTE: GUILTY
-REASON: Walking in cold, I wouldn't buy a 5th–7th grader entering the 11th–12th grade tier when half the score is an 11th–12th grade test with zero proof of readiness and a heavy AI-written codebase that risks disqualification, especially when 8th–10th grade "Софтуерни приложения" is right there.
-DECIDING FACT: The 11th–12th grade IT test counts for 50% of the final score (where laureates scored 79–96 and the minimum for 6.00 was 82), yet the record has no data on the V–VII student's test readiness, Appendix 5 AI-contribution logs, or 20-minute defense capability.
-WOULD FLIP IF: The record showed mock XI–XII test scores in the competitive range alongside verified Appendix 5 logs separating the student's own code from AI-generated code and working online test accounts for all roles.

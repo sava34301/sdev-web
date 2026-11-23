@@ -8,9 +8,9 @@
 import './env';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, basename, dirname } from 'node:path';
-import { KEYWORD_SPECS } from '@/lang/keywords';
+import { KEYWORD_SPECS } from '@/lang/core/keywords';
 import { stripSignature } from '@/lang/dialect/signature';
-import { formatSdev } from '@/components/ide/formatSdev';
+import { formatSdev } from '@/lang/tools/formatter';
 import { prepare, runPrepared, type PrepareOptions } from './pipeline';
 import { activeDialect, runtimePreference } from './store';
 

@@ -10,7 +10,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execute } from '../src/lang';
-import { resolveLinks, type LinkableFile } from '../src/lang/linker';
+import { resolveLinks, type LinkableFile } from '../src/lang/tools/linker';
 
 (globalThis as unknown as { __sdevHost: unknown }).__sdevHost = {
   readFile: (p: string) => readFileSync(p, 'utf8'),

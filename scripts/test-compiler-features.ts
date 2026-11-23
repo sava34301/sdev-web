@@ -11,10 +11,10 @@
  * - ComprehensionExpr (list and dict comprehensions)
  * - WithStatement
  */
-import { Lexer } from '../src/lang/lexer';
-import { Parser } from '../src/lang/parser';
-import { Compiler } from '../src/lang/compiler';
-import { VM } from '../src/lang/vm';
+import { Lexer } from '../src/lang/core/lexer';
+import { Parser } from '../src/lang/core/parser';
+import { Compiler } from '../src/lang/runtime/compiler';
+import { VM } from '../src/lang/runtime/vm';
 
 let passed = 0;
 let failed = 0;

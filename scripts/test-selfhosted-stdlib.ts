@@ -1,5 +1,5 @@
 import { execute } from '../src/lang';
-import { resolveLinks, type LinkableFile } from '../src/lang/linker';
+import { resolveLinks, type LinkableFile } from '../src/lang/tools/linker';
 import { readFileSync } from 'node:fs';
 
 console.log('Testing Self-Hosted VM, Kernel, and v2 Stdlib...');

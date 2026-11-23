@@ -33,8 +33,8 @@ function staticDependencies(entry: string, visited = new Set<string>()): Set<str
 
 const startup = new Set([...staticDependencies('src/App.tsx'), ...staticDependencies('src/pages/IDE.tsx')]);
 for (const deferred of [
-  'src/pages/Index.tsx', 'src/lang/interpreter.ts', 'src/lang/compiler.ts',
-  'src/lang/web.ts', 'src/lang/hardware/understand.ts',
+  'src/pages/Index.tsx', 'src/lang/runtime/interpreter.ts', 'src/lang/runtime/compiler.ts',
+  'src/lang/stdlib/web.ts', 'src/lang/hardware/understand.ts',
   'src/components/ide/HardwarePanel.tsx', 'src/components/ide/IdeAssistantPanel.tsx',
   'src/components/ide/TimeTravelDebugger.tsx', 'src/components/ide/LiveScratchpadPanel.tsx',
   ...['PersonalPanel', 'IdeCommandPalette', 'IdeSearchPanel', 'IdeSettingsPanel',

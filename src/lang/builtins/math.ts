@@ -1,7 +1,7 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, toNumber } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerMath(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export function registerMath(builtins: Map<string, SdevFunction>): void {
 
   // Math operations with unique names
   builtins.set('magnitude', {
@@ -71,26 +71,59 @@ export function registerMath(builtins: Map<string, SdevFunction>, output: Output
     call: () => Math.random(),
   });
 
-  // Advanced math
-  builtins.set('sin', { type: 'builtin', call: (args: unknown[]) => Math.sin(args[0] as number) });
-  builtins.set('cos', { type: 'builtin', call: (args: unknown[]) => Math.cos(args[0] as number) });
-  builtins.set('tan', { type: 'builtin', call: (args: unknown[]) => Math.tan(args[0] as number) });
-  builtins.set('log', { type: 'builtin', call: (args: unknown[]) => Math.log(args[0] as number) });
-  builtins.set('exp', { type: 'builtin', call: (args: unknown[]) => Math.exp(args[0] as number) });
-  builtins.set('PI', { type: 'builtin', call: () => Math.PI });
-  builtins.set('TAU', { type: 'builtin', call: () => Math.PI * 2 });
-
-  // random() alias for chaos()
-  builtins.set('random', {
+  builtins.set('sin', {
     type: 'builtin',
-    call: () => Math.random(),
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('sin() takes 1 argument', line);
+      return Math.sin(args[0] as number);
+    },
+  });
+  builtins.set('cos', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('cos() takes 1 argument', line);
+      return Math.cos(args[0] as number);
+    },
+  });
+  builtins.set('tan', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('tan() takes 1 argument', line);
+      return Math.tan(args[0] as number);
+    },
+  });
+  builtins.set('log', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('log() takes 1 argument', line);
+      return Math.log(args[0] as number);
+    },
+  });
+  builtins.set('exp', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('exp() takes 1 argument', line);
+      return Math.exp(args[0] as number);
+    },
   });
 
-  // Random utilities
+  builtins.set('random', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length === 0) return Math.random();
+      if (args.length === 2) {
+        const min = args[0] as number;
+        const max = args[1] as number;
+        return Math.random() * (max - min) + min;
+      }
+      throw new SdevError('random() takes 0 or 2 arguments', line);
+    },
+  });
+
   builtins.set('randint', {
     type: 'builtin',
     call: (args: unknown[], line: number) => {
-      if (args.length !== 2) throw new SdevError('randint() takes 2 arguments', line);
+      if (args.length !== 2) throw new SdevError('randint() takes 2 arguments (min, max)', line);
       const min = Math.ceil(args[0] as number);
       const max = Math.floor(args[1] as number);
       return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -179,23 +212,45 @@ export function registerMath(builtins: Map<string, SdevFunction>, output: Output
     },
   });
 
-  // More trig
-  builtins.set('asin', { type: 'builtin', call: (args: unknown[]) => Math.asin(args[0] as number) });
-  builtins.set('acos', { type: 'builtin', call: (args: unknown[]) => Math.acos(args[0] as number) });
-  builtins.set('atan', { type: 'builtin', call: (args: unknown[]) => Math.atan(args[0] as number) });
+  builtins.set('asin', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('asin() takes 1 argument', line);
+      return Math.asin(args[0] as number);
+    },
+  });
+  builtins.set('acos', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('acos() takes 1 argument', line);
+      return Math.acos(args[0] as number);
+    },
+  });
+  builtins.set('atan', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('atan() takes 1 argument', line);
+      return Math.atan(args[0] as number);
+    },
+  });
   builtins.set('atan2', {
     type: 'builtin',
-    call: (args: unknown[]) => Math.atan2(args[0] as number, args[1] as number)
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 2) throw new SdevError('atan2() takes 2 arguments (y, x)', line);
+      return Math.atan2(args[0] as number, args[1] as number);
+    },
   });
   builtins.set('sinh', { type: 'builtin', call: (args: unknown[]) => Math.sinh(args[0] as number) });
   builtins.set('cosh', { type: 'builtin', call: (args: unknown[]) => Math.cosh(args[0] as number) });
   builtins.set('tanh', { type: 'builtin', call: (args: unknown[]) => Math.tanh(args[0] as number) });
-  builtins.set('log10', { type: 'builtin', call: (args: unknown[]) => Math.log10(args[0] as number) });
+  builtins.set('log10', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 1) throw new SdevError('log10() takes 1 argument', line);
+      return Math.log10(args[0] as number);
+    },
+  });
   builtins.set('log2', { type: 'builtin', call: (args: unknown[]) => Math.log2(args[0] as number) });
-
-  // Constants
-  builtins.set('E', { type: 'builtin', call: () => Math.E });
-  builtins.set('INFINITY', { type: 'builtin', call: () => Infinity });
 
 
   // ============= Number Base Conversion =============

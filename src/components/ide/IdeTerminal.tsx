@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Trash2, Clock, ChevronRight, TerminalSquare } from 'lucide-react';
-import type { Interpreter } from '@/lang/interpreter';
+import type { Interpreter } from '@/lang/runtime/interpreter';
 
 interface Props {
   lines: string[];
@@ -58,7 +58,7 @@ export function IdeTerminal({ lines, error, execTime, onClear }: Props) {
       busyRef.current = true;
       setBusy(true);
       const [{ Lexer }, { Parser }, { Interpreter }] = await Promise.all([
-        import('@/lang/lexer'), import('@/lang/parser'), import('@/lang/interpreter'),
+        import('@/lang/core/lexer'), import('@/lang/core/parser'), import('@/lang/runtime/interpreter'),
       ]);
       const { interp } = ensureEnv(Interpreter);
       const tokens = new Lexer(src).tokenize();

@@ -30,3 +30,10 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Tooling, scratch & Python bytecode
+.court/
+.bla-hardened/
+.tmp_snippet_*
+__pycache__/
+*.pyc

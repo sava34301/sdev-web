@@ -30,6 +30,7 @@
 import { readFileSync, writeFileSync, appendFileSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { compile as selfCompile, compileWith, bakedDriver } from '../src/lang-bridge/compile-self.mjs';
+import { applyFmath, writeBlobToMemory, readSliceFromMemory } from '../src/lang-bridge/seed-vm.mjs';
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -219,12 +220,6 @@ async function main() {
     line = parts.pop();
     for (const p of parts) process.stdout.write(p + '\n');
   };
-  const blob = (bytes) => {
-    const dst = allocStr(bytes.length);
-    new Uint8Array(mem.buffer, dst + 4, bytes.length).set(bytes);
-    return dst;
-  };
-
   const hostRead = (path) => {
     if (table.has(path)) return table.get(path);
     if (path.startsWith('sdev:ls:')) {
@@ -246,16 +241,16 @@ async function main() {
   const inst = await WebAssembly.instantiate(module, {
     env: {
       host_say_i32: (n) => emit(String(n) + '\n'),
-      host_say_str: (ptr, len) => emit(decoder.decode(new Uint8Array(mem.buffer, ptr, len)) + '\n'),
+      host_say_str: (ptr, len) => emit(decoder.decode(readSliceFromMemory(mem, ptr, len)) + '\n'),
       host_say_f64: (x) => emit(String(x) + '\n'),
-      host_fmath: (op, a, b) => [Math.sin, Math.cos, Math.tan, Math.exp, Math.log, (x, y) => Math.pow(x, y)][op](a, b),
+      host_fmath: (op, a, b) => applyFmath(op, a, b),
       host_read_file: (ptr, len) => {
-        const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
-        return blob(encoder.encode(hostRead(path)));
+        const path = decoder.decode(readSliceFromMemory(mem, ptr, len));
+        return writeBlobToMemory(mem, allocStr, encoder.encode(hostRead(path)));
       },
       host_write_file: (pPtr, pLen, dPtr, dLen) => {
-        const path = decoder.decode(new Uint8Array(mem.buffer, pPtr, pLen));
-        const data = decoder.decode(new Uint8Array(mem.buffer, dPtr, dLen));
+        const path = decoder.decode(readSliceFromMemory(mem, pPtr, pLen));
+        const data = decoder.decode(readSliceFromMemory(mem, dPtr, dLen));
         if (path.startsWith('sdev:exit:')) { exitCode = Number(path.slice(10)) | 0; return 0; }
         if (path === 'sdev:err') { process.stderr.write(data); return 0; }
         if (path.startsWith('sdev:append:')) {
@@ -276,7 +271,7 @@ async function main() {
   inst.exports.set_prog_len(program.bytecode.length);
   inst.exports.run();
   if (line) process.stdout.write(line + '\n');
-  process.exit(exitCode);
+  process.exitCode = exitCode;
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

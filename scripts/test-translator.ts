@@ -1,4 +1,4 @@
-import { translateSource, translateForDialect } from '../src/lang/translator';
+import { translateSource, translateForDialect } from '../src/lang/tools/translator';
 import { canonicalize } from '../src/lang/dialect/canonicalize';
 import { emptyDialect } from '../src/lang/dialect/spec';
 import { execute } from '../src/lang/index';

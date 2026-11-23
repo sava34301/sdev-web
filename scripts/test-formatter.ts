@@ -6,7 +6,7 @@
  *
  * Run: node scripts/run-ts.mjs scripts/test-formatter.ts
  */
-import { formatSdev } from '../src/components/ide/formatSdev';
+import { formatSdev } from '../src/lang/tools/formatter';
 
 let passed = 0;
 let failed = 0;

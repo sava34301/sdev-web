@@ -1,7 +1,16 @@
-import { SdevFunction, OutputCallback, stringify, isTruthy, toNumber } from './utils';
-import { SdevError } from '../errors';
+import { SdevFunction, isTruthy } from './utils';
+import { SdevError } from '../core/errors';
 
-export function registerList(builtins: Map<string, SdevFunction>, output: OutputCallback): void {
+export const flattenBuiltin: SdevFunction = {
+  type: 'builtin',
+  call: (args: unknown[], line: number) => {
+    if (args.length !== 1) throw new SdevError('flatten() takes 1 argument', line);
+    const m = args[0];
+    return Array.isArray(m) ? m.flat(Infinity) : [m];
+  },
+};
+
+export function registerList(builtins: Map<string, SdevFunction>): void {
 
   // ============= List Operations =============
   builtins.set('insert', {
@@ -46,14 +55,7 @@ export function registerList(builtins: Map<string, SdevFunction>, output: Output
     },
   });
 
-  builtins.set('flatten', {
-    type: 'builtin',
-    call: (args: unknown[], line: number) => {
-      if (args.length !== 1) throw new SdevError('flatten() takes 1 argument', line);
-      if (!Array.isArray(args[0])) throw new SdevError('Argument must be a list', line);
-      return args[0].flat(Infinity);
-    },
-  });
+  builtins.set('flatten', flattenBuiltin);
 
   builtins.set('zip', {
     type: 'builtin',
@@ -268,6 +270,41 @@ export function registerList(builtins: Map<string, SdevFunction>, output: Output
         if (isTruthy(fn.call([item], line))) return item;
       }
       return null;
+    },
+  });
+
+  builtins.set('position', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 2) throw new SdevError('position() takes 2 arguments', line);
+      const arr = args[0];
+      const needle = args[1];
+      if (!Array.isArray(arr)) throw new SdevError('First argument must be a list', line);
+      return arr.indexOf(needle);
+    },
+  });
+
+  builtins.set('union', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 2) throw new SdevError('union() takes 2 arguments', line);
+      const a = args[0];
+      const b = args[1];
+      if (!Array.isArray(a) || !Array.isArray(b)) throw new SdevError('Arguments must be lists', line);
+      const set = new Set([...a.map(x => JSON.stringify(x)), ...b.map(x => JSON.stringify(x))]);
+      return [...set].map(x => JSON.parse(x));
+    },
+  });
+
+  builtins.set('intersect', {
+    type: 'builtin',
+    call: (args: unknown[], line: number) => {
+      if (args.length !== 2) throw new SdevError('intersect() takes 2 arguments', line);
+      const a = args[0] as unknown[];
+      const b = args[1] as unknown[];
+      if (!Array.isArray(a) || !Array.isArray(b)) throw new SdevError('Arguments must be lists', line);
+      const setB = new Set(b.map(x => JSON.stringify(x)));
+      return a.filter(x => setB.has(JSON.stringify(x)));
     },
   });
 }

@@ -54,7 +54,7 @@ export function useCodeTranslation() {
 
     try {
       // ─── Stage 1: dictionary + fuzzy (synchronous, offline) ───
-      const { translateSource } = await import('@/lang/translator');
+      const { translateSource } = await import('@/lang/tools/translator');
       const { translated, detectedLanguage } = translateSource(code, sourceLanguage);
 
       // ─── Stage 2: AI fallback if foreign words remain ───

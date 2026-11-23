@@ -6,16 +6,14 @@ import { withoutBoardBlocks } from './boards';
  * silently does nothing. So the sense check looks for lines that parse but
  * clearly mean something else, as well as lines that do not parse.
  */
-import { Lexer } from '@/lang/lexer';
-import { Parser } from '@/lang/parser';
-import { Interpreter } from '@/lang/interpreter';
-import { createGraphicsBuiltins } from '@/lang/graphics';
-import { TokenType } from '@/lang/tokens';
-import { mathRequest } from './math';
-import { taskRequest } from './tasks';
+import { Lexer } from '@/lang/core/lexer';
+import { Parser } from '@/lang/core/parser';
+import { Interpreter } from '@/lang/runtime/interpreter';
+import { createGraphicsBuiltins } from '@/lang/stdlib/graphics';
+import { TokenType } from '@/lang/core/tokens';
 import { baseWordMap, CANONICAL, type Intent } from './vocabulary';
-import { KEYWORD_TOKEN_BY_WORD } from '@/lang/keywords';
-import { sdevDefinedNames, sdevValidateSyntax } from './sdev-engine';
+import { KEYWORD_TOKEN_BY_WORD } from '@/lang/core/keywords';
+import { sdevDefinedNames, sdevValidateSyntax, sdevMathRequest, sdevTaskRequest } from './sdev-engine';
 
 export interface Sense {
   parses: boolean;
@@ -50,8 +48,8 @@ const WEB_CONTEXT_ONLY_NAMES = new Set([
 function runtimeNames(): Set<string> {
   if (!runtimeCache) {
     try {
-      const env = (new Interpreter(() => {}) as unknown as { globalEnv: { values: Map<string, unknown> } }).globalEnv;
-      runtimeCache = new Set([...env.values.keys()].filter((k) => !WEB_CONTEXT_ONLY_NAMES.has(k)));
+      const env = new Interpreter(() => {}, { bindWeb: false }).getGlobalEnv();
+      runtimeCache = new Set([...env.ownKeys()].filter((k) => !WEB_CONTEXT_ONLY_NAMES.has(k)));
     } catch { runtimeCache = new Set(); }
   }
   return runtimeCache;
@@ -187,7 +185,7 @@ export function senseFile(source: string, extra?: Map<string, Intent>): Sense {
     if (!line || line.startsWith('#') || line.startsWith('//')) continue;
     const head = line.split(/[\s(]+/)[0].toLowerCase();
     const canonicalHead = line === ';;' || line === '}' || isSdevWord(head, line);
-    if (!canonicalHead && ((head !== 'say' && mathRequest(line) !== null) || taskRequest(line) !== null)) {
+    if (!canonicalHead && ((head !== 'say' && sdevMathRequest(line) !== null) || sdevTaskRequest(line) !== null)) {
       reasons.push(`line ${i + 1}: a calculation asked for in words`);
       continue;
     }
