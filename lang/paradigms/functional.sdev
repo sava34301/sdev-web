@@ -86,3 +86,33 @@ to match_adt with adt on_some on_none
   end
   return on_none
 end
+
+to match_result with res on_ok on_err
+  if is_ok(res) is 1
+    return call on_ok(res["val"])
+  end
+  return call on_err(res["err"])
+end
+
+to match_option_fn with opt on_some on_none
+  if is_some(opt) is 1
+    return call on_some(opt["val"])
+  end
+  return call on_none()
+end
+
+to func_pipe2 with x f g
+  set r1 to call f(x)
+  return call g(r1)
+end
+
+to func_pipe3 with x f g h
+  set r1 to call f(x)
+  set r2 to call g(r1)
+  return call h(r2)
+end
+
+to func_compose2 with f g x
+  set r1 to call g(x)
+  return call f(r1)
+end

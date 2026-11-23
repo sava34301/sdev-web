@@ -85,7 +85,7 @@ const NAME = '[\\p{L}_][\\p{L}\\p{N}_]*';
 export function definedNames(source: string): Set<string> {
   const out = new Set<string>();
   const add = (re: RegExp, group = 1) => { for (const m of source.matchAll(re)) if (m[group]) out.add(m[group]); };
-  add(new RegExp(`\\b(?:set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\s+(${NAME})`, 'gu'));
+  add(new RegExp(`\\b(?:set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon|feature|facet|refine|augment)\\s+(${NAME})`, 'gu'));
   add(new RegExp(`\\bfor\\s+(?:each\\s+)?(${NAME})`, 'gu'));
   add(new RegExp(`\\bfor\\s+(?:each\\s+)?${NAME}\\s*,\\s*(${NAME})`, 'gu'));
   add(new RegExp(`^\\s*(${NAME})\\s*(?:=|\\+=|-=|\\*=|/=)(?!=)`, 'gmu'));
@@ -93,8 +93,20 @@ export function definedNames(source: string): Set<string> {
   for (const m of source.matchAll(new RegExp(`\\bwith\\s+([^\\n:{]+)`, 'gu'))) {
     for (const w of m[1].split(/[\s,]+/)) if (new RegExp(`^${NAME}$`, 'u').test(w)) out.add(w);
   }
-  for (const m of source.matchAll(new RegExp(`\\b(?:to|conjure|func|function|fn|def)\\s+${NAME}\\s*\\(([^)]*)\\)`, 'gu'))) {
-    for (const w of m[1].split(/[\s,=]+/)) if (new RegExp(`^${NAME}$`, 'u').test(w)) out.add(w);
+  const fnHeadRe = new RegExp(`\\b(?:to|conjure|forge|func|function|fn|def|refine|augment)\\s+${NAME}\\s*\\(`, 'gu');
+  const identRe = new RegExp(NAME, 'gu');
+  for (const m of source.matchAll(fnHeadRe)) {
+    let depth = 1;
+    let i = m.index! + m[0].length;
+    const start = i;
+    while (i < source.length && depth > 0) {
+      const ch = source[i];
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      i++;
+    }
+    const paramSrc = source.slice(start, depth === 0 ? i - 1 : i).replace(/(["'])(?:\\.|(?!\1).)*\1/g, ' ');
+    for (const id of paramSrc.matchAll(identRe)) out.add(id[0]);
   }
   add(new RegExp(`\\b(?:iterate|within|spell|lambda|essence|rescue|except|alias)\\s+(${NAME})`, 'gu'));
   add(new RegExp(`\\b(?:iterate|for)\\s+${NAME}\\s*,\\s*(${NAME})`, 'gu'));
@@ -127,7 +139,7 @@ export function unknownNames(source: string): string[] {
     if (prev && (String(prev.value) === '.' || prev.type === 'DOT')) continue;
     if (next && (next.type === 'COLON' || String(next.value) === ':') ) continue;
     if (/[^\x00-\x7F]/.test(name)) continue;
-    if (['end', 'else', 'self', 'this', 'me', 'super', 'to', 'with', 'each', 'of', 'from', 'by', 'step', 'more', 'less', 'essence', 'value', 'capture', 'nothing'].includes(name)) continue;
+    if (['end', 'else', 'self', 'this', 'me', 'super', 'to', 'with', 'each', 'of', 'from', 'by', 'step', 'more', 'less', 'essence', 'value', 'capture', 'nothing', 'when', 'requires', 'excludes', 'feature', 'facet', 'refine', 'augment'].includes(name)) continue;
     if (name === 'ref' && next && next.type === TokenType.IDENTIFIER && next.line === t.line) continue;
     if (name === 'call' && next && next.type === TokenType.IDENTIFIER && tokens[i + 2]?.type === TokenType.LPAREN) continue;
     if (name === 'make' && (!next || (next.line ?? 0) > (t.line ?? 0) || next.value === 'with' || next.value === 'capture')) continue;

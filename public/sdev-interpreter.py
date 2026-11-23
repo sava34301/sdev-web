@@ -76,6 +76,8 @@ class TokenType(Enum):
     SLASH = auto()
     PERCENT = auto()
     CARET = auto()
+    SHL = auto()
+    SHR = auto()
     
     # Comparison
     EQUALS = auto()
@@ -99,6 +101,7 @@ class TokenType(Enum):
     RBRACE = auto()
     COMMA = auto()
     ARROW = auto()
+    FATARROW = auto()
     PIPE = auto()
     DOUBLE_COLON = auto()
     DOUBLE_SEMI = auto()
@@ -937,11 +940,14 @@ class Lexer:
                 self.advance()
             return
         
-        # `==` / `!=` — symbolic forms of `equals` / `differs`, as in the
-        # browser runtime.
+        # `==` / `=>` / `!=`
         if char == '=' and self.peek() == '=':
             self.advance()
             self.add_token(TokenType.EQUALS, '==', start_column)
+            return
+        if char == '=' and self.peek() == '>':
+            self.advance()
+            self.add_token(TokenType.FATARROW, '=>', start_column)
             return
         if char == '!' and self.peek() == '=':
             self.advance()
@@ -955,6 +961,9 @@ class Lexer:
             elif self.peek() == '=':
                 self.advance()
                 self.add_token(TokenType.ATMOST, '<=', start_column)
+            elif self.peek() == '<':
+                self.advance()
+                self.add_token(TokenType.SHL, '<<', start_column)
             else:
                 self.add_token(TokenType.LESS, '<', start_column)
             return
@@ -963,6 +972,9 @@ class Lexer:
             if self.peek() == '=':
                 self.advance()
                 self.add_token(TokenType.ATLEAST, '>=', start_column)
+            elif self.peek() == '>':
+                self.advance()
+                self.add_token(TokenType.SHR, '>>', start_column)
             else:
                 self.add_token(TokenType.MORE, '>', start_column)
             return
@@ -1185,6 +1197,8 @@ class FuncDeclaration(ASTNode):
     name: str
     params: List[str]
     body: 'BlockStatement'
+    pattern_params: Optional[List[Any]] = None
+    guard: Optional[ASTNode] = None
 
 @dataclass
 class ReturnStatement(ASTNode):
@@ -1259,6 +1273,30 @@ class SpawnExpr(ASTNode):
     expressions: List[ASTNode]
 
 @dataclass
+class RefineDeclaration(ASTNode):
+    target_name: str
+    is_function_refine: bool
+    params: List[str]
+    methods: List['MethodDeclaration']
+    fields: List['LetStatement']
+    body: Optional['BlockStatement'] = None
+
+@dataclass
+class FeatureDeclaration(ASTNode):
+    name: str
+    requires: List[str]
+    excludes: List[str]
+    refinements: List[RefineDeclaration]
+    methods: List[FuncDeclaration]
+    fields: List['LetStatement']
+    statements: List[ASTNode]
+
+@dataclass
+class WithStatement(ASTNode):
+    items: List[Tuple[ASTNode, Optional[str]]]
+    body: 'BlockStatement'
+
+@dataclass
 class Program(ASTNode):
     statements: List[ASTNode]
 
@@ -1312,6 +1350,12 @@ class Parser:
                 self.advance()
             return ExpressionStatement(tok.line, NullLiteral(tok.line))
         tok = self.peek()
+        if self._is_contextual_feature_start():
+            return self.parse_feature_declaration()
+        if self._is_contextual_refine_start():
+            return self.parse_refine_declaration()
+        if tok.type == TokenType.IDENTIFIER and tok.value == 'with':
+            return self.parse_with_statement()
         if tok.type == TokenType.IDENTIFIER and tok.value == 'use':
             self.advance()
             if self.check(TokenType.STRING):
@@ -1354,6 +1398,70 @@ class Parser:
         value = self.parse_expression()
         return LetStatement(forge_token.line, name, value)
     
+    def _parse_func_param_pattern(self):
+        t = self.peek()
+        if t.type == TokenType.IDENTIFIER and t.value == '_':
+            self.advance()
+            return ('wild',)
+        if t.type in (TokenType.NUMBER, TokenType.STRING, TokenType.YEP, TokenType.NOPE, TokenType.VOID, TokenType.MINUS):
+            val = self.parse_unary()
+            return ('lit', val)
+        if self.match(TokenType.LBRACKET):
+            elems = []
+            rest_name = None
+            if not self.check(TokenType.RBRACKET):
+                while True:
+                    if self.check(TokenType.RBRACKET):
+                        break
+                    if self.match(TokenType.STAR):
+                        rest_name = self.consume(TokenType.IDENTIFIER, "Expected rest name").value
+                    else:
+                        elems.append(self._parse_func_param_pattern())
+                    if not self.match(TokenType.COMMA):
+                        break
+            self.consume(TokenType.RBRACKET, "Expected ']'")
+            return ('seq', elems, rest_name)
+        if self.match(TokenType.LBRACE):
+            entries = []
+            if not self.check(TokenType.RBRACE):
+                while True:
+                    if self.check(TokenType.RBRACE):
+                        break
+                    kt = self.peek()
+                    if kt.type == TokenType.IDENTIFIER and self.pos + 1 < len(self.tokens) and self.tokens[self.pos + 1].type == TokenType.COLON:
+                        self.advance()
+                        k_expr = StringLiteral(kt.line, kt.value)
+                    else:
+                        k_expr = self.parse_expression()
+                    self.consume(TokenType.COLON, "Expected ':' in mapping pattern")
+                    entries.append((k_expr, self._parse_func_param_pattern()))
+                    if not self.match(TokenType.COMMA):
+                        break
+            self.consume(TokenType.RBRACE, "Expected '}'")
+            return ('map', entries)
+        if t.type == TokenType.IDENTIFIER and self.pos + 1 < len(self.tokens) and self.tokens[self.pos + 1].type == TokenType.LPAREN:
+            cname = self.advance().value
+            self.advance() # '('
+            sub = []
+            if not self.check(TokenType.RPAREN):
+                sub.append(self._parse_func_param_pattern())
+                while self.match(TokenType.COMMA):
+                    sub.append(self._parse_func_param_pattern())
+            self.consume(TokenType.RPAREN, "Expected ')'")
+            return ('adt', cname, sub)
+        name = self.consume(TokenType.IDENTIFIER, "Expected parameter name").value
+        return ('cap', name)
+
+    def _is_pattern_param_start(self) -> bool:
+        t = self.peek()
+        if t.type in (TokenType.NUMBER, TokenType.STRING, TokenType.YEP, TokenType.NOPE, TokenType.VOID, TokenType.MINUS, TokenType.LBRACKET, TokenType.LBRACE):
+            return True
+        if t.type == TokenType.IDENTIFIER and t.value == '_':
+            return True
+        if t.type == TokenType.IDENTIFIER and self.pos + 1 < len(self.tokens) and self.tokens[self.pos + 1].type == TokenType.LPAREN:
+            return True
+        return False
+
     def parse_conjure_declaration(self) -> FuncDeclaration:
         if self.check(TokenType.FORGE):
             conjure_token = self.consume(TokenType.FORGE, "Expected 'forge'")
@@ -1363,14 +1471,37 @@ class Parser:
         self.consume(TokenType.LPAREN, "Expected '('")
         
         params = []
+        pattern_params = []
         if not self.check(TokenType.RPAREN):
-            params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter name").value)
-            while self.match(TokenType.COMMA):
-                params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter name").value)
+            while True:
+                if self.check(TokenType.RPAREN):
+                    break
+                if self._is_pattern_param_start():
+                    pat = self._parse_func_param_pattern()
+                    params.append(f'__pat_{len(params)}')
+                    pattern_params.append(pat)
+                else:
+                    if self.match(TokenType.SELF):
+                        params.append('self')
+                    else:
+                        params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter name").value)
+                    pattern_params.append(None)
+                if not self.match(TokenType.COMMA):
+                    break
         self.consume(TokenType.RPAREN, "Expected ')'")
-        
-        body = self.parse_block_statement()
-        return FuncDeclaration(conjure_token.line, name, params, body)
+
+        guard = None
+        if self.check(TokenType.IDENTIFIER) and self.peek().value == 'when':
+            self.advance()
+            guard = self.parse_expression()
+
+        if self.match(TokenType.FATARROW):
+            expr = self.parse_expression()
+            body = BlockStatement(expr.line, [ReturnStatement(expr.line, expr)])
+        else:
+            body = self.parse_block_statement()
+        has_pats = any(p is not None for p in pattern_params)
+        return FuncDeclaration(conjure_token.line, name, params, body, pattern_params if has_pats else None, guard)
     
     def parse_ponder_statement(self) -> IfStatement:
         ponder_token = self.consume(TokenType.PONDER, "Expected 'ponder'")
@@ -1517,8 +1648,16 @@ class Parser:
         return left
     
     def parse_comparison(self) -> ASTNode:
-        left = self.parse_term()
+        left = self.parse_shift()
         while self.match(TokenType.LESS, TokenType.MORE, TokenType.ATMOST, TokenType.ATLEAST):
+            operator = self.previous().value
+            right = self.parse_shift()
+            left = BinaryExpr(left.line, operator, left, right)
+        return left
+
+    def parse_shift(self) -> ASTNode:
+        left = self.parse_term()
+        while self.match(TokenType.SHL, TokenType.SHR):
             operator = self.previous().value
             right = self.parse_term()
             left = BinaryExpr(left.line, operator, left, right)
@@ -1601,13 +1740,34 @@ class Parser:
             self.consume(TokenType.RBRACKET, "Expected ']'")
             return IndexExpr(obj.line, obj, start)
     
-    def finish_call(self, callee: ASTNode) -> CallExpr:
+    def finish_call(self, callee: ASTNode) -> ASTNode:
         args = []
         if not self.check(TokenType.RPAREN):
             args.append(self.parse_expression())
             while self.match(TokenType.COMMA):
                 args.append(self.parse_expression())
         self.consume(TokenType.RPAREN, "Expected ')'")
+        is_partial = isinstance(callee, Identifier) and callee.name in ('partial', 'partial_right')
+        has_ph = any(isinstance(a, Identifier) and a.name == '_' for a in args)
+        if has_ph:
+            if is_partial:
+                mapped = []
+                for a in args:
+                    if isinstance(a, Identifier) and a.name == '_':
+                        mapped.append(DictLiteral(a.line, [(StringLiteral(a.line, '__sdev_placeholder__'), BooleanLiteral(a.line, True))]))
+                    else:
+                        mapped.append(a)
+                return CallExpr(callee.line, callee, mapped)
+            ph_params = []
+            bound_args = []
+            for a in args:
+                if isinstance(a, Identifier) and a.name == '_':
+                    pname = f'__p{len(ph_params)}'
+                    ph_params.append(pname)
+                    bound_args.append(Identifier(a.line, pname))
+                else:
+                    bound_args.append(a)
+            return LambdaExpr(callee.line, ph_params, CallExpr(callee.line, callee, bound_args))
         return CallExpr(callee.line, callee, args)
     
     def parse_primary(self) -> ASTNode:
@@ -1747,9 +1907,13 @@ class Parser:
                 
                 params = []
                 if not self.check(TokenType.RPAREN):
-                    params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter").value)
+                    p = self.advance().value if self.check(TokenType.SELF) else self.consume(TokenType.IDENTIFIER, "Expected parameter").value
+                    if p != 'self':
+                        params.append(p)
                     while self.match(TokenType.COMMA):
-                        params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter").value)
+                        p = self.advance().value if self.check(TokenType.SELF) else self.consume(TokenType.IDENTIFIER, "Expected parameter").value
+                        if p != 'self':
+                            params.append(p)
                 self.consume(TokenType.RPAREN, "Expected ')'")
                 
                 body = self.parse_block_statement()
@@ -1764,6 +1928,198 @@ class Parser:
         
         self.consume(TokenType.DOUBLE_SEMI, "Expected ';;'")
         return ClassDeclaration(essence_token.line, name, parent, methods, static_methods, constructor)
+
+    def _is_contextual_feature_start(self) -> bool:
+        t = self.peek()
+        if t.type != TokenType.IDENTIFIER or t.value not in ('feature', 'facet'):
+            return False
+        if self.pos + 1 >= len(self.tokens):
+            return False
+        nxt = self.tokens[self.pos + 1]
+        if nxt.type != TokenType.IDENTIFIER or nxt.line != t.line:
+            return False
+        if self.pos + 2 >= len(self.tokens):
+            return True
+        after = self.tokens[self.pos + 2]
+        if after.line != nxt.line:
+            return True
+        return after.type in (TokenType.DOUBLE_COLON, TokenType.EXTEND) or (
+            after.type == TokenType.IDENTIFIER and after.value in ('requires', 'excludes')
+        )
+
+    def parse_feature_declaration(self) -> FeatureDeclaration:
+        ftok = self.advance()
+        name = self.consume(TokenType.IDENTIFIER, "Expected feature name").value
+        requires = []
+        excludes = []
+
+        def parse_name_list():
+            names = []
+            if self.match(TokenType.LBRACKET):
+                if not self.check(TokenType.RBRACKET):
+                    names.append(self.consume(TokenType.IDENTIFIER, "Expected feature name").value)
+                    while self.match(TokenType.COMMA):
+                        if self.check(TokenType.RBRACKET):
+                            break
+                        names.append(self.consume(TokenType.IDENTIFIER, "Expected feature name").value)
+                self.consume(TokenType.RBRACKET, "Expected ']'")
+                return names
+            names.append(self.consume(TokenType.IDENTIFIER, "Expected feature name").value)
+            while self.match(TokenType.COMMA):
+                names.append(self.consume(TokenType.IDENTIFIER, "Expected feature name").value)
+            return names
+
+        while True:
+            if self.check(TokenType.IDENTIFIER) and self.peek().value == 'requires':
+                self.advance()
+                requires.extend(parse_name_list())
+            elif self.check(TokenType.IDENTIFIER) and self.peek().value == 'excludes':
+                self.advance()
+                excludes.extend(parse_name_list())
+            elif self.match(TokenType.EXTEND):
+                requires.extend(parse_name_list())
+            else:
+                break
+
+        refinements = []
+        methods = []
+        fields = []
+        statements = []
+
+        def push_member(st):
+            if isinstance(st, RefineDeclaration):
+                refinements.append(st)
+            elif isinstance(st, FuncDeclaration):
+                methods.append(st)
+            elif isinstance(st, LetStatement):
+                fields.append(st)
+            else:
+                statements.append(st)
+
+        if self.match(TokenType.DOUBLE_COLON):
+            while not self.check(TokenType.DOUBLE_SEMI) and not self.is_at_end():
+                push_member(self.parse_statement())
+            self.consume(TokenType.DOUBLE_SEMI, "Expected ';;'")
+        else:
+            while not self.is_at_end() and not (self.check(TokenType.IDENTIFIER) and self.peek().value == 'end') and not self.check(TokenType.DOUBLE_SEMI):
+                push_member(self.parse_statement())
+            if self.check(TokenType.IDENTIFIER) and self.peek().value == 'end':
+                self.advance()
+
+        return FeatureDeclaration(ftok.line, name, requires, excludes, refinements, methods, fields, statements)
+
+    def _is_contextual_refine_start(self) -> bool:
+        t = self.peek()
+        if t.type != TokenType.IDENTIFIER or t.value not in ('refine', 'augment'):
+            return False
+        if self.pos + 1 >= len(self.tokens):
+            return False
+        nxt = self.tokens[self.pos + 1]
+        if nxt.line != t.line:
+            return False
+        if nxt.type in (TokenType.CONJURE, TokenType.ESSENCE) or (nxt.type == TokenType.IDENTIFIER and nxt.value in ('essence', 'kind', 'class', 'to', 'func', 'def')):
+            return self.pos + 2 < len(self.tokens) and self.tokens[self.pos + 2].type == TokenType.IDENTIFIER and self.tokens[self.pos + 2].line == t.line
+        if nxt.type != TokenType.IDENTIFIER:
+            return False
+        if self.pos + 2 >= len(self.tokens):
+            return True
+        after = self.tokens[self.pos + 2]
+        if after.line != nxt.line:
+            return True
+        if after.type == TokenType.DOUBLE_COLON:
+            return True
+        if after.type == TokenType.IDENTIFIER and after.value == 'with':
+            return True
+        if after.type == TokenType.LPAREN:
+            depth = 1
+            idx = self.pos + 3
+            while idx < len(self.tokens) and depth > 0:
+                if self.tokens[idx].type == TokenType.LPAREN:
+                    depth += 1
+                elif self.tokens[idx].type == TokenType.RPAREN:
+                    depth -= 1
+                idx += 1
+            if idx >= len(self.tokens) or self.tokens[idx].line != t.line:
+                return True
+            return self.tokens[idx].type in (TokenType.DOUBLE_COLON, TokenType.ARROW, TokenType.FATARROW)
+        return False
+
+    def parse_refine_declaration(self) -> RefineDeclaration:
+        rtok = self.advance()
+        is_func_mod = False
+        is_class_mod = False
+        if self.match(TokenType.CONJURE) or (self.check(TokenType.IDENTIFIER) and self.peek().value in ('to', 'func', 'def')):
+            if self.previous().type != TokenType.CONJURE:
+                self.advance()
+            is_func_mod = True
+        elif self.match(TokenType.ESSENCE) or (self.check(TokenType.IDENTIFIER) and self.peek().value in ('essence', 'kind', 'class')):
+            if self.previous().type != TokenType.ESSENCE:
+                self.advance()
+            is_class_mod = True
+
+        target_name = self.consume(TokenType.IDENTIFIER, "Expected class or function name to refine").value
+        is_fn = is_func_mod or (not is_class_mod and (self.check(TokenType.LPAREN) or (self.check(TokenType.IDENTIFIER) and self.peek().value == 'with')))
+        if is_fn:
+            params = []
+            if self.match(TokenType.LPAREN):
+                if not self.check(TokenType.RPAREN):
+                    params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter name").value)
+                    while self.match(TokenType.COMMA):
+                        params.append(self.consume(TokenType.IDENTIFIER, "Expected parameter name").value)
+                self.consume(TokenType.RPAREN, "Expected ')'")
+            elif self.check(TokenType.IDENTIFIER) and self.peek().value == 'with':
+                self.advance()
+                while self.check(TokenType.IDENTIFIER) and self.peek().line == rtok.line and not self.check(TokenType.FATARROW):
+                    params.append(self.advance().value)
+                    self.match(TokenType.COMMA)
+            if self.match(TokenType.FATARROW):
+                expr = self.parse_expression()
+                body = BlockStatement(expr.line, [ReturnStatement(expr.line, expr)])
+            else:
+                body = self.parse_block_statement()
+            return RefineDeclaration(rtok.line, target_name, True, params, [], [], body)
+
+        self.consume(TokenType.DOUBLE_COLON, "Expected '::'")
+        methods = []
+        fields = []
+        while not self.check(TokenType.DOUBLE_SEMI) and not self.is_at_end():
+            if self.check(TokenType.CONJURE):
+                self.advance()
+                mname = self.consume(TokenType.IDENTIFIER, "Expected method name").value
+                self.consume(TokenType.LPAREN, "Expected '('")
+                mparams = []
+                if not self.check(TokenType.RPAREN):
+                    p = self.advance().value if self.check(TokenType.SELF) else self.consume(TokenType.IDENTIFIER, "Expected parameter").value
+                    if p != 'self':
+                        mparams.append(p)
+                    while self.match(TokenType.COMMA):
+                        p = self.advance().value if self.check(TokenType.SELF) else self.consume(TokenType.IDENTIFIER, "Expected parameter").value
+                        if p != 'self':
+                            mparams.append(p)
+                self.consume(TokenType.RPAREN, "Expected ')'")
+                mbody = self.parse_block_statement()
+                methods.append(MethodDeclaration(rtok.line, mname, mparams, mbody, False))
+            elif self.check(TokenType.FORGE):
+                fields.append(self.parse_forge_statement())
+            else:
+                self.advance()
+        self.consume(TokenType.DOUBLE_SEMI, "Expected ';;'")
+        return RefineDeclaration(rtok.line, target_name, False, [], methods, fields, None)
+
+    def parse_with_statement(self) -> WithStatement:
+        wtok = self.advance() # 'with'
+        items = []
+        while True:
+            expr = self.parse_expression()
+            alias = None
+            if self.check(TokenType.IDENTIFIER) and self.peek().value in ('as', 'alias'):
+                self.advance()
+                alias = self.consume(TokenType.IDENTIFIER, "Expected alias name").value
+            items.append((expr, alias))
+            if not self.match(TokenType.COMMA):
+                break
+        body = self.parse_block_statement()
+        return WithStatement(wtok.line, items, body)
     
     def parse_async_declaration(self) -> AsyncFuncDeclaration:
         """Parse: async conjure name(params) :: body ;;"""
@@ -1928,6 +2284,8 @@ class SdevClass:
     methods: Dict[str, 'SdevMethod']
     static_methods: Dict[str, 'SdevMethod']
     constructor: Optional['SdevMethod']
+    feature_layers: List[Dict[str, Any]] = field(default_factory=list)
+    fields: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class SdevMethod:
@@ -2845,6 +3203,13 @@ class Interpreter:
         self.output = output_callback
         self.global_env = Environment()
         self.max_iterations = 1_000_000
+        self._fop = {
+            'features': {},
+            'active': [],
+            'requires': {},
+            'excludes': {},
+            'proceed_stack': [],
+        }
         self._register_builtins()
     
     def _register_builtins(self):
@@ -5395,7 +5760,1121 @@ class Interpreter:
             return ''
         builtins['input'] = SdevBuiltin('input', _smart_input, 0, 3)
 
+        self._register_fop_and_fp(builtins)
         return builtins
+
+    def _is_callable_val(self, v: Any) -> bool:
+        return isinstance(v, (SdevBuiltin, SdevUserFunc, SdevLambda, SdevBoundMethod, SdevAsyncFunc))
+
+    def _fop_resolve_name(self, feat_or_name: Any, line: int) -> str:
+        if isinstance(feat_or_name, str):
+            return feat_or_name
+        if isinstance(feat_or_name, dict) and isinstance(feat_or_name.get('name'), str):
+            return feat_or_name['name']
+        raise SdevError('Expected feature name or feature object', line)
+
+    def _fop_is_enabled(self, feat_or_name: Any) -> bool:
+        if isinstance(feat_or_name, str):
+            name = feat_or_name
+        elif isinstance(feat_or_name, dict) and feat_or_name.get('__feature__'):
+            name = str(feat_or_name.get('name', ''))
+        else:
+            return False
+        return bool(name and name in self._fop['active'])
+
+    def _fop_get_exclusions(self, name: str) -> List[str]:
+        out: List[str] = []
+        seen = set()
+        def _add(x: str):
+            if x not in seen:
+                seen.add(x)
+                out.append(x)
+        feat = self._fop['features'].get(name)
+        if feat:
+            for ex in feat.get('excludes', []):
+                _add(ex)
+        for ex in self._fop['excludes'].get(name, []):
+            _add(ex)
+        for active in self._fop['active']:
+            af = self._fop['features'].get(active)
+            if af and name in af.get('excludes', []):
+                _add(active)
+            if name in self._fop['excludes'].get(active, []):
+                _add(active)
+        return out
+
+    def _fop_get_requirements(self, name: str) -> List[str]:
+        out: List[str] = []
+        seen = set()
+        def _add(x: str):
+            if x not in seen:
+                seen.add(x)
+                out.append(x)
+        feat = self._fop['features'].get(name)
+        if feat:
+            for req in feat.get('requires', []):
+                _add(req)
+        for req in self._fop['requires'].get(name, []):
+            _add(req)
+        return out
+
+    def _fop_enable(self, feat_or_name: Any, line: int, visiting: Optional[set] = None) -> bool:
+        if visiting is None:
+            visiting = set()
+        if isinstance(feat_or_name, dict) and feat_or_name.get('__feature__'):
+            fname = feat_or_name.get('name')
+            if fname and fname not in self._fop['features']:
+                self._fop['features'][fname] = feat_or_name
+        name = self._fop_resolve_name(feat_or_name, line)
+        if self._fop_is_enabled(name):
+            return True
+        if name in visiting:
+            raise SdevError(f"Cyclic feature requirement involving '{name}'", line)
+        visiting.add(name)
+
+        for ex in self._fop_get_exclusions(name):
+            if self._fop_is_enabled(ex):
+                raise SdevError(f"Feature '{name}' excludes active feature '{ex}'", line)
+
+        for req in self._fop_get_requirements(name):
+            if not self._fop_is_enabled(req):
+                if req not in self._fop['features']:
+                    raise SdevError(f"Feature '{name}' requires unregistered feature '{req}'", line)
+                self._fop_enable(req, line, visiting)
+
+        feat = self._fop['features'].get(name)
+        if feat is not None:
+            feat['active'] = True
+        if name not in self._fop['active']:
+            self._fop['active'].append(name)
+        visiting.discard(name)
+        return True
+
+    def _fop_disable(self, feat_or_name: Any, line: int) -> bool:
+        name = self._fop_resolve_name(feat_or_name, line)
+        feat = self._fop['features'].get(name)
+        if feat is not None:
+            feat['active'] = False
+        self._fop['active'] = [n for n in self._fop['active'] if n != name]
+        return False
+
+    def _fop_toggle(self, feat_or_name: Any, line: int) -> bool:
+        name = self._fop_resolve_name(feat_or_name, line)
+        if self._fop_is_enabled(name):
+            self._fop_disable(name, line)
+            return False
+        self._fop_enable(name, line)
+        return True
+
+    def _fop_snapshot(self) -> dict:
+        return {
+            'active': list(self._fop['active']),
+            'states': {k: bool(v.get('active')) for k, v in self._fop['features'].items()},
+        }
+
+    def _fop_restore(self, snap: dict) -> None:
+        self._fop['active'] = list(snap['active'])
+        for k, feat in self._fop['features'].items():
+            prev = snap['states'].get(k)
+            feat['active'] = prev if prev is not None else (k in self._fop['active'])
+
+    def _fop_with_proceed(self, prev_fn: Any, body_cb: Callable[[], Any]) -> Any:
+        self._fop['proceed_stack'].append(prev_fn)
+        try:
+            return body_cb()
+        finally:
+            self._fop['proceed_stack'].pop()
+
+    def _fop_call_proceed(self, args: List[Any], line: int) -> Any:
+        if not self._fop['proceed_stack']:
+            raise SdevError('proceed() called outside of a feature refinement', line)
+        prev = self._fop['proceed_stack'].pop()
+        try:
+            return self._call_function(prev, args, line)
+        finally:
+            self._fop['proceed_stack'].append(prev)
+
+    def _fop_chain_method(self, prev_fn: Any, new_fn: Any) -> SdevBuiltin:
+        fallback = prev_fn if prev_fn is not None else SdevBuiltin('noop', lambda a, l: None)
+        def _chained(args, call_line):
+            return self._fop_with_proceed(fallback, lambda: self._call_function(new_fn, args, call_line))
+        return SdevBuiltin('fop_layered', _chained)
+
+    def _fop_validate_selection(self, selection: List[str], model: Optional[dict] = None) -> dict:
+        errors: List[str] = []
+        selected = set(selection)
+
+        if model is not None:
+            m_feats = model.get('features', [])
+            if m_feats:
+                for s in selection:
+                    if s not in m_feats and s not in errors:
+                        errors.append(f"Unknown feature '{s}' in model '{model.get('name', '')}'")
+            for m in model.get('mandatory', []):
+                if m not in selected:
+                    errors.append(f"Missing mandatory feature '{m}'")
+            for alt_group in model.get('alternatives', []):
+                cnt = sum(1 for f in alt_group if f in selected)
+                if cnt != 1:
+                    errors.append(f"Alternative group [{', '.join(alt_group)}] requires exactly 1 feature (got {cnt})")
+            for or_group in model.get('or_groups', []):
+                cnt = sum(1 for f in or_group if f in selected)
+                if cnt < 1:
+                    errors.append(f"OR group [{', '.join(or_group)}] requires at least 1 feature")
+
+        def req_sources(f: str) -> List[str]:
+            out = list(self._fop_get_requirements(f))
+            if model and f in model.get('requires', {}):
+                for r in model['requires'][f]:
+                    if r not in out:
+                        out.append(r)
+            return out
+
+        def ex_sources(f: str) -> List[str]:
+            out = list(self._fop_get_exclusions(f))
+            if model and f in model.get('excludes', {}):
+                for e in model['excludes'][f]:
+                    if e not in out:
+                        out.append(e)
+            return out
+
+        for f in selection:
+            for req in req_sources(f):
+                if req not in selected:
+                    errors.append(f"Feature '{f}' requires '{req}'")
+            for ex in ex_sources(f):
+                if ex in selected:
+                    pair = f"'{f}' excludes '{ex}'" if f < ex else f"'{ex}' excludes '{f}'"
+                    msg = f"Feature conflict: {pair}"
+                    if msg not in errors:
+                        errors.append(msg)
+
+        resolved: List[str] = []
+        seen = set()
+        def visit(f: str):
+            if f in seen:
+                return
+            seen.add(f)
+            for r in req_sources(f):
+                visit(r)
+            resolved.append(f)
+        if model:
+            for m in model.get('mandatory', []):
+                visit(m)
+        for f in selection:
+            visit(f)
+
+        return {'valid': len(errors) == 0, 'errors': errors, 'resolved': resolved}
+
+    def _build_feature_obj(self, name: str, requires=None, excludes=None, fields=None, methods=None, refinements=None, active: bool = False) -> dict:
+        reserved = {'__feature__', 'name', 'active', 'requires', 'excludes', 'fields', 'methods', 'refinements'}
+        fields_d = dict(fields or {})
+        methods_d = dict(methods or {})
+        feat = {
+            '__feature__': True,
+            'name': name,
+            'active': bool(active),
+            'requires': list(requires or []),
+            'excludes': list(excludes or []),
+            'fields': fields_d,
+            'methods': methods_d,
+            'refinements': list(refinements or []),
+        }
+        for k, v in fields_d.items():
+            if k not in reserved:
+                feat[k] = v
+        for k, v in methods_d.items():
+            if k not in reserved:
+                feat[k] = v
+        return feat
+
+    def _register_fop_and_fp(self, builtins: Dict[str, SdevBuiltin]) -> None:
+        reserved = {'__feature__', 'name', 'active', 'requires', 'excludes', 'fields', 'methods', 'refinements'}
+
+        def _as_fn(v: Any, msg: str, line: int):
+            if not self._is_callable_val(v):
+                raise SdevError(msg, line)
+            return v
+
+        def _is_ph(v: Any) -> bool:
+            return isinstance(v, dict) and bool(v.get('__sdev_placeholder__'))
+
+        def _resolve_feat_obj(arg: Any, line: int) -> dict:
+            if isinstance(arg, dict) and arg.get('__feature__'):
+                return arg
+            if isinstance(arg, str):
+                f = self._fop['features'].get(arg)
+                if not f:
+                    raise SdevError(f"Unknown feature '{arg}'", line)
+                return f
+            if isinstance(arg, dict):
+                fname = arg.get('name') if isinstance(arg.get('name'), str) else 'anonymous'
+                fields = dict(arg['fields']) if isinstance(arg.get('fields'), dict) else {}
+                methods = {}
+                if isinstance(arg.get('methods'), dict):
+                    for k, v in arg['methods'].items():
+                        if self._is_callable_val(v):
+                            methods[k] = v
+                for k, v in arg.items():
+                    if k in reserved:
+                        continue
+                    if self._is_callable_val(v):
+                        methods[k] = v
+                    else:
+                        fields[k] = v
+                return self._build_feature_obj(
+                    fname,
+                    [str(x) for x in arg.get('requires', [])] if isinstance(arg.get('requires'), list) else [],
+                    [str(x) for x in arg.get('excludes', [])] if isinstance(arg.get('excludes'), list) else [],
+                    fields,
+                    methods,
+                )
+            raise SdevError('Expected a feature object or name', line)
+
+        # ============= Function-Oriented Programming (FP) Builtins =============
+
+        def _compose(args, line):
+            if len(args) < 2:
+                raise SdevError('compose() takes at least 2 arguments', line)
+            fns = [_as_fn(a, 'All arguments must be functions', line) for a in args]
+            def _composed(inner, call_line):
+                res = self._call_function(fns[-1], inner, call_line)
+                for fn in reversed(fns[:-1]):
+                    res = self._call_function(fn, [res], call_line)
+                return res
+            return SdevBuiltin('composed', _composed)
+        builtins['compose'] = SdevBuiltin('compose', _compose)
+
+        def _pipe(args, line):
+            if len(args) < 2:
+                raise SdevError('pipe() takes at least 2 arguments (value, ...fns)', line)
+            res = args[0]
+            for fn in args[1:]:
+                _as_fn(fn, 'Arguments after first must be functions', line)
+                res = self._call_function(fn, [res], line)
+            return res
+        builtins['pipe'] = SdevBuiltin('pipe', _pipe)
+
+        def _curry(args, line):
+            if len(args) != 2:
+                raise SdevError('curry() takes 2 arguments (fn, arity)', line)
+            fn = _as_fn(args[0], 'First argument must be a function', line)
+            arity = int(args[1])
+            def _make_curried(collected):
+                def _step(inner, call_line):
+                    all_args = collected + inner
+                    if len(all_args) >= arity:
+                        return self._call_function(fn, all_args, call_line)
+                    return _make_curried(all_args)
+                return SdevBuiltin('curried', _step)
+            return _make_curried([])
+        builtins['curry'] = SdevBuiltin('curry', _curry, 2, 2)
+
+        def _memoize(args, line):
+            if len(args) != 1:
+                raise SdevError('memoize() takes 1 argument', line)
+            fn = _as_fn(args[0], 'Argument must be a function', line)
+            cache = {}
+            def _memo(inner, call_line):
+                try:
+                    key = json.dumps(inner, sort_keys=True, default=str)
+                except Exception:
+                    key = repr(inner)
+                if key in cache:
+                    return cache[key]
+                res = self._call_function(fn, inner, call_line)
+                cache[key] = res
+                return res
+            return SdevBuiltin('memoized', _memo)
+        builtins['memoize'] = SdevBuiltin('memoize', _memoize, 1, 1)
+
+        # Monadic Option & Result
+        builtins['Some'] = SdevBuiltin('Some', lambda a, l: {'is_some': True, 'is_none': False, 'val': a[0] if a else None}, 1, 1)
+        builtins['None'] = SdevBuiltin('None', lambda a, l: {'is_some': False, 'is_none': True, 'val': None}, 0, 0)
+        builtins['is_some'] = SdevBuiltin('is_some', lambda a, l: isinstance(a[0], dict) and bool(a[0].get('is_some')), 1, 1)
+        builtins['is_none'] = SdevBuiltin('is_none', lambda a, l: isinstance(a[0], dict) and bool(a[0].get('is_none')), 1, 1)
+
+        def _unwrap_or(args, line):
+            o = args[0] if args else None
+            fallback = args[1] if len(args) > 1 else None
+            if isinstance(o, dict) and (o.get('is_some') or o.get('is_ok')):
+                return o.get('val')
+            return fallback
+        builtins['unwrap_or'] = SdevBuiltin('unwrap_or', _unwrap_or, 2, 2)
+
+        def _map_some(args, line):
+            opt, fn = args[0], args[1]
+            if not isinstance(opt, dict) or not opt.get('is_some'):
+                return opt
+            _as_fn(fn, 'Second argument must be a function', line)
+            return {'is_some': True, 'is_none': False, 'val': self._call_function(fn, [opt.get('val')], line)}
+        builtins['map_some'] = SdevBuiltin('map_some', _map_some, 2, 2)
+
+        def _flat_map_some(args, line):
+            opt, fn = args[0], args[1]
+            if not isinstance(opt, dict) or not opt.get('is_some'):
+                return opt
+            _as_fn(fn, 'Second argument must be a function', line)
+            return self._call_function(fn, [opt.get('val')], line)
+        builtins['flat_map_some'] = SdevBuiltin('flat_map_some', _flat_map_some, 2, 2)
+
+        builtins['Ok'] = SdevBuiltin('Ok', lambda a, l: {'is_ok': True, 'is_err': False, 'val': a[0] if a else None, 'err': None}, 1, 1)
+        builtins['Err'] = SdevBuiltin('Err', lambda a, l: {'is_ok': False, 'is_err': True, 'val': None, 'err': a[0] if a else None}, 1, 1)
+        builtins['is_ok'] = SdevBuiltin('is_ok', lambda a, l: isinstance(a[0], dict) and bool(a[0].get('is_ok')), 1, 1)
+        builtins['is_err'] = SdevBuiltin('is_err', lambda a, l: isinstance(a[0], dict) and bool(a[0].get('is_err')), 1, 1)
+
+        def _result_unwrap_or(args, line):
+            r = args[0] if args else None
+            fallback = args[1] if len(args) > 1 else None
+            if isinstance(r, dict) and r.get('is_ok'):
+                return r.get('val')
+            return fallback
+        builtins['result_unwrap_or'] = SdevBuiltin('result_unwrap_or', _result_unwrap_or, 2, 2)
+
+        def _map_ok(args, line):
+            r, fn = args[0], args[1]
+            if not isinstance(r, dict) or not r.get('is_ok'):
+                return r
+            _as_fn(fn, 'Second argument must be a function', line)
+            return {'is_ok': True, 'is_err': False, 'val': self._call_function(fn, [r.get('val')], line), 'err': None}
+        builtins['map_ok'] = SdevBuiltin('map_ok', _map_ok, 2, 2)
+
+        def _flat_map_ok(args, line):
+            r, fn = args[0], args[1]
+            if not isinstance(r, dict) or not r.get('is_ok'):
+                return r
+            _as_fn(fn, 'Second argument must be a function', line)
+            return self._call_function(fn, [r.get('val')], line)
+        builtins['flat_map_ok'] = SdevBuiltin('flat_map_ok', _flat_map_ok, 2, 2)
+
+        # Combinators
+        def _partial(args, line):
+            if len(args) < 1:
+                raise SdevError('partial() takes at least 1 argument (fn, ...args)', line)
+            fn = _as_fn(args[0], 'First argument to partial() must be a function', line)
+            bound = args[1:]
+            def _applied(rest, call_line):
+                ri = 0
+                final_args = []
+                for b in bound:
+                    if _is_ph(b) and ri < len(rest):
+                        final_args.append(rest[ri])
+                        ri += 1
+                    else:
+                        final_args.append(b)
+                while ri < len(rest):
+                    final_args.append(rest[ri])
+                    ri += 1
+                return self._call_function(fn, final_args, call_line)
+            return SdevBuiltin('partial', _applied)
+        builtins['partial'] = SdevBuiltin('partial', _partial)
+
+        def _partial_right(args, line):
+            if len(args) < 1:
+                raise SdevError('partial_right() takes at least 1 argument (fn, ...args)', line)
+            fn = _as_fn(args[0], 'First argument to partial_right() must be a function', line)
+            bound = args[1:]
+            has_ph = any(_is_ph(b) for b in bound)
+            def _applied(rest, call_line):
+                if has_ph:
+                    ri = 0
+                    resolved = []
+                    for b in bound:
+                        if _is_ph(b) and ri < len(rest):
+                            resolved.append(rest[ri])
+                            ri += 1
+                        else:
+                            resolved.append(b)
+                    return self._call_function(fn, rest[ri:] + resolved, call_line)
+                return self._call_function(fn, list(rest) + list(bound), call_line)
+            return SdevBuiltin('partial_right', _applied)
+        builtins['partial_right'] = SdevBuiltin('partial_right', _partial_right)
+
+        def _flip(args, line):
+            if len(args) != 1:
+                raise SdevError('flip() takes 1 argument', line)
+            fn = _as_fn(args[0], 'Argument to flip() must be a function', line)
+            def _flipped(inner, call_line):
+                if len(inner) < 2:
+                    return self._call_function(fn, inner, call_line)
+                return self._call_function(fn, [inner[1], inner[0]] + list(inner[2:]), call_line)
+            return SdevBuiltin('flipped', _flipped)
+        builtins['flip'] = SdevBuiltin('flip', _flip, 1, 1)
+
+        id_comb = SdevBuiltin('identity_fn', lambda a, l: a[0] if a else None)
+        builtins['identity_fn'] = id_comb
+        builtins['id_fn'] = id_comb
+
+        const_comb = SdevBuiltin('constant', lambda a, l: SdevBuiltin('always_val', lambda _a, _l, _v=(a[0] if a else None): _v))
+        builtins['constant'] = const_comb
+        builtins['always'] = const_comb
+
+        def _juxt(args, line):
+            if len(args) == 0:
+                raise SdevError('juxt() requires at least 1 function', line)
+            raw = args[0] if (len(args) == 1 and isinstance(args[0], list)) else args
+            fns = [_as_fn(f, 'All arguments to juxt() must be functions', line) for f in raw]
+            return SdevBuiltin('juxt_fn', lambda inner, call_line: [self._call_function(f, inner, call_line) for f in fns])
+        builtins['juxt'] = SdevBuiltin('juxt', _juxt)
+
+        def _converge(args, line):
+            if len(args) != 2:
+                raise SdevError('converge() takes 2 arguments (afterFn, branchFns)', line)
+            after_fn = _as_fn(args[0], 'First argument to converge() must be a function', line)
+            if not isinstance(args[1], list):
+                raise SdevError('Second argument to converge() must be a list of functions', line)
+            branches = [_as_fn(f, 'All branch elements in converge() must be functions', line) for f in args[1]]
+            def _conv(inner, call_line):
+                vals = [self._call_function(bf, inner, call_line) for bf in branches]
+                return self._call_function(after_fn, vals, call_line)
+            return SdevBuiltin('converge_fn', _conv)
+        builtins['converge'] = SdevBuiltin('converge', _converge, 2, 2)
+
+        def _ap(args, line):
+            if len(args) != 2:
+                raise SdevError('ap() takes 2 arguments (fns, values)', line)
+            left, right = args[0], args[1]
+            if isinstance(left, list) and isinstance(right, list):
+                out = []
+                for f in left:
+                    _as_fn(f, 'ap() list elements on left must be functions', line)
+                    for v in right:
+                        out.append(self._call_function(f, [v], line))
+                return out
+            if isinstance(left, dict) and (left.get('is_some') or left.get('is_none')):
+                if not left.get('is_some') or not isinstance(right, dict) or not right.get('is_some'):
+                    return {'is_some': False, 'is_none': True, 'val': None}
+                fn = _as_fn(left.get('val'), 'Option ap() requires a function inside Some', line)
+                return {'is_some': True, 'is_none': False, 'val': self._call_function(fn, [right.get('val')], line)}
+            if isinstance(left, dict) and (left.get('is_ok') or left.get('is_err')):
+                if not left.get('is_ok'):
+                    return left
+                if not isinstance(right, dict) or not right.get('is_ok'):
+                    return right
+                fn = _as_fn(left.get('val'), 'Result ap() requires a function inside Ok', line)
+                return {'is_ok': True, 'is_err': False, 'val': self._call_function(fn, [right.get('val')], line), 'err': None}
+            raise SdevError('ap() requires lists, Options, or Results', line)
+        builtins['ap'] = SdevBuiltin('ap', _ap, 2, 2)
+
+        def _tap(args, line):
+            if len(args) == 1:
+                fn = _as_fn(args[0], 'tap(fn) expects a function', line)
+                def _tapped(inner, call_line):
+                    self._call_function(fn, inner, call_line)
+                    return inner[0] if inner else None
+                return SdevBuiltin('tap_fn', _tapped)
+            if len(args) == 2:
+                fn = _as_fn(args[1], 'Second argument to tap(val, fn) must be a function', line)
+                self._call_function(fn, [args[0]], line)
+                return args[0]
+            raise SdevError('tap() takes 1 or 2 arguments', line)
+        builtins['tap'] = SdevBuiltin('tap', _tap, 1, 2)
+
+        def _thru(args, line):
+            if len(args) != 2:
+                raise SdevError('thru() takes 2 arguments (value, fn)', line)
+            fn = _as_fn(args[1], 'Second argument to thru() must be a function', line)
+            return self._call_function(fn, [args[0]], line)
+        builtins['thru'] = SdevBuiltin('thru', _thru, 2, 2)
+
+        def _once(args, line):
+            if len(args) != 1:
+                raise SdevError('once() takes 1 argument', line)
+            fn = _as_fn(args[0], 'Argument to once() must be a function', line)
+            state = {'called': False, 'val': None}
+            def _onced(inner, call_line):
+                if not state['called']:
+                    state['called'] = True
+                    state['val'] = self._call_function(fn, inner, call_line)
+                return state['val']
+            return SdevBuiltin('once_fn', _onced)
+        builtins['once'] = SdevBuiltin('once', _once, 1, 1)
+
+        def _trampoline(args, line):
+            if len(args) < 1:
+                raise SdevError('trampoline() takes at least 1 argument', line)
+            fn = _as_fn(args[0], 'First argument to trampoline() must be a function', line)
+            def _run_tramp(init_args, call_line):
+                res = self._call_function(fn, init_args, call_line)
+                while self._is_callable_val(res):
+                    res = self._call_function(res, [], call_line)
+                return res
+            if len(args) > 1:
+                return _run_tramp(args[1:], line)
+            return SdevBuiltin('trampoline_fn', _run_tramp)
+        builtins['trampoline'] = SdevBuiltin('trampoline', _trampoline)
+
+        def _complement(args, line):
+            if len(args) != 1:
+                raise SdevError('complement() takes 1 argument', line)
+            pred = _as_fn(args[0], 'Argument to complement() must be a function', line)
+            return SdevBuiltin('complement_fn', lambda inner, call_line: not self._is_truthy(self._call_function(pred, inner, call_line)))
+        comp_b = SdevBuiltin('complement', _complement, 1, 1)
+        builtins['complement'] = comp_b
+        builtins['negate_fn'] = comp_b
+
+        def _both(args, line):
+            if len(args) != 2:
+                raise SdevError('both() takes 2 predicates', line)
+            p1 = _as_fn(args[0], 'First argument to both() must be a function', line)
+            p2 = _as_fn(args[1], 'Second argument to both() must be a function', line)
+            return SdevBuiltin('both_fn', lambda inner, cl: self._is_truthy(self._call_function(p1, inner, cl)) and self._is_truthy(self._call_function(p2, inner, cl)))
+        builtins['both'] = SdevBuiltin('both', _both, 2, 2)
+
+        def _either_fn(args, line):
+            if len(args) != 2:
+                raise SdevError('either_fn() takes 2 predicates', line)
+            p1 = _as_fn(args[0], 'First argument to either_fn() must be a function', line)
+            p2 = _as_fn(args[1], 'Second argument to either_fn() must be a function', line)
+            return SdevBuiltin('either_pred', lambda inner, cl: self._is_truthy(self._call_function(p1, inner, cl)) or self._is_truthy(self._call_function(p2, inner, cl)))
+        builtins['either_fn'] = SdevBuiltin('either_fn', _either_fn, 2, 2)
+
+        def _all_pass(args, line):
+            if len(args) != 1 or not isinstance(args[0], list):
+                raise SdevError('all_pass() takes a list of predicates', line)
+            preds = [_as_fn(p, 'all_pass() elements must be functions', line) for p in args[0]]
+            return SdevBuiltin('all_pass_fn', lambda inner, cl: all(self._is_truthy(self._call_function(p, inner, cl)) for p in preds))
+        builtins['all_pass'] = SdevBuiltin('all_pass', _all_pass, 1, 1)
+
+        def _any_pass(args, line):
+            if len(args) != 1 or not isinstance(args[0], list):
+                raise SdevError('any_pass() takes a list of predicates', line)
+            preds = [_as_fn(p, 'any_pass() elements must be functions', line) for p in args[0]]
+            return SdevBuiltin('any_pass_fn', lambda inner, cl: any(self._is_truthy(self._call_function(p, inner, cl)) for p in preds))
+        builtins['any_pass'] = SdevBuiltin('any_pass', _any_pass, 1, 1)
+
+        def _cond(args, line):
+            if len(args) != 1 or not isinstance(args[0], list):
+                raise SdevError('cond() takes a list of [predicate, transform] pairs', line)
+            pairs = []
+            for pair in args[0]:
+                if not isinstance(pair, list) or len(pair) < 2:
+                    raise SdevError('Each cond() branch must be a [predicate, fn] pair', line)
+                pairs.append((
+                    _as_fn(pair[0], 'cond() predicate must be a function', line),
+                    _as_fn(pair[1], 'cond() handler must be a function', line),
+                ))
+            def _run_cond(inner, cl):
+                for pred, fn in pairs:
+                    if self._is_truthy(self._call_function(pred, inner, cl)):
+                        return self._call_function(fn, inner, cl)
+                return None
+            return SdevBuiltin('cond_fn', _run_cond)
+        builtins['cond'] = SdevBuiltin('cond', _cond, 1, 1)
+
+        # Functional Lenses
+        def _make_prop_lens(key):
+            def _get(a, _l):
+                t = a[0]
+                if isinstance(t, list) and isinstance(key, (int, float)) and not isinstance(key, bool):
+                    idx = int(key)
+                    return t[idx] if 0 <= idx < len(t) else None
+                if isinstance(t, dict):
+                    return t.get(self._stringify(key))
+                return None
+            def _set(a, _l):
+                val, t = a[0], a[1]
+                if isinstance(t, list) and isinstance(key, (int, float)) and not isinstance(key, bool):
+                    copy = list(t)
+                    idx = int(key)
+                    while len(copy) <= idx:
+                        copy.append(None)
+                    copy[idx] = val
+                    return copy
+                base = dict(t) if isinstance(t, dict) else {}
+                base[self._stringify(key)] = val
+                return base
+            return {
+                '__lens__': True,
+                'get': SdevBuiltin('lens_get', _get, 1, 1),
+                'set': SdevBuiltin('lens_set', _set, 2, 2),
+            }
+
+        def _lens(args, line):
+            if len(args) != 2:
+                raise SdevError('lens() takes 2 arguments (getter, setter)', line)
+            g = _as_fn(args[0], 'lens() getter must be a function', line)
+            s = _as_fn(args[1], 'lens() setter must be a function', line)
+            return {'__lens__': True, 'get': g, 'set': s}
+        builtins['lens'] = SdevBuiltin('lens', _lens, 2, 2)
+
+        def _lens_prop(args, line):
+            if len(args) != 1:
+                raise SdevError('lens_prop() takes 1 argument (key)', line)
+            k = args[0] if (isinstance(args[0], (int, float)) and not isinstance(args[0], bool)) else self._stringify(args[0])
+            return _make_prop_lens(k)
+        builtins['lens_prop'] = SdevBuiltin('lens_prop', _lens_prop, 1, 1)
+
+        def _lens_path(args, line):
+            if len(args) != 1 or not isinstance(args[0], list):
+                raise SdevError('lens_path() takes 1 argument (list of keys/indices)', line)
+            path = list(args[0])
+            def _get_at(obj):
+                cur = obj
+                for seg in path:
+                    if cur is None:
+                        return None
+                    if isinstance(cur, list) and isinstance(seg, (int, float)) and not isinstance(seg, bool):
+                        idx = int(seg)
+                        cur = cur[idx] if 0 <= idx < len(cur) else None
+                    elif isinstance(cur, dict):
+                        cur = cur.get(self._stringify(seg))
+                    else:
+                        return None
+                return cur
+            def _set_at(obj, idx, val):
+                if idx >= len(path):
+                    return val
+                seg = path[idx]
+                if isinstance(obj, list) and isinstance(seg, (int, float)) and not isinstance(seg, bool):
+                    copy = list(obj)
+                    sidx = int(seg)
+                    while len(copy) <= sidx:
+                        copy.append(None)
+                    copy[sidx] = _set_at(copy[sidx], idx + 1, val)
+                    return copy
+                k = self._stringify(seg)
+                base = dict(obj) if isinstance(obj, dict) else {}
+                base[k] = _set_at(base.get(k), idx + 1, val)
+                return base
+            return {
+                '__lens__': True,
+                'get': SdevBuiltin('lens_path_get', lambda a, l: _get_at(a[0]), 1, 1),
+                'set': SdevBuiltin('lens_path_set', lambda a, l: _set_at(a[1], 0, a[0]), 2, 2),
+            }
+        builtins['lens_path'] = SdevBuiltin('lens_path', _lens_path, 1, 1)
+
+        def _view(args, line):
+            if len(args) != 2:
+                raise SdevError('view() takes 2 arguments (lens, target)', line)
+            l = args[0]
+            if not isinstance(l, dict) or not self._is_callable_val(l.get('get')):
+                raise SdevError('First argument to view() must be a lens', line)
+            return self._call_function(l['get'], [args[1]], line)
+        builtins['view'] = SdevBuiltin('view', _view, 2, 2)
+
+        def _set_over(args, line):
+            if len(args) != 3:
+                raise SdevError('set_over() takes 3 arguments (lens, value, target)', line)
+            l = args[0]
+            if not isinstance(l, dict) or not self._is_callable_val(l.get('set')):
+                raise SdevError('First argument to set_over() must be a lens', line)
+            return self._call_function(l['set'], [args[1], args[2]], line)
+        builtins['set_over'] = SdevBuiltin('set_over', _set_over, 3, 3)
+
+        def _over(args, line):
+            if len(args) != 3:
+                raise SdevError('over() takes 3 arguments (lensOrKey, fn, target)', line)
+            k = args[0]
+            l = _make_prop_lens(k) if isinstance(k, (str, int, float)) and not isinstance(k, bool) else k
+            if not isinstance(l, dict) or not self._is_callable_val(l.get('get')) or not self._is_callable_val(l.get('set')):
+                raise SdevError('First argument to over() must be a lens or property key', line)
+            fn = _as_fn(args[1], 'Second argument to over() must be a function', line)
+            cur = self._call_function(l['get'], [args[2]], line)
+            nxt = self._call_function(fn, [cur], line)
+            return self._call_function(l['set'], [nxt, args[2]], line)
+        builtins['over'] = SdevBuiltin('over', _over, 3, 3)
+
+        # Transducers
+        def _xf_map(args, line):
+            if len(args) != 1:
+                raise SdevError('xf_map() takes 1 argument (fn)', line)
+            fn = _as_fn(args[0], 'xf_map() argument must be a function', line)
+            def _xf(step_args, step_line):
+                step = _as_fn(step_args[0], 'Transducer expects a step reducer function', step_line)
+                return SdevBuiltin('xf_map_step', lambda ra, rl: self._call_function(step, [ra[0], self._call_function(fn, [ra[1]], rl)], rl))
+            return SdevBuiltin('xf_map_fn', _xf)
+        builtins['xf_map'] = SdevBuiltin('xf_map', _xf_map, 1, 1)
+
+        def _xf_filter(args, line):
+            if len(args) != 1:
+                raise SdevError('xf_filter() takes 1 argument (pred)', line)
+            pred = _as_fn(args[0], 'xf_filter() argument must be a function', line)
+            def _xf(step_args, step_line):
+                step = _as_fn(step_args[0], 'Transducer expects a step reducer function', step_line)
+                return SdevBuiltin('xf_filter_step', lambda ra, rl: self._call_function(step, [ra[0], ra[1]], rl) if self._is_truthy(self._call_function(pred, [ra[1]], rl)) else ra[0])
+            return SdevBuiltin('xf_filter_fn', _xf)
+        builtins['xf_filter'] = SdevBuiltin('xf_filter', _xf_filter, 1, 1)
+
+        def _xf_take(args, line):
+            if len(args) != 1:
+                raise SdevError('xf_take() takes 1 argument (n)', line)
+            if not isinstance(args[0], (int, float)) or isinstance(args[0], bool):
+                raise SdevError('xf_take() argument must be a number', line)
+            count = args[0]
+            def _xf(step_args, step_line):
+                step = _as_fn(step_args[0], 'Transducer expects a step reducer function', step_line)
+                state = {'rem': count}
+                def _step(ra, rl):
+                    if state['rem'] <= 0:
+                        return {'__reduced__': True, 'value': ra[0]}
+                    state['rem'] -= 1
+                    nxt = self._call_function(step, [ra[0], ra[1]], rl)
+                    if state['rem'] <= 0:
+                        return {'__reduced__': True, 'value': nxt}
+                    return nxt
+                return SdevBuiltin('xf_take_step', _step)
+            return SdevBuiltin('xf_take_fn', _xf)
+        builtins['xf_take'] = SdevBuiltin('xf_take', _xf_take, 1, 1)
+
+        def _transduce(args, line):
+            if len(args) != 4:
+                raise SdevError('transduce() takes 4 arguments (xform, reducer, init, collection)', line)
+            raw_xf = args[0]
+            reducer = _as_fn(args[1], 'transduce() reducer must be a function', line)
+            acc = args[2]
+            coll = args[3]
+            if not isinstance(coll, list):
+                raise SdevError('transduce() 4th argument must be a list', line)
+            step_fn = reducer
+            if isinstance(raw_xf, list):
+                for xf in reversed(raw_xf):
+                    _as_fn(xf, 'transduce() xform list must contain transducer functions', line)
+                    step_fn = _as_fn(self._call_function(xf, [step_fn], line), 'Transducer did not return a step function', line)
+            else:
+                _as_fn(raw_xf, 'transduce() xform must be a transducer function or list', line)
+                step_fn = _as_fn(self._call_function(raw_xf, [step_fn], line), 'Transducer did not return a step function', line)
+            for item in coll:
+                acc = self._call_function(step_fn, [acc, item], line)
+                if isinstance(acc, dict) and acc.get('__reduced__'):
+                    acc = acc.get('value')
+                    break
+            return acc
+        builtins['transduce'] = SdevBuiltin('transduce', _transduce, 4, 4)
+
+        def _attempt_result(args, line):
+            if len(args) < 1:
+                raise SdevError('attempt_result() takes at least 1 argument (fn, ...args)', line)
+            fn = _as_fn(args[0], 'First argument to attempt_result() must be a function', line)
+            try:
+                val = self._call_function(fn, args[1:], line)
+                return {'is_ok': True, 'is_err': False, 'val': val, 'err': None}
+            except Exception as e:
+                return {'is_ok': False, 'is_err': True, 'val': None, 'err': str(e)}
+        builtins['attempt_result'] = SdevBuiltin('attempt_result', _attempt_result)
+
+        def _try_catch_fn(args, line):
+            if len(args) != 2:
+                raise SdevError('try_catch_fn() takes 2 arguments (fn, onErr)', line)
+            fn = _as_fn(args[0], 'First argument to try_catch_fn() must be a function', line)
+            on_err = _as_fn(args[1], 'Second argument to try_catch_fn() must be a function', line)
+            def _wrapped(inner, cl):
+                try:
+                    return self._call_function(fn, inner, cl)
+                except Exception as e:
+                    return self._call_function(on_err, [str(e)] + list(inner), cl)
+            return SdevBuiltin('try_catch_fn', _wrapped)
+        builtins['try_catch_fn'] = SdevBuiltin('try_catch_fn', _try_catch_fn, 2, 2)
+
+        def _match_option(args, line):
+            if len(args) != 3:
+                raise SdevError('match_option() takes 3 arguments (opt, onSome, onNone)', line)
+            opt, on_some, on_none = args[0], args[1], args[2]
+            is_some = isinstance(opt, dict) and bool(opt.get('is_some') or opt.get('tag') == 'Some')
+            if is_some:
+                return self._call_function(on_some, [opt.get('val')], line) if self._is_callable_val(on_some) else on_some
+            return self._call_function(on_none, [], line) if self._is_callable_val(on_none) else on_none
+        builtins['match_option'] = SdevBuiltin('match_option', _match_option, 3, 3)
+
+        def _match_result(args, line):
+            if len(args) != 3:
+                raise SdevError('match_result() takes 3 arguments (res, onOk, onErr)', line)
+            res, on_ok, on_err = args[0], args[1], args[2]
+            is_ok = isinstance(res, dict) and bool(res.get('is_ok') or res.get('tag') == 'Ok')
+            if is_ok:
+                return self._call_function(on_ok, [res.get('val')], line) if self._is_callable_val(on_ok) else on_ok
+            err_val = res.get('err') if isinstance(res, dict) else None
+            return self._call_function(on_err, [err_val], line) if self._is_callable_val(on_err) else on_err
+        builtins['match_result'] = SdevBuiltin('match_result', _match_result, 3, 3)
+
+        # ============= Feature-Oriented Programming (FOP) Builtins =============
+
+        builtins['proceed'] = SdevBuiltin('proceed', lambda a, l: self._fop_call_proceed(a, l))
+        builtins['original'] = SdevBuiltin('original', lambda a, l: self._fop_call_proceed(a, l))
+
+        def _feature_define(args, line):
+            if len(args) < 1 or len(args) > 2:
+                raise SdevError('feature_define() takes 1-2 arguments (name, spec?)', line)
+            name = str(args[0])
+            spec = args[1] if (len(args) > 1 and isinstance(args[1], dict)) else {}
+            reqs = [str(x) for x in spec.get('requires', [])] if isinstance(spec.get('requires'), list) else []
+            excls = [str(x) for x in spec.get('excludes', [])] if isinstance(spec.get('excludes'), list) else []
+            fields = dict(spec['fields']) if isinstance(spec.get('fields'), dict) else {}
+            methods = {}
+            if isinstance(spec.get('methods'), dict):
+                for k, v in spec['methods'].items():
+                    if self._is_callable_val(v):
+                        methods[k] = v
+            for k, v in spec.items():
+                if k in reserved:
+                    continue
+                if self._is_callable_val(v):
+                    methods[k] = v
+                else:
+                    fields[k] = v
+            active = bool(spec.get('active'))
+            feat = self._build_feature_obj(name, reqs, excls, fields, methods, [], active)
+            self._fop['features'][name] = feat
+            if active and name not in self._fop['active']:
+                self._fop['active'].append(name)
+            return feat
+        builtins['feature_define'] = SdevBuiltin('feature_define', _feature_define, 1, 2)
+
+        en_b = SdevBuiltin('enable_feature', lambda a, l: self._fop_enable(a[0], l), 1, 1)
+        builtins['enable_feature'] = en_b
+        builtins['feature_enable'] = en_b
+
+        dis_b = SdevBuiltin('disable_feature', lambda a, l: self._fop_disable(a[0], l), 1, 1)
+        builtins['disable_feature'] = dis_b
+        builtins['feature_disable'] = dis_b
+
+        tog_b = SdevBuiltin('toggle_feature', lambda a, l: self._fop_toggle(a[0], l), 1, 1)
+        builtins['toggle_feature'] = tog_b
+        builtins['feature_toggle'] = tog_b
+
+        ise_b = SdevBuiltin('is_feature_enabled', lambda a, l: self._fop_is_enabled(a[0]), 1, 1)
+        builtins['is_feature_enabled'] = ise_b
+        builtins['feature_enabled'] = ise_b
+
+        builtins['active_features'] = SdevBuiltin('active_features', lambda a, l: list(self._fop['active']), 0, 0)
+
+        def _make_feature_context(feature_list, line):
+            state = {'snap': None}
+            def _on_enter(_a, _l):
+                state['snap'] = self._fop_snapshot()
+                try:
+                    for f in feature_list:
+                        self._fop_enable(f, line)
+                except Exception:
+                    if state['snap'] is not None:
+                        self._fop_restore(state['snap'])
+                    raise
+                return feature_list
+            def _on_exit(_a, _l):
+                if state['snap'] is not None:
+                    self._fop_restore(state['snap'])
+                    state['snap'] = None
+                return False
+            return {
+                '__feature_context__': True,
+                'features': feature_list,
+                'on_enter': SdevBuiltin('on_enter', _on_enter, 0, 0),
+                'on_exit': SdevBuiltin('on_exit', _on_exit, 0, 1),
+            }
+
+        def _with_features(args, line):
+            if len(args) < 1 or len(args) > 2:
+                raise SdevError('with_features() takes 1 or 2 arguments (features, fn?)', line)
+            flist = args[0] if isinstance(args[0], list) else [args[0]]
+            if len(args) == 1:
+                return _make_feature_context(flist, line)
+            fn = _as_fn(args[1], 'Second argument to with_features() must be a function', line)
+            snap = self._fop_snapshot()
+            try:
+                for f in flist:
+                    self._fop_enable(f, line)
+                return self._call_function(fn, [], line)
+            finally:
+                self._fop_restore(snap)
+        builtins['with_features'] = SdevBuiltin('with_features', _with_features, 1, 2)
+
+        def _feature_context(args, line):
+            flist = args[0] if (len(args) == 1 and isinstance(args[0], list)) else list(args)
+            return _make_feature_context(flist, line)
+        builtins['feature_context'] = SdevBuiltin('feature_context', _feature_context)
+
+        def _compose_features(args, line):
+            items = args[0] if (len(args) == 1 and isinstance(args[0], list)) else list(args)
+            if not items:
+                return self._build_feature_obj('empty')
+            feats = [_resolve_feat_obj(it, line) for it in items]
+            names: List[str] = []
+            reqs: List[str] = []
+            excls: List[str] = []
+            fields: Dict[str, Any] = {}
+            methods: Dict[str, Any] = {}
+            refinements: List[Any] = []
+            for f in feats:
+                names.append(f['name'])
+                for r in f.get('requires', []):
+                    if r not in reqs:
+                        reqs.append(r)
+                for e in f.get('excludes', []):
+                    if e not in excls:
+                        excls.append(e)
+                fields.update(f.get('fields', {}))
+                for mname, mfn in f.get('methods', {}).items():
+                    if not self._is_callable_val(mfn):
+                        continue
+                    prev = methods.get(mname)
+                    methods[mname] = self._fop_chain_method(prev, mfn)
+                refinements.extend(f.get('refinements', []))
+            reqs = [r for r in reqs if r not in names]
+            for ex in excls:
+                if ex in names:
+                    raise SdevError(f"Cannot compose mutually excluding features including '{ex}'", line)
+            return self._build_feature_obj('+'.join(names), reqs, excls, fields, methods, refinements, False)
+        builtins['compose_features'] = SdevBuiltin('compose_features', _compose_features)
+
+        def _apply_feature(args, line):
+            if len(args) != 2:
+                raise SdevError('apply_feature() takes 2 arguments (target, feature)', line)
+            target = args[0]
+            feat = _resolve_feat_obj(args[1], line)
+            if isinstance(target, SdevClass):
+                target.feature_layers.append({
+                    'feature_name': None,
+                    'methods': dict(feat.get('methods', {})),
+                    'attrs': dict(feat.get('fields', {})),
+                })
+                return target
+            if isinstance(target, dict):
+                target.update(feat.get('fields', {}))
+                for mname, mfn in feat.get('methods', {}).items():
+                    if not self._is_callable_val(mfn):
+                        continue
+                    prev = target.get(mname)
+                    prev_fn = prev if self._is_callable_val(prev) else None
+                    wrapped = self._fop_chain_method(prev_fn, mfn)
+                    def _bound_call(ca, cl, _w=wrapped, _m=mfn, _t=target):
+                        needs_self = not isinstance(_m, (SdevUserFunc, SdevLambda)) or (len(_m.params) > len(ca)) or (bool(_m.params) and _m.params[0] == 'self')
+                        pass_args = ca if (ca and ca[0] is _t) or not needs_self else [_t] + list(ca)
+                        return _w.func(pass_args, cl)
+                    target[mname] = SdevBuiltin(mname, _bound_call)
+                return target
+            raise SdevError('First argument to apply_feature() must be an object, instance, or class', line)
+        builtins['apply_feature'] = SdevBuiltin('apply_feature', _apply_feature, 2, 2)
+
+        def _refine_target(args, line):
+            if len(args) != 2:
+                raise SdevError('refine_target() takes 2 arguments (target, overrides)', line)
+            target, overrides = args[0], args[1]
+            if self._is_callable_val(target) and self._is_callable_val(overrides):
+                return self._fop_chain_method(target, overrides)
+            if isinstance(target, SdevClass) and isinstance(overrides, dict):
+                mm = {}
+                attrs = {}
+                for k, v in overrides.items():
+                    if self._is_callable_val(v):
+                        mm[k] = v
+                    else:
+                        attrs[k] = v
+                target.feature_layers.append({'feature_name': None, 'methods': mm, 'attrs': attrs})
+                return target
+            if isinstance(target, dict) and isinstance(overrides, dict):
+                clone = dict(target)
+                for k, v in overrides.items():
+                    if self._is_callable_val(v):
+                        prev = clone.get(k)
+                        prev_fn = prev if self._is_callable_val(prev) else None
+                        clone[k] = self._fop_chain_method(prev_fn, v)
+                    else:
+                        clone[k] = v
+                return clone
+            raise SdevError('refine_target() expects (fn, wrapper) or (object/class, overrides)', line)
+        builtins['refine_target'] = SdevBuiltin('refine_target', _refine_target, 2, 2)
+
+        def _feature_model(args, line):
+            if len(args) < 1 or len(args) > 2:
+                raise SdevError('feature_model() takes 1-2 arguments (name, config?)', line)
+            name = str(args[0])
+            cfg = args[1] if (len(args) > 1 and isinstance(args[1], dict)) else {}
+            model = {
+                '__feature_model__': True,
+                'name': name,
+                'features': [str(x) for x in cfg.get('features', [])] if isinstance(cfg.get('features'), list) else [],
+                'mandatory': [str(x) for x in cfg.get('mandatory', [])] if isinstance(cfg.get('mandatory'), list) else [],
+                'optional': [str(x) for x in cfg.get('optional', [])] if isinstance(cfg.get('optional'), list) else [],
+                'requires': {},
+                'excludes': {},
+                'alternatives': [([str(x) for x in g] if isinstance(g, list) else []) for g in cfg.get('alternatives', [])] if isinstance(cfg.get('alternatives'), list) else [],
+                'or_groups': [([str(x) for x in g] if isinstance(g, list) else []) for g in cfg.get('or_groups', [])] if isinstance(cfg.get('or_groups'), list) else [],
+            }
+            if isinstance(cfg.get('requires'), dict):
+                for k, v in cfg['requires'].items():
+                    model['requires'][str(k)] = [str(x) for x in v] if isinstance(v, list) else [str(v)]
+            if isinstance(cfg.get('excludes'), dict):
+                for k, v in cfg['excludes'].items():
+                    model['excludes'][str(k)] = [str(x) for x in v] if isinstance(v, list) else [str(v)]
+            if not model['features']:
+                seen = []
+                def _addf(x):
+                    if x not in seen:
+                        seen.append(x)
+                for f in model['mandatory'] + model['optional']:
+                    _addf(f)
+                for g in model['alternatives'] + model['or_groups']:
+                    for f in g:
+                        _addf(f)
+                for k, vs in model['requires'].items():
+                    _addf(k)
+                    for f in vs: _addf(f)
+                for k, vs in model['excludes'].items():
+                    _addf(k)
+                    for f in vs: _addf(f)
+                model['features'] = seen
+            return model
+        builtins['feature_model'] = SdevBuiltin('feature_model', _feature_model, 1, 2)
+
+        def _feature_require(args, line):
+            if len(args) != 2:
+                raise SdevError('feature_require() takes 2 arguments (featureA, featureB)', line)
+            a = self._fop_resolve_name(args[0], line)
+            b = self._fop_resolve_name(args[1], line)
+            lst = self._fop['requires'].setdefault(a, [])
+            if b not in lst:
+                lst.append(b)
+            return True
+        builtins['feature_require'] = SdevBuiltin('feature_require', _feature_require, 2, 2)
+
+        def _feature_exclude(args, line):
+            if len(args) != 2:
+                raise SdevError('feature_exclude() takes 2 arguments (featureA, featureB)', line)
+            a = self._fop_resolve_name(args[0], line)
+            b = self._fop_resolve_name(args[1], line)
+            la = self._fop['excludes'].setdefault(a, [])
+            if b not in la: la.append(b)
+            lb = self._fop['excludes'].setdefault(b, [])
+            if a not in lb: lb.append(a)
+            return True
+        builtins['feature_exclude'] = SdevBuiltin('feature_exclude', _feature_exclude, 2, 2)
+
+        def _validate_features(args, line):
+            if len(args) < 1 or len(args) > 2:
+                raise SdevError('validate_features() takes 1-2 arguments (modelOrSelection, selection?)', line)
+            if len(args) == 1:
+                if not isinstance(args[0], list):
+                    raise SdevError('validate_features(selection) expects a list of feature names', line)
+                sel = [x['name'] if isinstance(x, dict) and x.get('__feature__') else self._stringify(x) for x in args[0]]
+                return self._fop_validate_selection(sel, None)
+            if not isinstance(args[0], dict) or not args[0].get('__feature_model__'):
+                raise SdevError('First argument to validate_features(model, selection) must be a feature_model', line)
+            if not isinstance(args[1], list):
+                raise SdevError('Second argument to validate_features(model, selection) must be a list', line)
+            sel = [x['name'] if isinstance(x, dict) and x.get('__feature__') else self._stringify(x) for x in args[1]]
+            return self._fop_validate_selection(sel, args[0])
+        builtins['validate_features'] = SdevBuiltin('validate_features', _validate_features, 1, 2)
+
+        def _resolve_features(args, line):
+            if len(args) < 1 or len(args) > 2:
+                raise SdevError('resolve_features() takes 1-2 arguments (selection, model?)', line)
+            sel_raw = args[0]
+            model = None
+            if isinstance(args[0], dict) and args[0].get('__feature_model__') and len(args) > 1 and isinstance(args[1], list):
+                model = args[0]
+                sel_raw = args[1]
+            elif len(args) == 2 and isinstance(args[1], dict) and args[1].get('__feature_model__'):
+                model = args[1]
+            if not isinstance(sel_raw, list):
+                raise SdevError('resolve_features() expects a list of feature names', line)
+            sel = [x['name'] if isinstance(x, dict) and x.get('__feature__') else self._stringify(x) for x in sel_raw]
+            res = self._fop_validate_selection(sel, model)
+            checked = self._fop_validate_selection(res['resolved'], model)
+            conflicts = [e for e in checked['errors'] if e.startswith('Feature conflict:')]
+            if conflicts:
+                raise SdevError(conflicts[0], line)
+            return res['resolved']
+        builtins['resolve_features'] = SdevBuiltin('resolve_features', _resolve_features, 1, 2)
     
     def _get_type(self, value: Any) -> str:
         if value is None:
@@ -5612,6 +7091,13 @@ class Interpreter:
             return self._execute_for_in(node, env)
         if isinstance(node, TryStatement):
             return self._execute_try(node, env)
+        if isinstance(node, FeatureDeclaration):
+            return self._execute_feature_decl(node, env)
+        if isinstance(node, RefineDeclaration):
+            self._execute_refine_decl(node, env, None)
+            return None
+        if isinstance(node, WithStatement):
+            return self._execute_with_stmt(node, env)
         if isinstance(node, FuncDeclaration):
             return self._execute_func_decl(node, env)
         if isinstance(node, ReturnStatement):
@@ -5651,24 +7137,38 @@ class Interpreter:
         sdev_class = SdevClass(node.name, parent, methods, static_methods, constructor)
         env.define(node.name, sdev_class)
     
+    def _instantiate_class(self, sdev_class: SdevClass, args: List[Any], line: int) -> SdevInstance:
+        mro: List[SdevClass] = []
+        cur: Optional[SdevClass] = sdev_class
+        while cur is not None:
+            mro.append(cur)
+            cur = cur.parent
+        mro.reverse()
+
+        fields: Dict[str, Any] = {}
+        for c in mro:
+            for k, v in c.fields.items():
+                fields[k] = v
+            for layer in c.feature_layers:
+                fname = layer.get('feature_name')
+                if fname is None or self._fop_is_enabled(fname):
+                    for k, v in layer.get('attrs', {}).items():
+                        fields[k] = v
+
+        instance = SdevInstance(sdev_class, fields)
+        init_fn = self._resolve_active_method(sdev_class, instance, 'init')
+        if init_fn is None and sdev_class.constructor:
+            init_fn = SdevBoundMethod(instance, sdev_class.constructor)
+        if init_fn is not None:
+            self._call_function(init_fn, args, line)
+        return instance
+
     def _execute_new(self, node: NewExpr, env: Environment) -> SdevInstance:
         sdev_class = env.get(node.class_name, node.line)
         if not isinstance(sdev_class, SdevClass):
             raise SdevError(f"'{node.class_name}' is not a class", node.line)
-        
-        instance = SdevInstance(sdev_class, {})
-        
-        # Inherit parent fields
-        if sdev_class.parent and sdev_class.parent.constructor:
-            pass  # Parent init called via super
-        
-        # Call constructor
-        if sdev_class.constructor:
-            args = [self._execute(a, env) for a in node.args]
-            bound = SdevBoundMethod(instance, sdev_class.constructor)
-            self._call_bound_method(bound, args, node.line)
-        
-        return instance
+        args = [self._execute(a, env) for a in node.args]
+        return self._instantiate_class(sdev_class, args, node.line)
     
     def _execute_async_decl(self, node: AsyncFuncDeclaration, env: Environment) -> None:
         func = SdevAsyncFunc(node.name, node.params, node.body, env)
@@ -5751,6 +7251,18 @@ class Interpreter:
             return self._is_equal(left, right)
         if op == 'differs' or op == '<>':
             return not self._is_equal(left, right)
+        if op == '<<':
+            if self._is_callable_val(left) or self._is_callable_val(right):
+                return SdevBuiltin('composed_rtl', lambda ca, cl: self._call_function(left, [self._call_function(right, ca, cl)], cl))
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                return int(left) << int(right)
+            raise SdevError("Cannot use '<<' with these types", node.line)
+        if op == '>>':
+            if self._is_callable_val(left) or self._is_callable_val(right):
+                return SdevBuiltin('composed_ltr', lambda ca, cl: self._call_function(right, [self._call_function(left, ca, cl)], cl))
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                return int(left) >> int(right)
+            raise SdevError("Cannot use '>>' with these types", node.line)
         
         raise SdevError(f"Unknown operator: {op}", node.line)
     
@@ -5782,11 +7294,7 @@ class Interpreter:
             return self._call_async_func(callee, args, node.line)
         if isinstance(callee, SdevClass):
             # Calling a class as a constructor (alternative to 'new')
-            instance = SdevInstance(callee, {})
-            if callee.constructor:
-                bound = SdevBoundMethod(instance, callee.constructor)
-                self._call_bound_method(bound, args, node.line)
-            return instance
+            return self._instantiate_class(callee, args, node.line)
         
         raise SdevError(f'Cannot call {self._get_type(callee)} as a function', node.line)
     
@@ -5840,10 +7348,19 @@ class Interpreter:
         if isinstance(obj, SdevInstance):
             if prop in obj.fields:
                 return obj.fields[prop]
-            # Look for method in class hierarchy
-            method = self._find_method(obj.sdev_class, prop)
-            if method:
-                return SdevBoundMethod(obj, method)
+            # Look for method in class hierarchy + active feature layers
+            method = self._resolve_active_method(obj.sdev_class, obj, prop)
+            if method is not None:
+                return method
+            # Check active feature layer attributes across MRO
+            cur_c: Optional[SdevClass] = obj.sdev_class
+            while cur_c is not None:
+                for layer in reversed(cur_c.feature_layers):
+                    fname = layer.get('feature_name')
+                    if fname is None or self._fop_is_enabled(fname):
+                        if prop in layer.get('attrs', {}):
+                            return layer['attrs'][prop]
+                cur_c = cur_c.parent
             raise SdevError(f"Instance has no property '{prop}'", node.line)
         
         if isinstance(obj, SdevClass):
@@ -6031,9 +7548,319 @@ class Interpreter:
                 return self._execute(node.catch_block, catch_env)
             return None
     
+    def _match_param_pattern(self, pat: Any, val: Any, env: Environment, line: int) -> bool:
+        if pat is None:
+            return True
+        kind = pat[0]
+        if kind == 'wild':
+            return True
+        if kind == 'cap':
+            env.define(pat[1], val)
+            return True
+        if kind == 'lit':
+            lit_val = self._execute(pat[1], env)
+            if isinstance(val, bool) != isinstance(lit_val, bool):
+                return False
+            return self._is_equal(val, lit_val)
+        if kind == 'seq':
+            elems, rest_name = pat[1], pat[2]
+            if not isinstance(val, list):
+                return False
+            if rest_name is not None:
+                if len(val) < len(elems):
+                    return False
+            else:
+                if len(val) != len(elems):
+                    return False
+            for i, sub_p in enumerate(elems):
+                if not self._match_param_pattern(sub_p, val[i], env, line):
+                    return False
+            if rest_name is not None:
+                env.define(rest_name, val[len(elems):])
+            return True
+        if kind == 'map':
+            entries = pat[1]
+            if not isinstance(val, dict):
+                return False
+            for k_expr, sub_p in entries:
+                k_val = self._execute(k_expr, env)
+                key = k_val if isinstance(k_val, str) else self._stringify(k_val)
+                if key not in val:
+                    return False
+                if not self._match_param_pattern(sub_p, val[key], env, line):
+                    return False
+            return True
+        if kind == 'adt':
+            cname, sub_pats = pat[1], pat[2]
+            if cname == 'Some':
+                if not isinstance(val, dict) or not (val.get('is_some') or val.get('tag') == 'Some'):
+                    return False
+                if len(sub_pats) > 0 and not self._match_param_pattern(sub_pats[0], val.get('val'), env, line):
+                    return False
+                return True
+            if cname == 'None':
+                if val is None and not sub_pats:
+                    return True
+                if isinstance(val, dict) and (val.get('is_none') or val.get('tag') == 'None') and not sub_pats:
+                    return True
+                return False
+            if cname == 'Ok':
+                if not isinstance(val, dict) or not (val.get('is_ok') or val.get('tag') == 'Ok'):
+                    return False
+                if len(sub_pats) > 0 and not self._match_param_pattern(sub_pats[0], val.get('val'), env, line):
+                    return False
+                return True
+            if cname == 'Err':
+                if not isinstance(val, dict) or not (val.get('is_err') or val.get('tag') == 'Err'):
+                    return False
+                if len(sub_pats) > 0 and not self._match_param_pattern(sub_pats[0], val.get('err'), env, line):
+                    return False
+                return True
+            if isinstance(val, dict) and (val.get('tag') == cname or val.get('type') == cname):
+                if not sub_pats:
+                    return True
+                if len(sub_pats) == 1:
+                    inner_v = val.get('val') if 'val' in val else val.get('value')
+                    return self._match_param_pattern(sub_pats[0], inner_v, env, line)
+                return False
+            return False
+        return False
+
     def _execute_func_decl(self, node: FuncDeclaration, env: Environment) -> None:
-        func = SdevUserFunc(node.name, node.params, node.body, env)
-        env.define(node.name, func)
+        has_patterns = bool(node.pattern_params and any(p is not None for p in node.pattern_params))
+        has_clause_spec = has_patterns or (node.guard is not None)
+        existing = env.values.get(node.name)
+        existing_clauses = getattr(existing, '_clauses', None) if isinstance(existing, SdevBuiltin) else None
+
+        if not has_clause_spec and existing_clauses is None:
+            func = SdevUserFunc(node.name, node.params, node.body, env)
+            env.define(node.name, func)
+            return None
+
+        def _clause_runner(args: List[Any], call_line: int):
+            if len(args) > len(node.params):
+                return (False, None)
+            clause_env = Environment(env)
+            for i, p_name in enumerate(node.params):
+                arg_val = args[i] if i < len(args) else None
+                pat = node.pattern_params[i] if (node.pattern_params and i < len(node.pattern_params)) else None
+                if pat is not None:
+                    if not self._match_param_pattern(pat, arg_val, clause_env, call_line):
+                        return (False, None)
+                else:
+                    clause_env.define(p_name, arg_val)
+            if node.guard is not None:
+                if not self._is_truthy(self._execute(node.guard, clause_env)):
+                    return (False, None)
+            try:
+                self._execute(node.body, clause_env)
+                return (True, None)
+            except ReturnException as e:
+                return (True, e.value)
+
+        if existing_clauses is not None:
+            existing_clauses.append(_clause_runner)
+            return None
+
+        clauses = [_clause_runner]
+        def _dispatch(args: List[Any], call_line: int):
+            for c in clauses:
+                matched, val = c(args, call_line)
+                if matched:
+                    return val
+            raise SdevError(f"No matching clause for function '{node.name}'", call_line)
+
+        dispatcher = SdevBuiltin(node.name, _dispatch)
+        dispatcher._clauses = clauses
+        env.define(node.name, dispatcher)
+        return None
+
+    def _execute_feature_decl(self, node: FeatureDeclaration, env: Environment) -> dict:
+        feat_env = Environment(env)
+        fields: Dict[str, Any] = {}
+        methods: Dict[str, Any] = {}
+        refinements: List[Any] = []
+
+        for field_stmt in node.fields:
+            val = self._execute(field_stmt.value, feat_env)
+            fields[field_stmt.name] = val
+            feat_env.define(field_stmt.name, val)
+
+        for method_decl in node.methods:
+            self._execute_func_decl(method_decl, feat_env)
+            fn_val = feat_env.get(method_decl.name, method_decl.line)
+            methods[method_decl.name] = fn_val
+
+        for stmt in node.statements:
+            self._execute(stmt, feat_env)
+
+        for ref in node.refinements:
+            refinements.append(self._execute_refine_decl(ref, feat_env, node.name))
+
+        feat = self._build_feature_obj(
+            node.name,
+            node.requires,
+            node.excludes,
+            fields,
+            methods,
+            refinements,
+            False,
+        )
+        self._fop['features'][node.name] = feat
+        env.define(node.name, feat)
+        return feat
+
+    def _execute_refine_decl(self, node: RefineDeclaration, env: Environment, owner_feature_name: Optional[str]) -> dict:
+        if node.is_function_refine:
+            existing = env.get(node.target_name, node.line) if env.has(node.target_name) else None
+            if existing is None or not self._is_callable_val(existing):
+                raise SdevError(f"Cannot refine unknown or non-function '{node.target_name}'", node.line)
+            layer_fn = SdevUserFunc(f"{node.target_name}#refine", node.params, node.body, env)
+            if not isinstance(existing, SdevBuiltin) or not hasattr(existing, '_fop_layers'):
+                base_fn = existing
+                layers: List[dict] = []
+                def _fop_dispatch(ca, cl, _base=base_fn, _layers=layers):
+                    active = [l for l in _layers if l['feature_name'] is None or self._fop_is_enabled(l['feature_name'])]
+                    if not active:
+                        return self._call_function(_base, ca, cl)
+                    runner = _base
+                    for l in active:
+                        runner = self._fop_chain_method(runner, l['fn'])
+                    return self._call_function(runner, ca, cl)
+                disp = SdevBuiltin(node.target_name, _fop_dispatch)
+                disp._fop_layers = layers
+                env.set(node.target_name, disp, node.line)
+                existing = disp
+            existing._fop_layers.append({'feature_name': owner_feature_name, 'fn': layer_fn})
+            return {
+                'target_name': node.target_name,
+                'is_function_refine': True,
+                'fields': {},
+                'methods': {},
+                'fn_wrapper': layer_fn,
+            }
+
+        klass_val = env.get(node.target_name, node.line) if env.has(node.target_name) else None
+        if not isinstance(klass_val, SdevClass):
+            raise SdevError(f"Cannot refine unknown or non-class '{node.target_name}'", node.line)
+        attrs: Dict[str, Any] = {}
+        for fstmt in node.fields:
+            attrs[fstmt.name] = self._execute(fstmt.value, env)
+        methods: Dict[str, SdevMethod] = {}
+        for m in node.methods:
+            methods[m.name] = SdevMethod(m.name, m.params, m.body, m.is_private, env)
+        klass_val.feature_layers.append({
+            'feature_name': owner_feature_name,
+            'methods': methods,
+            'attrs': attrs,
+        })
+        return {
+            'target_name': node.target_name,
+            'is_function_refine': False,
+            'fields': attrs,
+            'methods': methods,
+        }
+
+    def _execute_with_stmt(self, node: WithStatement, env: Environment) -> Any:
+        scope = Environment(env)
+        opened: List[Any] = []
+        def _get_enter(mgr: Any):
+            if isinstance(mgr, dict) and self._is_callable_val(mgr.get('on_enter')):
+                return mgr['on_enter']
+            if isinstance(mgr, SdevInstance):
+                return self._resolve_active_method(mgr.sdev_class, mgr, 'on_enter')
+            return None
+        def _get_exit(mgr: Any):
+            if isinstance(mgr, dict) and self._is_callable_val(mgr.get('on_exit')):
+                return mgr['on_exit']
+            if isinstance(mgr, SdevInstance):
+                return self._resolve_active_method(mgr.sdev_class, mgr, 'on_exit')
+            return None
+
+        try:
+            for expr, alias in node.items:
+                mgr = self._execute(expr, scope)
+                enter = _get_enter(mgr)
+                bound = self._call_function(enter, [], node.line) if enter else mgr
+                opened.append(mgr)
+                if alias:
+                    scope.define(alias, bound)
+            res = self._execute(node.body, scope)
+            for mgr in reversed(opened):
+                ex = _get_exit(mgr)
+                if ex:
+                    self._call_function(ex, [None], node.line)
+            opened.clear()
+            return res
+        except (ReturnException, BreakException, ContinueException):
+            for mgr in reversed(opened):
+                ex = _get_exit(mgr)
+                if ex:
+                    self._call_function(ex, [None], node.line)
+            opened.clear()
+            raise
+        except Exception as exc:
+            for mgr in reversed(opened):
+                ex = _get_exit(mgr)
+                if ex:
+                    suppressed = self._call_function(ex, [str(exc)], node.line)
+                    if self._is_truthy(suppressed):
+                        opened.clear()
+                        return None
+            opened.clear()
+            raise
+
+    def _resolve_active_method(self, sdev_class: SdevClass, instance: SdevInstance, name: str) -> Any:
+        chain: List[Any] = []
+        if name == 'init':
+            base = sdev_class.constructor
+        else:
+            base = self._find_method(sdev_class, name)
+        if base is not None:
+            chain.append(base)
+
+        mro: List[SdevClass] = []
+        cur: Optional[SdevClass] = sdev_class
+        while cur is not None:
+            mro.append(cur)
+            cur = cur.parent
+        mro.reverse()
+
+        for c in mro:
+            for layer in c.feature_layers:
+                fname = layer.get('feature_name')
+                if fname is None or self._fop_is_enabled(fname):
+                    m = layer.get('methods', {}).get(name)
+                    if m is not None:
+                        chain.append(m)
+
+        if not chain:
+            return None
+        if len(chain) == 1 and isinstance(chain[0], SdevMethod):
+            return SdevBoundMethod(instance, chain[0])
+
+        def _build_chain(idx: int) -> SdevBuiltin:
+            curr = chain[idx]
+            def _invoke_curr(call_args: List[Any], call_line: int):
+                if isinstance(curr, SdevMethod):
+                    return self._call_bound_method(SdevBoundMethod(instance, curr), call_args, call_line)
+                needs_self = not isinstance(curr, (SdevUserFunc, SdevLambda)) or (len(curr.params) > len(call_args)) or (bool(curr.params) and curr.params[0] == 'self')
+                pass_args = call_args if (call_args and call_args[0] is instance) or not needs_self else [instance] + list(call_args)
+                return self._call_function(curr, pass_args, call_line)
+
+            if idx == 0:
+                return SdevBuiltin(name, _invoke_curr)
+
+            prev_bound = _build_chain(idx - 1)
+            def _wrapped(call_args: List[Any], call_line: int):
+                def _prev_for_proceed(p_args: List[Any], p_line: int):
+                    norm = p_args[1:] if (p_args and p_args[0] is instance) else p_args
+                    return prev_bound.func(norm, p_line)
+                prev_proceed = SdevBuiltin('proceed', _prev_for_proceed)
+                return self._fop_with_proceed(prev_proceed, lambda: _invoke_curr(call_args, call_line))
+            return SdevBuiltin(name, _wrapped)
+
+        return _build_chain(len(chain) - 1)
     
     def _execute_block(self, node: BlockStatement, env: Environment) -> Any:
         block_env = Environment(env)

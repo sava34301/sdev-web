@@ -25,7 +25,7 @@ use "lang/stdlib/v2/oce.sdev"
 | --- | --- |
 | `bits.sdev` | Bitwise logic & wrapping (`bits_and`, `bits_or`, `bits_xor`, `bits_not_n`, `bits_shl`, `bits_shr`, `bits_test`, `bits_popcount`, `bits_to_hex`, `bits_from_hex`, `floor_div`, `floor_mod`, `wrap_u8`, `wrap_u16`, `wrap_i16`). |
 | `buffer.sdev` | Byte buffers, binary encoding, and low-level memory helpers. |
-| `func.sdev` | Functional combinators: `take`, `drop`, `compose`, higher-order helpers. |
+| `func.sdev` | Functional combinators: `func_take`, `func_drop`, `func_map`, `func_filter`, `func_fold`, `func_scan`, `func_juxt`, `func_converge`, `func_zip_with`, `func_partition`, `func_flat_map`, `func_find`, `func_every`, `func_some`. |
 | `graphics.sdev` | Self-hosted 2D canvas command recorder & SVG emitter (`canvas_create`, `gfx_background`, `gfx_fill`, `gfx_stroke`, `gfx_rect`, `gfx_circle`, `gfx_line`, `gfx_text`, `gfx_to_svg`). |
 | `json.sdev` | JSON serialization, string escaping, and parsing helpers. |
 | `list.sdev` | Core list operations: `list_append`, `list_concat_two`, `list_map`, `list_filter`, `list_fold`, `list_sort`, slicing, searching. |
@@ -45,7 +45,10 @@ use "lang/stdlib/v2/oce.sdev"
 | `ui.sdev` | Declarative UI & reactive window tree builder (`ui_window`, `ui_column`, `ui_card`, `ui_input`, `ui_slider`, `ui_checkbox`, `ui_button`, `ui_get`, `ui_set`, `ui_to_html`). |
 | `web.sdev` | Entry point importing the full Website Building Toolkit (`lang/web/*`). |
 
-Plus `lang/stdlib/testkit.sdev` for pure-SDEV test suites (`check`, `str_same`, `first_diff`, `shell`, `tk_report`).
+Plus `lang/stdlib/testkit.sdev` for pure-SDEV test suites (`check`, `str_same`, `first_diff`, `shell`, `tk_report`), and pure-SDEV v2 paradigm modules under `lang/paradigms/`:
+
+- `lang/paradigms/feature.sdev` — Feature-Oriented Programming & SPL records (`feature_create`, `feature_add_field`, `feature_add_method`, `feature_compose`, `feature_model_create`, `feature_model_add`, `feature_model_require`, `feature_model_exclude`, `feature_model_validate`, `feature_model_resolve`, `feature_registry_create`, `feature_enable_in`, `feature_disable_in`, `feature_is_enabled_in`).
+- `lang/paradigms/functional.sdev` — `Option`/`Result` ADTs & combinators (`Some`, `None`, `Ok`, `Err`, `match_adt`, `match_result`, `match_option_fn`, `func_pipe2`, `func_pipe3`, `func_compose2`).
 
 ---
 

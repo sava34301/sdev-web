@@ -232,6 +232,34 @@ speak("MAPPED_RES=" + str(mappedRes["val"]))
 const fnRes = execute(fnTest);
 check('Option and Result algebraic monads with map_some and map_ok', fnRes.success && fnRes.output[0] === 'DOUBLED=20' && fnRes.output[1] === 'UNWRAP_OR=99' && fnRes.output[2] === 'MAPPED_RES=150', String(fnRes.error));
 
+// ── 8. Feature-Oriented & Function-Oriented Programming ───────────────────────
+console.log('\n--- 8. Feature-Oriented & Function-Oriented Programming ---');
+
+const fopFpTest = `
+conjure price(x) => x * 10
+feature Discount ::
+  refine price(x) ::
+    yield proceed(x) - 5
+  ;;
+;;
+enable_feature("Discount")
+forge inc be x -> x + 1
+forge pipe_res be (inc >> price)(3)
+
+conjure fib_tag(0) => "zero"
+conjure fib_tag(n) when n > 0 => "pos:" + str(n)
+
+speak("PIPE=" + str(pipe_res))
+speak("TAG0=" + fib_tag(0))
+speak("TAG2=" + fib_tag(2))
+`;
+const fopFpRes = execute(fopFpTest);
+check(
+  'FOP refinements compose with FP tacit >> and guarded multi-clause functions',
+  fopFpRes.success && fopFpRes.output[0] === 'PIPE=35' && fopFpRes.output[1] === 'TAG0=zero' && fopFpRes.output[2] === 'TAG2=pos:2',
+  String(fopFpRes.error)
+);
+
 console.log(`\n================================================================`);
 console.log(`Multi-Language Parity Suite: ${passed} passed, ${failed} failed`);
 console.log(`================================================================`);

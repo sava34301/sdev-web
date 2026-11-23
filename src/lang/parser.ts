@@ -62,6 +62,8 @@ export class Parser {
     if (this.check(TokenType.ESSENCE_KW)) return this.parseEssenceDeclaration();
     // 'essence' stays a contextual keyword - check by value
     if (this.isContextualClassStart()) return this.parseEssenceDeclaration();
+    if (this.isContextualFeatureStart()) return this.parseFeatureDeclaration();
+    if (this.isContextualRefineStart()) return this.parseRefineDeclaration();
     // Reassignment dialects used by the sdev stdlib:
     //   be x be value        (leading-'be' form)
     //   set x to value       (ML/v2 form, 'set'/'to' are contextual)
@@ -89,31 +91,53 @@ export class Parser {
     return after.type === TokenType.LPAREN || after.type === TokenType.WITH || (after.type === TokenType.IDENTIFIER && after.value === 'with');
   }
 
-  /** to name [with a b c] <block> end */
+  /** to name [with a b c] [when guard] (<block> end | => expr) */
   private parseToDeclaration(): AST.FuncDeclaration {
     const toToken = this.advance();
     const name = this.consumeName('Expected function name');
-    const params: string[] = [];
+    let paramSpecs: AST.Param[] = [];
+    let patternParams: (AST.PatternNode | null)[] = [];
     if (this.check(TokenType.WITH) || this.checkIdentifierValue('with')) {
       this.advance();
-      while (this.check(TokenType.IDENTIFIER) && this.peek().line === toToken.line) {
-        params.push(this.advance().value);
+      while (
+        this.check(TokenType.IDENTIFIER) &&
+        this.peek().line === toToken.line &&
+        !this.check(TokenType.WHEN) &&
+        !this.check(TokenType.FATARROW)
+      ) {
+        const pname = this.advance().value;
+        paramSpecs.push({ name: pname, kind: 'normal' });
+        patternParams.push(null);
         this.match(TokenType.COMMA);
       }
     } else if (this.check(TokenType.LPAREN) && this.peek().line === toToken.line) {
-      this.advance();
-      while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
-        params.push(this.consumeName('Expected parameter name'));
-        if (!this.match(TokenType.COMMA)) break;
-      }
-      this.consume(TokenType.RPAREN, "Expected ')'");
+      const parsed = this.parseFuncParamList();
+      paramSpecs = parsed.paramSpecs;
+      patternParams = parsed.patternParams;
     }
-    const body = this.parseBlockStatement();
+    let guard: AST.ASTNode | undefined;
+    if (this.match(TokenType.WHEN)) {
+      guard = this.parseExpression();
+    }
+    let body: AST.BlockStatement;
+    if (this.match(TokenType.FATARROW)) {
+      const expr = this.parseExpression();
+      body = {
+        type: 'BlockStatement',
+        statements: [{ type: 'ReturnStatement', value: expr, line: expr.line }],
+        line: expr.line,
+      };
+    } else {
+      body = this.parseBlockStatement();
+    }
+    const hasPatterns = patternParams.some((p) => p !== null);
     return {
       type: 'FuncDeclaration',
       name,
-      params,
-      paramSpecs: params.map((n) => ({ name: n })),
+      params: paramSpecs.map((p) => p.name),
+      paramSpecs,
+      ...(hasPatterns ? { patternParams } : {}),
+      ...(guard ? { guard } : {}),
       isGenerator: this.blockEmits(body),
       body,
       line: toToken.line,
@@ -306,20 +330,35 @@ export class Parser {
     return this.parseBitOr();
   }
 
-  // conjure name(params) [-> Type] :: body ;;
+  // conjure name(params) [-> Type] [when guard] (:: body ;; | => expr)
   private parseConjureDeclaration(): AST.FuncDeclaration {
     const conjureToken = this.consume(TokenType.CONJURE, "Expected 'conjure'");
     const name = this.consumeName('Expected function name');
-    const paramSpecs = this.parseParamList();
+    const { paramSpecs, patternParams } = this.parseFuncParamList();
     let returnType: AST.ASTNode | undefined;
     if (this.match(TokenType.ARROW)) returnType = this.parseTypeExpr();
+    let guard: AST.ASTNode | undefined;
+    if (this.match(TokenType.WHEN)) guard = this.parseExpression();
 
-    const body = this.parseBlockStatement();
+    let body: AST.BlockStatement;
+    if (this.match(TokenType.FATARROW)) {
+      const expr = this.parseExpression();
+      body = {
+        type: 'BlockStatement',
+        statements: [{ type: 'ReturnStatement', value: expr, line: expr.line }],
+        line: expr.line,
+      };
+    } else {
+      body = this.parseBlockStatement();
+    }
+    const hasPatterns = patternParams.some((p) => p !== null);
     return {
       type: 'FuncDeclaration',
       name,
       params: paramSpecs.map((p) => p.name),
       paramSpecs,
+      ...(hasPatterns ? { patternParams } : {}),
+      ...(guard ? { guard } : {}),
       returnType,
       isGenerator: this.blockEmits(body),
       body,
@@ -347,8 +386,43 @@ export class Parser {
   }
 
   private parseParamList(): AST.Param[] {
+    return this.parseFuncParamList().paramSpecs;
+  }
+
+  private isPatternParamStart(): boolean {
+    const t = this.peek();
+    if (
+      t.type === TokenType.NUMBER ||
+      t.type === TokenType.STRING ||
+      t.type === TokenType.YEP ||
+      t.type === TokenType.NOPE ||
+      t.type === TokenType.VOID ||
+      t.type === TokenType.MINUS ||
+      t.type === TokenType.LBRACKET ||
+      t.type === TokenType.LBRACE
+    ) {
+      return true;
+    }
+    if (t.type === TokenType.IDENTIFIER && t.value === '_') return true;
+    if (t.type === TokenType.IDENTIFIER) {
+      const next = this.tokens[this.pos + 1];
+      if (
+        next &&
+        (next.type === TokenType.LPAREN ||
+          next.type === TokenType.DOT ||
+          next.type === TokenType.BAR ||
+          next.type === TokenType.AS)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private parseFuncParamList(): { paramSpecs: AST.Param[]; patternParams: (AST.PatternNode | null)[] } {
     this.consume(TokenType.LPAREN, "Expected '('");
     const params: AST.Param[] = [];
+    const patternParams: (AST.PatternNode | null)[] = [];
     let kwOnly = false;
     if (!this.check(TokenType.RPAREN)) {
       do {
@@ -365,6 +439,13 @@ export class Parser {
           kwOnly = true;
           continue;
         }
+        if (this.isPatternParamStart()) {
+          const pat = this.parsePattern();
+          const synName = `__pat_${params.length}`;
+          params.push({ name: synName, kind: kwOnly ? 'kwonly' : 'normal' });
+          patternParams.push(pat);
+          continue;
+        }
         let kind: AST.Param['kind'] = kwOnly ? 'kwonly' : 'normal';
         if (this.match(TokenType.STARSTAR)) kind = 'named';
         else if (this.match(TokenType.STAR)) { kind = 'rest'; kwOnly = true; }
@@ -379,10 +460,11 @@ export class Parser {
         if (this.match(TokenType.BE)) def = this.parseExpression();
 
         params.push({ name, kind, annotation, default: def });
+        patternParams.push(null);
       } while (this.match(TokenType.COMMA));
     }
     this.consume(TokenType.RPAREN, "Expected ')'");
-    return params;
+    return { paramSpecs: params, patternParams };
   }
 
   // essence/kind Name (extend A, B)? :: fields + methods ;;
@@ -450,6 +532,279 @@ export class Parser {
       metaclass,
       methods,
       line: essenceToken.line,
+    };
+  }
+
+  private isContextualFeatureStart(): boolean {
+    if (!this.checkIdentifierValue('feature') && !this.checkIdentifierValue('facet')) return false;
+    const tok = this.peek();
+    const next = this.tokens[this.pos + 1];
+    if (!next || next.type !== TokenType.IDENTIFIER || next.line !== tok.line) return false;
+    const after = this.tokens[this.pos + 2];
+    if (!after || after.line !== next.line) return true;
+    return (
+      after.type === TokenType.DOUBLE_COLON ||
+      after.type === TokenType.EXTEND ||
+      (after.type === TokenType.IDENTIFIER && (after.value === 'requires' || after.value === 'excludes'))
+    );
+  }
+
+  private parseFeatureDeclaration(): AST.FeatureDeclaration {
+    const featureToken = this.advance(); // 'feature' | 'facet'
+    const name = this.consumeName('Expected feature name');
+    const requires: string[] = [];
+    const excludes: string[] = [];
+
+    const parseNameList = (): string[] => {
+      const names: string[] = [];
+      if (this.match(TokenType.LBRACKET)) {
+        if (!this.check(TokenType.RBRACKET)) {
+          do {
+            if (this.check(TokenType.RBRACKET)) break;
+            names.push(this.consumeName('Expected feature name'));
+          } while (this.match(TokenType.COMMA));
+        }
+        this.consume(TokenType.RBRACKET, "Expected ']'");
+        return names;
+      }
+      names.push(this.consumeName('Expected feature name'));
+      while (this.match(TokenType.COMMA)) {
+        names.push(this.consumeName('Expected feature name'));
+      }
+      return names;
+    };
+
+    for (;;) {
+      if (this.checkIdentifierValue('requires')) {
+        this.advance();
+        requires.push(...parseNameList());
+      } else if (this.checkIdentifierValue('excludes')) {
+        this.advance();
+        excludes.push(...parseNameList());
+      } else if (this.match(TokenType.EXTEND)) {
+        requires.push(...parseNameList());
+      } else {
+        break;
+      }
+    }
+
+    const refinements: AST.RefineDeclaration[] = [];
+    const methods: AST.FuncDeclaration[] = [];
+    const fields: AST.LetStatement[] = [];
+    const statements: AST.ASTNode[] = [];
+
+    const pushMember = (stmt: AST.ASTNode) => {
+      if (stmt.type === 'RefineDeclaration') refinements.push(stmt);
+      else if (stmt.type === 'FuncDeclaration') methods.push(stmt);
+      else if (stmt.type === 'LetStatement') fields.push(stmt);
+      else if (stmt.type === 'AssignStatement' && stmt.declare) {
+        fields.push({ type: 'LetStatement', name: stmt.name, value: stmt.value, line: stmt.line });
+      } else {
+        statements.push(stmt);
+      }
+    };
+
+    if (this.check(TokenType.DOUBLE_COLON)) {
+      this.advance();
+      while (!this.check(TokenType.DOUBLE_SEMI) && !this.isAtEnd()) {
+        pushMember(this.parseStatement());
+      }
+      this.consume(TokenType.DOUBLE_SEMI, "Expected ';;'");
+    } else {
+      while (!this.isAtEnd() && !this.checkEndWord() && !this.check(TokenType.DOUBLE_SEMI)) {
+        pushMember(this.parseStatement());
+      }
+      if (this.checkEndWord()) this.advance();
+    }
+
+    return {
+      type: 'FeatureDeclaration',
+      name,
+      requires,
+      excludes,
+      refinements,
+      methods,
+      fields,
+      statements,
+      line: featureToken.line,
+    };
+  }
+
+  private isContextualRefineStart(): boolean {
+    if (!this.checkIdentifierValue('refine') && !this.checkIdentifierValue('augment')) return false;
+    const tok = this.peek();
+    const next = this.tokens[this.pos + 1];
+    if (!next || next.line !== tok.line) return false;
+    if (
+      next.type === TokenType.CONJURE ||
+      next.type === TokenType.ESSENCE_KW ||
+      next.type === TokenType.ESSENCE ||
+      (next.type === TokenType.IDENTIFIER && ['essence', 'kind', 'class', 'to', 'func', 'def'].includes(next.value))
+    ) {
+      const target = this.tokens[this.pos + 2];
+      return !!target && target.type === TokenType.IDENTIFIER && target.line === tok.line;
+    }
+    if (next.type !== TokenType.IDENTIFIER) return false;
+    const after = this.tokens[this.pos + 2];
+    if (!after || after.line !== next.line) return true;
+    if (after.type === TokenType.DOUBLE_COLON) return true;
+    if (after.type === TokenType.WITH || (after.type === TokenType.IDENTIFIER && after.value === 'with')) return true;
+    if (after.type === TokenType.LPAREN) {
+      let depth = 1;
+      let i = this.pos + 3;
+      while (i < this.tokens.length && depth > 0) {
+        if (this.tokens[i].type === TokenType.LPAREN) depth++;
+        else if (this.tokens[i].type === TokenType.RPAREN) depth--;
+        i++;
+      }
+      const postParen = this.tokens[i];
+      if (!postParen || postParen.line !== tok.line) return true;
+      return (
+        postParen.type === TokenType.DOUBLE_COLON ||
+        postParen.type === TokenType.ARROW ||
+        postParen.type === TokenType.FATARROW
+      );
+    }
+    return false;
+  }
+
+  private parseRefineDeclaration(): AST.RefineDeclaration {
+    const refineToken = this.advance(); // 'refine' | 'augment'
+    let isFuncModifier = false;
+    let isClassModifier = false;
+
+    if (
+      this.match(TokenType.CONJURE) ||
+      this.checkIdentifierValue('to') ||
+      this.checkIdentifierValue('func') ||
+      this.checkIdentifierValue('def')
+    ) {
+      if (this.previous().type !== TokenType.CONJURE) this.advance();
+      isFuncModifier = true;
+    } else if (
+      this.match(TokenType.ESSENCE_KW, TokenType.ESSENCE) ||
+      this.checkIdentifierValue('essence') ||
+      this.checkIdentifierValue('kind') ||
+      this.checkIdentifierValue('class')
+    ) {
+      if (this.previous().type !== TokenType.ESSENCE_KW && this.previous().type !== TokenType.ESSENCE) {
+        this.advance();
+      }
+      isClassModifier = true;
+    }
+
+    const targetName = this.consumeName('Expected class or function name to refine');
+
+    const isFunctionRefine =
+      isFuncModifier ||
+      (!isClassModifier &&
+        (this.check(TokenType.LPAREN) ||
+          this.check(TokenType.WITH) ||
+          this.checkIdentifierValue('with')));
+
+    if (isFunctionRefine) {
+      let paramSpecs: AST.Param[] = [];
+      if (this.check(TokenType.LPAREN)) {
+        paramSpecs = this.parseParamList();
+      } else if (this.check(TokenType.WITH) || this.checkIdentifierValue('with')) {
+        this.advance();
+        while (
+          this.check(TokenType.IDENTIFIER) &&
+          this.peek().line === refineToken.line &&
+          !this.check(TokenType.FATARROW)
+        ) {
+          paramSpecs.push({ name: this.advance().value, kind: 'normal' });
+          this.match(TokenType.COMMA);
+        }
+      }
+      if (this.match(TokenType.ARROW)) this.parseTypeExpr();
+      let body: AST.BlockStatement;
+      if (this.match(TokenType.FATARROW)) {
+        const expr = this.parseExpression();
+        body = {
+          type: 'BlockStatement',
+          statements: [{ type: 'ReturnStatement', value: expr, line: expr.line }],
+          line: expr.line,
+        };
+      } else {
+        body = this.parseBlockStatement();
+      }
+      return {
+        type: 'RefineDeclaration',
+        targetName,
+        isFunctionRefine: true,
+        params: paramSpecs.map((p) => p.name),
+        paramSpecs,
+        methods: [],
+        fields: [],
+        body,
+        line: refineToken.line,
+      };
+    }
+
+    const methods: AST.FuncDeclaration[] = [];
+    const fields: AST.LetStatement[] = [];
+    const readClassRefineItem = () => {
+      if (this.check(TokenType.AT) && this.isDecoratorPosition()) {
+        const decorated = this.parseDecorated();
+        if (decorated.type === 'FuncDeclaration') methods.push(decorated);
+        return;
+      }
+      if (this.check(TokenType.ASYNC)) {
+        const node = this.parseAsyncStatement();
+        if (node.type === 'FuncDeclaration') methods.push(node);
+        return;
+      }
+      if (this.check(TokenType.CONJURE)) {
+        methods.push(this.parseConjureDeclaration());
+        return;
+      }
+      if (this.isToDeclaration()) {
+        methods.push(this.parseToDeclaration());
+        return;
+      }
+      if (this.check(TokenType.FORGE)) {
+        fields.push(this.parseForgeStatement(false));
+        return;
+      }
+      if (this.isContextualFixedStart()) {
+        fields.push(this.parseForgeStatement(true));
+        return;
+      }
+      if (this.checkIdentifierValue('set') && this.isSetToStatement()) {
+        const st = this.parseSetToStatement();
+        if (st.type === 'AssignStatement') {
+          fields.push({ type: 'LetStatement', name: st.name, value: st.value, line: st.line });
+        }
+        return;
+      }
+      if (this.check(TokenType.PASS)) {
+        this.advance();
+        return;
+      }
+      this.advance();
+    };
+
+    if (this.check(TokenType.DOUBLE_COLON)) {
+      this.advance();
+      while (!this.check(TokenType.DOUBLE_SEMI) && !this.isAtEnd()) {
+        readClassRefineItem();
+      }
+      this.consume(TokenType.DOUBLE_SEMI, "Expected ';;'");
+    } else {
+      while (!this.isAtEnd() && !this.checkEndWord() && !this.check(TokenType.DOUBLE_SEMI)) {
+        readClassRefineItem();
+      }
+      if (this.checkEndWord()) this.advance();
+    }
+
+    return {
+      type: 'RefineDeclaration',
+      targetName,
+      isFunctionRefine: false,
+      methods,
+      fields,
+      line: refineToken.line,
     };
   }
 
@@ -789,7 +1144,8 @@ export class Parser {
       t.type === TokenType.FORGE || t.type === TokenType.CONJURE ||
       t.type === TokenType.PONDER || t.type === TokenType.CYCLE ||
       t.type === TokenType.ITERATE || t.type === TokenType.YIELD ||
-      t.type === TokenType.CASE;
+      t.type === TokenType.CASE ||
+      this.isContextualFeatureStart() || this.isContextualRefineStart();
   }
 
   // yeet (break)
@@ -1351,6 +1707,44 @@ export class Parser {
       } while (this.match(TokenType.COMMA));
     }
     this.consume(TokenType.RPAREN, "Expected ')'");
+    const isPartialBuiltin =
+      callee.type === 'Identifier' && (callee.name === 'partial' || callee.name === 'partial_right');
+    const hasPlaceholder = args.some((a) => a.type === 'Identifier' && a.name === '_');
+    if (hasPlaceholder) {
+      if (isPartialBuiltin) {
+        const mappedArgs = args.map((a) =>
+          a.type === 'Identifier' && a.name === '_'
+            ? ({
+                type: 'DictLiteral',
+                entries: [
+                  {
+                    key: { type: 'StringLiteral', value: '__sdev_placeholder__', line: a.line },
+                    value: { type: 'BooleanLiteral', value: true, line: a.line },
+                  },
+                ],
+                line: a.line,
+              } as AST.DictLiteral)
+            : a
+        );
+        return { type: 'CallExpr', callee, args: mappedArgs, line: callee.line };
+      }
+      const placeholderParams: string[] = [];
+      const boundArgs = args.map((a) => {
+        if (a.type === 'Identifier' && a.name === '_') {
+          const pname = `__p${placeholderParams.length}`;
+          placeholderParams.push(pname);
+          return { type: 'Identifier', name: pname, line: a.line } as AST.Identifier;
+        }
+        return a;
+      });
+      return {
+        type: 'LambdaExpr',
+        params: placeholderParams,
+        paramSpecs: placeholderParams.map((p) => ({ name: p, kind: 'normal' })),
+        body: { type: 'CallExpr', callee, args: boundArgs, line: callee.line },
+        line: callee.line,
+      };
+    }
     return { type: 'CallExpr', callee, args, line: callee.line };
   }
 

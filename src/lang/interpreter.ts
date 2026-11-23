@@ -2,6 +2,12 @@ import * as AST from './ast';
 import { Environment } from './environment';
 import { SdevError, ReturnException } from './errors';
 import { createBuiltins, SdevFunction, isTruthy, stringify, OutputCallback, setObjectTextHook } from './builtins';
+import {
+  FopRegistry,
+  buildFeatureObject,
+  chainMethodWithProceed,
+  type FopFeatureRefinement,
+} from './builtins/fop';
 import { createAdvancedBuiltins } from './advanced';
 import { createMatrixBuiltins } from './matrix';
 import { createParityBuiltins, formatValue, setObjectReprHook } from './pyparity';
@@ -23,6 +29,12 @@ interface EmitSignal {
 
 type Ev = Generator<EmitSignal, unknown, unknown>;
 
+interface SdevFeatureLayer {
+  featureName: string | null;
+  methods: Map<string, SdevFunction>;
+  attrs: Record<string, unknown>;
+}
+
 // OOP class representation
 interface SdevClass {
   type: 'class';
@@ -34,6 +46,7 @@ interface SdevClass {
   props: Map<string, { get?: SdevFunction; set?: SdevFunction }>;
   statics: Map<string, SdevFunction>;
   attrs: Record<string, unknown>;
+  featureLayers?: SdevFeatureLayer[];
 }
 
 interface SdevInstance {
@@ -63,6 +76,8 @@ function stmtDeclaresInScope(node: AST.ASTNode): boolean {
     case 'LetStatement':
     case 'FuncDeclaration':
     case 'ClassDeclaration':
+    case 'FeatureDeclaration':
+    case 'RefineDeclaration':
     case 'ImportStatement':
     case 'DelStatement':
     case 'WalrusExpr':
@@ -135,12 +150,14 @@ export class Interpreter {
   private globalEnv: Environment;
   private output: OutputCallback;
   private webState: WebState | null = null;
+  private fopRegistry: FopRegistry;
 
   constructor(output: OutputCallback, options?: { bindWeb?: boolean }) {
     this.output = output;
     this.globalEnv = new Environment();
+    this.fopRegistry = new FopRegistry();
 
-    const builtins = createBuiltins(output);
+    const builtins = createBuiltins(output, this.fopRegistry);
     builtins.forEach((fn, name) => this.globalEnv.define(name, fn));
 
     const advanced = createAdvancedBuiltins(output);
@@ -218,6 +235,9 @@ export class Interpreter {
   // A stray `emit` outside a generator body is a hard error.
   // ==========================================================
   private execute(node: AST.ASTNode, env: Environment): unknown {
+    if (this.ev !== Interpreter.prototype.ev) {
+      return this.runGen(node, env);
+    }
     return this.evalSync(node, env);
   }
 
@@ -231,6 +251,9 @@ export class Interpreter {
   }
 
   private evalSync(node: AST.ASTNode, env: Environment): unknown {
+    if (this.ev !== Interpreter.prototype.ev) {
+      return this.runGen(node, env);
+    }
     switch (node.type) {
       case 'NumberLiteral': return node.value;
       case 'StringLiteral': return node.value;
@@ -470,16 +493,13 @@ export class Interpreter {
         return out;
       }
       case 'FuncDeclaration': {
-        let fn: unknown = this.makeFunction(node, env);
-        if (node.decorators?.length) {
-          for (const dec of [...node.decorators].reverse()) {
-            const decorator = this.evalSync(dec, env);
-            fn = this.callValue(decorator, [fn], node.line);
-          }
-        }
-        env.define(node.name, fn);
-        return null;
+        return this.registerFuncDecl(node, env);
       }
+      case 'FeatureDeclaration':
+        return this.execFeatureDeclaration(node, env);
+      case 'RefineDeclaration':
+        this.execRefineDeclaration(node, env, null);
+        return null;
       case 'LambdaExpr': return this.makeLambda(node, env);
       case 'WalrusExpr': {
         const value = this.evalSync(node.value, env);
@@ -657,6 +677,8 @@ export class Interpreter {
       case 'WithStatement': return yield* this.evWith(node, env);
       case 'FuncDeclaration': return yield* this.evFuncDecl(node, env);
       case 'ClassDeclaration': return yield* this.evClassDecl(node, env);
+      case 'FeatureDeclaration': return this.execFeatureDeclaration(node, env);
+      case 'RefineDeclaration': this.execRefineDeclaration(node, env, null); return null;
       case 'ReturnStatement': {
         const value = node.value ? yield* this.ev(node.value, env) : null;
         throw new ReturnException(value);
@@ -869,8 +891,24 @@ export class Interpreter {
       case '|':
         if (left instanceof SdevSet && right instanceof SdevSet) return new SdevSet([...left.values(), ...right.values()]);
         return this.requireNumbers(left, right, '|', line, (a, b) => a | b);
-      case '<<': return this.requireNumbers(left, right, '<<', line, (a, b) => a << b);
-      case '>>': return this.requireNumbers(left, right, '>>', line, (a, b) => a >> b);
+      case '<<':
+        if (isFunction(left) || isFunction(right)) {
+          return {
+            type: 'builtin',
+            call: (args: unknown[], callLine: number) =>
+              this.callValue(left, [this.callValue(right, args, callLine)], callLine),
+          } as SdevFunction;
+        }
+        return this.requireNumbers(left, right, '<<', line, (a, b) => a << b);
+      case '>>':
+        if (isFunction(left) || isFunction(right)) {
+          return {
+            type: 'builtin',
+            call: (args: unknown[], callLine: number) =>
+              this.callValue(right, [this.callValue(left, args, callLine)], callLine),
+          } as SdevFunction;
+        }
+        return this.requireNumbers(left, right, '>>', line, (a, b) => a >> b);
       case '<': case '>': case '<=': case '>=': {
         if (typeof left === 'string' && typeof right === 'string') {
           return operator === '<' ? left < right : operator === '>' ? left > right :
@@ -1068,6 +1106,22 @@ export class Interpreter {
       if (klass) {
         const prop = this.findProperty(klass, property);
         if (prop?.get) return prop.get.call([obj], line);
+      }
+      if (Object.prototype.hasOwnProperty.call(obj, property)) {
+        const val = (obj as Record<string, unknown>)[property];
+        if (val !== undefined) return val;
+      }
+      if (klass) {
+        const activeMethod = this.resolveActiveMethod(klass, obj, property);
+        if (activeMethod) return activeMethod;
+        for (let i = klass.mro.length - 1; i >= 0; i--) {
+          const c = klass.mro[i];
+          for (const layer of c.featureLayers ?? []) {
+            if (layer.featureName === null || this.fopRegistry.isEnabled(layer.featureName)) {
+              if (property in layer.attrs) return layer.attrs[property];
+            }
+          }
+        }
       }
       const val = (obj as Record<string, unknown>)[property];
       if (val !== undefined) return val;
@@ -1474,8 +1528,28 @@ export class Interpreter {
         return true;
       }
       case 'PatClass': {
-        const klass = env.get(pattern.className, line) as SdevClass | undefined;
-        if (!klass || klass.type !== 'class') return false;
+        const klass = env.has(pattern.className) ? (env.get(pattern.className, line) as SdevClass | undefined) : undefined;
+        if (!klass || klass.type !== 'class') {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const obj = value as Record<string, unknown>;
+            if (pattern.className === 'Some' && (obj.is_some || obj.tag === 'Some')) {
+              if (pattern.positional.length === 0) return true;
+              return pattern.positional.length === 1 && this.matchPattern(pattern.positional[0], obj.val, env, line);
+            }
+            if (pattern.className === 'None' && (obj.is_none || obj.tag === 'None')) {
+              return pattern.positional.length === 0;
+            }
+            if (pattern.className === 'Ok' && (obj.is_ok || obj.tag === 'Ok')) {
+              if (pattern.positional.length === 0) return true;
+              return pattern.positional.length === 1 && this.matchPattern(pattern.positional[0], obj.val, env, line);
+            }
+            if (pattern.className === 'Err' && (obj.is_err || obj.tag === 'Err')) {
+              if (pattern.positional.length === 0) return true;
+              return pattern.positional.length === 1 && this.matchPattern(pattern.positional[0], obj.err, env, line);
+            }
+          }
+          return false;
+        }
         if (!this.isInstanceOf(value, klass)) return false;
         const obj = value as Record<string, unknown>;
         const order = (klass.attrs['match_fields'] as unknown[] | undefined) ?? Object.keys(obj);
@@ -1538,15 +1612,219 @@ export class Interpreter {
   // ----------------------------------------------------------
 
   private *evFuncDecl(node: AST.FuncDeclaration, env: Environment): Ev {
-    let fn: unknown = this.makeFunction(node, env);
     if (node.decorators?.length) {
+      let fn: unknown = this.makeFunction(node, env);
       for (const dec of [...node.decorators].reverse()) {
         const decorator = yield* this.ev(dec, env);
         fn = this.callValue(decorator, [fn], node.line);
       }
+      env.define(node.name, fn);
+      return null;
     }
-    env.define(node.name, fn);
+    return this.registerFuncDecl(node, env);
+  }
+
+  private registerFuncDecl(node: AST.FuncDeclaration, env: Environment): null {
+    const hasPatterns = Boolean(node.patternParams?.some((p) => p !== null));
+    const hasClauseSpec = hasPatterns || Boolean(node.guard);
+    const existing = env.hasOwn(node.name) ? env.get(node.name, node.line) : undefined;
+    type ClauseRunner = (args: unknown[], callLine: number) => { matched: boolean; value: unknown };
+    type MultiClauseFn = RichFunction & { __clauses?: ClauseRunner[] };
+    const existingMulti = existing && typeof existing === 'object' ? (existing as MultiClauseFn) : undefined;
+
+    if (!hasClauseSpec && !existingMulti?.__clauses) {
+      let fn: unknown = this.makeFunction(node, env);
+      if (node.decorators?.length) {
+        for (const dec of [...node.decorators].reverse()) {
+          const decorator = this.evalSync(dec, env);
+          fn = this.callValue(decorator, [fn], node.line);
+        }
+      }
+      env.define(node.name, fn);
+      return null;
+    }
+
+    const specs: AST.Param[] = node.paramSpecs ?? node.params.map((name) => ({ name, kind: 'normal' as const }));
+    const clauseRunner: ClauseRunner = (args: unknown[], callLine: number) => {
+      const clauseEnv = new Environment(env);
+      this.bindParams(specs, args, clauseEnv, callLine, node.name);
+      if (node.patternParams) {
+        for (let i = 0; i < node.patternParams.length; i++) {
+          const pat = node.patternParams[i];
+          if (!pat) continue;
+          const argVal = i < args.length ? args[i] : clauseEnv.get(specs[i].name, callLine);
+          if (!this.matchPattern(pat, argVal, clauseEnv, callLine)) {
+            return { matched: false, value: null };
+          }
+        }
+      }
+      if (node.guard) {
+        if (!this.truthy(this.evalSync(node.guard, clauseEnv))) {
+          return { matched: false, value: null };
+        }
+      }
+      if (node.isGenerator) {
+        return { matched: true, value: makeGenerator(this.generatorBody(node.body, clauseEnv)) };
+      }
+      try {
+        this.evalSync(node.body, clauseEnv);
+        return { matched: true, value: null };
+      } catch (e) {
+        if (e instanceof ReturnException) return { matched: true, value: e.value };
+        throw e;
+      }
+    };
+
+    if (existingMulti?.__clauses) {
+      existingMulti.__clauses.push(clauseRunner);
+      return null;
+    }
+
+    const clauses: ClauseRunner[] = [clauseRunner];
+    const dispatcher: MultiClauseFn = {
+      type: 'user',
+      __clauses: clauses,
+      call: (args: unknown[], callLine: number) => {
+        for (const c of clauses) {
+          const res = c(args, callLine);
+          if (res.matched) return res.value;
+        }
+        throw new SdevError(`No matching clause for function '${node.name}'`, callLine);
+      },
+      meta: {
+        paramSpecs: specs,
+        isGenerator: node.isGenerator,
+        isAsync: node.isAsync,
+        name: node.name,
+        ast: node,
+      },
+    };
+    env.define(node.name, dispatcher);
     return null;
+  }
+
+  private execFeatureDeclaration(node: AST.FeatureDeclaration, env: Environment): unknown {
+    const featEnv = new Environment(env);
+    const fields: Record<string, unknown> = {};
+    const methods: Record<string, SdevFunction> = {};
+    const refinements: FopFeatureRefinement[] = [];
+
+    for (const field of node.fields) {
+      const val = this.evalSync(field.value, featEnv);
+      fields[field.name] = val;
+      if (field.isFixed) featEnv.defineFixed(field.name, val);
+      else featEnv.define(field.name, val);
+    }
+
+    for (const method of node.methods) {
+      const fn = this.makeFunction(method, featEnv, `${node.name}.${method.name}`);
+      methods[method.name] = fn;
+      featEnv.define(method.name, fn);
+    }
+
+    for (const stmt of node.statements) {
+      this.evalSync(stmt, featEnv);
+    }
+
+    for (const ref of node.refinements) {
+      refinements.push(this.execRefineDeclaration(ref, featEnv, node.name));
+    }
+
+    const feat = buildFeatureObject(
+      node.name,
+      node.requires ?? [],
+      node.excludes ?? [],
+      fields,
+      methods,
+      refinements,
+      false
+    );
+    this.fopRegistry.registerFeature(feat);
+    env.define(node.name, feat);
+    return feat;
+  }
+
+  private execRefineDeclaration(
+    node: AST.RefineDeclaration,
+    env: Environment,
+    ownerFeatureName: string | null
+  ): FopFeatureRefinement {
+    if (node.isFunctionRefine) {
+      const fakeDecl: AST.FuncDeclaration = {
+        type: 'FuncDeclaration',
+        name: `${node.targetName}#refine`,
+        params: node.params ?? [],
+        paramSpecs: node.paramSpecs,
+        body: node.body!,
+        line: node.line,
+      };
+      const layerFn = this.makeFunction(fakeDecl, env);
+      const existing = env.has(node.targetName) ? env.get(node.targetName, node.line) : undefined;
+      if (!existing || !isFunction(existing)) {
+        throw new SdevError(`Cannot refine unknown or non-function '${node.targetName}'`, node.line);
+      }
+
+      type LayerEntry = { featureName: string | null; fn: SdevFunction };
+      type FeatureDispatchFn = SdevFunction & { __fop_base?: SdevFunction; __fop_layers?: LayerEntry[] };
+      let disp = existing as FeatureDispatchFn;
+      if (!disp.__fop_layers) {
+        const baseFn = existing;
+        const layers: LayerEntry[] = [];
+        disp = {
+          type: 'user',
+          __fop_base: baseFn,
+          __fop_layers: layers,
+          call: (args: unknown[], callLine: number) => {
+            const active = layers.filter(
+              (l) => l.featureName === null || this.fopRegistry.isEnabled(l.featureName)
+            );
+            if (active.length === 0) return baseFn.call(args, callLine);
+            let runner: SdevFunction = baseFn;
+            for (const l of active) {
+              runner = chainMethodWithProceed(this.fopRegistry, runner, l.fn);
+            }
+            return runner.call(args, callLine);
+          },
+        };
+        env.set(node.targetName, disp, node.line);
+      }
+      disp.__fop_layers!.push({ featureName: ownerFeatureName, fn: layerFn });
+      return {
+        targetName: node.targetName,
+        isFunctionRefine: true,
+        fields: {},
+        methods: new Map(),
+        fnWrapper: layerFn,
+      };
+    }
+
+    const klassVal = env.has(node.targetName) ? env.get(node.targetName, node.line) : undefined;
+    if (!klassVal || (klassVal as SdevClass).type !== 'class') {
+      throw new SdevError(`Cannot refine unknown or non-class '${node.targetName}'`, node.line);
+    }
+    const klass = klassVal as SdevClass;
+    const attrs: Record<string, unknown> = {};
+    for (const field of node.fields) {
+      attrs[field.name] = this.evalSync(field.value, env);
+    }
+    const methods = new Map<string, SdevFunction>();
+    for (const method of node.methods) {
+      const fn = this.makeFunction(method, env, `${node.targetName}.${method.name}`, klass);
+      methods.set(method.name, fn);
+      const alias = dunderAlias(method.name);
+      if (alias && !methods.has(alias)) methods.set(alias, fn);
+    }
+    (klass.featureLayers ??= []).push({
+      featureName: ownerFeatureName,
+      methods,
+      attrs,
+    });
+    return {
+      targetName: node.targetName,
+      isFunctionRefine: false,
+      fields: attrs,
+      methods,
+    };
   }
 
   private makeFunction(node: AST.FuncDeclaration, env: Environment, boundName?: string, ownerClass?: SdevClass): RichFunction {
@@ -1880,15 +2158,52 @@ export class Interpreter {
     return this.instantiate(klassValue as SdevClass, args, node.line, kwargs);
   }
 
+  private resolveActiveMethod(klass: SdevClass, receiver: unknown, name: string): SdevFunction | undefined {
+    const chain: SdevFunction[] = [];
+    const base = this.findMethod(klass, name);
+    if (base) chain.push(base);
+    for (let i = klass.mro.length - 1; i >= 0; i--) {
+      const c = klass.mro[i];
+      for (const layer of c.featureLayers ?? []) {
+        if (layer.featureName === null || this.fopRegistry.isEnabled(layer.featureName)) {
+          const m = layer.methods.get(name);
+          if (m) chain.push(m);
+        }
+      }
+    }
+    if (chain.length === 0) return undefined;
+    const invokeLayer = (idx: number): SdevFunction => {
+      const current = chain[idx];
+      if (idx === 0) {
+        return {
+          type: 'user',
+          call: (args: unknown[], callLine: number) => {
+            const passArgs = args[0] === receiver ? args : [receiver, ...args];
+            return current.call(passArgs, callLine);
+          },
+        };
+      }
+      const prevBound = invokeLayer(idx - 1);
+      return {
+        type: 'user',
+        call: (args: unknown[], callLine: number) => {
+          const passArgs = args[0] === receiver ? args : [receiver, ...args];
+          return this.fopRegistry.withProceed(prevBound, () => current.call(passArgs, callLine));
+        },
+      };
+    };
+    return invokeLayer(chain.length - 1);
+  }
+
   private instantiate(klass: SdevClass, args: unknown[], line: number, kwargs?: Record<string, unknown>): unknown {
     const instance: SdevInstance = { type: 'instance', klass, fields: {} };
     const proxy = this.createInstanceProxy(instance);
 
-    const init = this.findMethod(klass, 'init') ?? this.findMethod(klass, 'on_init');
+    const init = this.resolveActiveMethod(klass, proxy, 'init') ?? this.resolveActiveMethod(klass, proxy, 'on_init');
     if (init) {
       const callArgs = kwargs && Object.keys(kwargs).length
-        ? [proxy, ...args, { __kwargs: true, ...kwargs }]
-        : [proxy, ...args];
+        ? [...args, { __kwargs: true, ...kwargs }]
+        : args;
       init.call(callArgs, line);
     } else {
       // Dataclass-style positional field binding when no init is declared
@@ -1909,23 +2224,24 @@ export class Interpreter {
       value: instance.klass.name, enumerable: false, configurable: true,
     });
 
-    // Inherited class attributes become instance defaults
+    // Inherited class attributes + active feature layer attributes become instance defaults
     for (let i = instance.klass.mro.length - 1; i >= 0; i--) {
-      Object.assign(proxy, instance.klass.mro[i].attrs);
+      const c = instance.klass.mro[i];
+      Object.assign(proxy, c.attrs);
+      for (const layer of c.featureLayers ?? []) {
+        if (layer.featureName === null || this.fopRegistry.isEnabled(layer.featureName)) {
+          Object.assign(proxy, layer.attrs);
+        }
+      }
     }
-
-    const bindMethod = (method: SdevFunction): SdevFunction => ({
-      type: 'user',
-      call: (args: unknown[], line: number) => method.call([proxy, ...args], line),
-    });
 
     const seen = new Set<string>();
     for (const klass of instance.klass.mro) {
-      klass.methods.forEach((method, name) => {
+      klass.methods.forEach((_method, name) => {
         if (seen.has(name) || name in proxy) return;
         seen.add(name);
         Object.defineProperty(proxy, name, {
-          get: () => bindMethod(method),
+          get: () => this.resolveActiveMethod(instance.klass, proxy, name),
           enumerable: true,
           configurable: true,
         });
@@ -1963,9 +2279,7 @@ export class Interpreter {
       const direct = (value as Record<string, unknown>)[slot];
       return isFunction(direct) ? direct : undefined;
     }
-    const method = this.findMethod(klass, slot);
-    if (!method) return undefined;
-    return { type: 'user', call: (args: unknown[], line: number) => method.call([value, ...args], line) };
+    return this.resolveActiveMethod(klass, value, slot);
   }
 
   // ----------------------------------------------------------

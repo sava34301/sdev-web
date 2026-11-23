@@ -428,6 +428,34 @@ export function lintSdevSource(
           collectDecls(m.body);
         }
         return;
+
+      case 'FeatureDeclaration':
+        definedCallables.add(node.name);
+        localScopes.add(node.name);
+        for (const f of node.fields) collectDecls(f);
+        for (const m of node.methods) {
+          definedCallables.add(m.name);
+          localScopes.add(m.name);
+          for (const p of m.params) noteVarDecl(p, m.line, true);
+          collectDecls(m.body);
+        }
+        for (const r of node.refinements) collectDecls(r);
+        for (const s of node.statements) collectDecls(s);
+        return;
+
+      case 'RefineDeclaration':
+        if (node.isFunctionRefine) {
+          for (const p of node.params ?? []) noteVarDecl(p, node.line, true);
+          if (node.body) collectDecls(node.body);
+        } else {
+          for (const f of node.fields) collectDecls(f);
+          for (const m of node.methods) {
+            definedCallables.add(m.name);
+            for (const p of m.params) noteVarDecl(p, m.line, true);
+            collectDecls(m.body);
+          }
+        }
+        return;
       case 'LetStatement': {
         const names = node.targets && node.targets.length > 0 ? node.targets : [node.name];
         for (const n of names) {
@@ -774,12 +802,29 @@ export function lintSdevSource(
         return;
 
       case 'FuncDeclaration':
+        if (node.guard) walkNode(node.guard);
         walkNode(node.body);
         return;
 
       case 'ClassDeclaration':
         for (const f of node.fields ?? []) walkNode(f);
         for (const m of node.methods) walkNode(m.body);
+        return;
+
+      case 'FeatureDeclaration':
+        for (const f of node.fields) walkNode(f);
+        for (const m of node.methods) walkNode(m.body);
+        for (const r of node.refinements) walkNode(r);
+        for (const s of node.statements) walkNode(s);
+        return;
+
+      case 'RefineDeclaration':
+        if (node.isFunctionRefine) {
+          if (node.body) walkNode(node.body);
+        } else {
+          for (const f of node.fields) walkNode(f);
+          for (const m of node.methods) walkNode(m.body);
+        }
         return;
 
       default: {

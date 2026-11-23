@@ -4,7 +4,7 @@
 > machine, native backend, standard library, machine-learning stack, hardware,
 > GIS, tooling, and the full generated reference tables.
 >
-> Created by **Sava Milanov**. Generated on 2026-11-20 by
+> Created by **Sava Milanov**. Generated on 2026-11-23 by
 > `scripts/build-ultimate-docs.mjs`. Do not edit by hand — edit the source
 > guides or the implementation and re-run the generator.
 
@@ -2107,20 +2107,21 @@ This prints `caught: cannot divide by zero` and then `done`.
 _Source: `docs/02-language/personal-dialects-and-libraries.md`_
 
 
-Personal SDEV lets anyone write SDEV in their own words, script family, operators, and custom functions without modifying or forking the self-hosted compiler. **A dialect is data, not a compiler fork** — a reversible canonicalizer sits in front of `lexer.sdev` / `parser.sdev` / `codegen.sdev`.
+Personal SDEV lets anyone build their own syntax — their own words, script family, style, operators, and custom functions — **without using the AI code understander** and without modifying or forking the self-hosted compiler. **A dialect is a pure `.sdev` data file, not a compiler fork or an AI prompt** — a deterministic, reversible canonicalizer translates dialect code straight into canonical sdev v2 and feeds it directly into `lexer.sdev` / `parser.sdev` / `codegen.sdev`.
 
 ```text
-dialect source ──canonicalize──▶ canonical sdev v2 ──▶ lexer ▶ parser ▶ codegen ▶ seed VM / native
-       ▲                                  │
-       └──────────── dialectize ──────────┘   (lossless reverse)
+dialect source ──canonicalize (no AI)──▶ canonical sdev v2 ──▶ lexer ▶ parser ▶ codegen ▶ seed VM / native
+       ▲                                       │
+       └────────────── dialectize ─────────────┘   (lossless reverse)
 ```
 
 ---
 
 #### 1. Custom Dialects & Dialect Studio (`/dialects`)
 
-- **Source Modules:** `src/lang/dialect/spec.ts`, `catalog.ts`, `canonicalize.ts`, `presets.ts`, `docs.ts`, and pure-SDEV engine `lang/dialect/dialect.sdev`.
-- **Web UI:** Open `/dialects` (or the **Personal sdev** sidebar panel in `/ide`) to create, edit, validate, preview, and publish dialects.
+- **Source Modules:** `src/lang/dialect/sdev-format.ts`, `spec.ts`, `catalog.ts`, `canonicalize.ts`, `presets.ts`, `docs.ts`, and pure-SDEV engine `lang/dialect/dialect.sdev`.
+- **Web UI:** Open `/dialects` (or the **Personal sdev** sidebar panel in `/ide`) to create, edit, validate, preview, download as `.dialect.sdev`, and publish dialects.
+- **Pure `.sdev` Dialect Files (No JSON Required):** Dialects are authored, exported, imported, and run directly as `#!sdev v2` files (`dialect_meta`, `dialect_style`, `dialect_words`, `dialect_synonyms`, `dialect_operators`, plus any custom `to ... end` functions). Use them straight from the CLI (`sdev run app.sdev --dialect my.dialect.sdev`, `sdev dialect export/import`) or in any file header (`#!dialect my.dialect.sdev`). Both the IDE and CLI bypass the AI code understander for dialect files and feed the canonicalized v2 source directly into the v2 compiler.
 
 A `DialectSpec` contains four parts:
 
@@ -2142,6 +2143,8 @@ A `DialectSpec` contains four parts:
 - `dialectize(canonicalSrc, dialect)` runs the pipeline in reverse, and `translateDialect(src, from, to)` translates cleanly between any two dialects.
 
 ##### Living Dialect Documentation
+
+The v2 compiler accepts `text(value)` (also `str(value)`) and `len(value)` (also `length(value)`). Renamed dialect spellings use these same functions: for example, Pirate sdev's `свитък(42)` produces `"42"`, and `свитък("ahoy")` keeps the text unchanged. Error messages caught by `rescue` can be passed to `text` without turning them into a numeric address.
 
 `src/lang/dialect/docs.ts` (`generateDialectDocs` / `getOrGenerateDocs`) renders per-dialect reference documentation straight from `CATALOG`, passes the sample program through `dialectize`, and appends the dialect's custom functions and operators. Cached rows in `dialect_docs` track `TEMPLATE_VERSION` and automatically regenerate when stale.
 
@@ -2235,8 +2238,10 @@ _Source: `docs/02-language/multi-paradigm-parity.md`_
 6. [Modern Language Conveniences: Null-Safety & Data Records (Kotlin / C# Parity)](#6-modern-language-conveniences-null-safety--data-records)
 7. [Systems Programming & Low-Level Memory Arenas (C / C++ Parity)](#7-systems-programming--low-level-memory-arenas)
 8. [Monadic Algebraic Data Types: `Option` & `Result` (Rust / Haskell Parity)](#8-monadic-algebraic-data-types-option--result)
-9. [Formal Code Formatter & Developer Tooling](#9-formal-code-formatter--developer-tooling)
-10. [Dual-Runtime Parity & Verification Matrix](#10-dual-runtime-parity--verification-matrix)
+9. [Feature-Oriented Programming (FOP) & Software Product Lines](#9-feature-oriented-programming-fop--software-product-lines)
+10. [Extended Function-Oriented Programming (Combinators, Lenses & Transducers)](#10-extended-function-oriented-programming-combinators-lenses--transducers)
+11. [Formal Code Formatter & Developer Tooling](#11-formal-code-formatter--developer-tooling)
+12. [Dual-Runtime Parity & Verification Matrix](#12-dual-runtime-parity--verification-matrix)
 
 ---
 
@@ -2673,7 +2678,54 @@ speak("Doubled result: {doubled['val']}") # 50
 
 ---
 
-#### 9. Formal Code Formatter & Developer Tooling
+#### 9. Feature-Oriented Programming (FOP) & Software Product Lines
+
+See [Feature-Oriented & Function-Oriented Programming](../02-language/feature-and-function-oriented-programming.md) for the complete reference. SDEV provides first-class feature modules (`feature` / `facet`), non-invasive function and class refinements (`refine` / `augment` with `proceed` / `original`), dynamic activation (`enable_feature`, `disable_feature`, `toggle_feature`, `with_features`, `with feature_context([...])`), feature algebra (`compose_features`, `apply_feature`, `refine_target`), and SPL model validation (`feature_model`, `validate_features`, `resolve_features`):
+
+```sdev
+conjure shipping(weight) :: yield weight * 5 ;;
+
+feature Express requires [] ::
+  refine shipping(weight) ::
+    yield proceed(weight) + 12
+  ;;
+;;
+
+speak(shipping(4))
+with feature_context([Express]) ::
+  speak(shipping(4))
+;;
+speak(shipping(4))
+```
+
+Pure SDEV v2 self-hosted equivalents (`feature_create`, `feature_compose`, `feature_model_validate`, `feature_model_resolve`, `feature_registry_create`) live in `lang/paradigms/feature.sdev`.
+
+---
+
+#### 10. Extended Function-Oriented Programming (Combinators, Lenses & Transducers)
+
+See [Feature-Oriented & Function-Oriented Programming](../02-language/feature-and-function-oriented-programming.md) for full details. SDEV supports tacit composition operators `>>` (left-to-right) and `<<` (right-to-left), placeholder holes (`_`) in calls and `partial`/`partial_right`, multi-clause pattern-matched and `when`-guarded function declarations (`=>` shorthand), point-free combinators (`flip`, `identity_fn`/`id_fn`, `constant`/`always`, `juxt`, `converge`, `ap`, `tap`, `thru`, `once`, `trampoline`, `complement`/`negate_fn`, `both`, `either_fn`, `all_pass`, `any_pass`, `cond`), immutable lenses (`lens`, `lens_prop`, `lens_path`, `view`, `set_over`, `over`), composable transducers (`xf_map`, `xf_filter`, `xf_take`, `transduce`), and `match_option`/`match_result`/`attempt_result`/`try_catch_fn`:
+
+```sdev
+conjure inc(x) => x + 1
+conjure dbl(x) => x * 2
+conjure fact(0) => 1
+conjure fact(n) when n > 0 => n * fact(n - 1)
+
+speak((inc >> dbl)(5))
+speak(fact(5))
+
+forge lp be lens_path(["score", 0])
+forge updated be over(lp, x -> x + 10, { score: [30] })
+speak(view(lp, updated))
+speak(transduce([xf_filter(x -> x > 1), xf_map(x -> x * 2)], (a, b) -> a + [b], [], [1, 2, 3]))
+```
+
+Pure SDEV v2 functional utilities also live in `lang/paradigms/functional.sdev` and `lang/stdlib/v2/func.sdev`.
+
+---
+
+#### 11. Formal Code Formatter & Developer Tooling
 
 ##### 9.1 SDEV Code Formatter
 SDEV includes a formal, deterministic formatter tested against edge cases:
@@ -2704,7 +2756,7 @@ Formatter suite: 8 passed, 0 failed
 
 ---
 
-#### 10. Dual-Runtime Parity & Verification Matrix
+#### 12. Dual-Runtime Parity & Verification Matrix
 
 All features adhere to dual-runtime parity requirements:
 
@@ -2719,6 +2771,8 @@ All features adhere to dual-runtime parity requirements:
 | **Null-Safety Helpers** | `coalesce`, `safe_get` | `coalesce`, `safe_get` | `scripts/test-multi-language-features.ts` |
 | **Arena Memory** | `src/lang/builtins/buffer.ts` | `lang/paradigms/systems.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
 | **Option & Result** | `src/lang/builtins/functional.ts` | `lang/paradigms/functional.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
+| **Feature-Oriented (FOP & SPL)** | `src/lang/builtins/fop.ts` & Python | `lang/paradigms/feature.sdev` & VM | `scripts/test-fop-fp.ts` |
+| **FP Combinators, Lenses & Transducers** | `src/lang/builtins/functional.ts` & Python | `lang/stdlib/v2/func.sdev` & VM | `scripts/test-fop-fp.ts` |
 | **Code Formatter** | Standard AST printer | Standard AST printer | `scripts/test-formatter.ts` |
 
 ##### Automated Test Execution
@@ -2730,7 +2784,7 @@ All 15 test suites, 209 track features, and 616 API registry entries pass with 1
 
 ---
 
-#### 11. Code Understander & Local Model Server Integration
+#### 13. Code Understander & Local Model Server Integration
 
 The SDEV Code Understander combines deterministic self-hosted rules written in pure SDEV with local large language models (LM Studio, Ollama, llama.cpp, LocalAI) and in-browser WebGPU models, providing seamless offline code understanding and repair with zero AI cloud credits.
 
@@ -2774,6 +2828,490 @@ The IDE Assistant Panel (**SDev Doctor**) directly leverages local models:
 ---
 
 _Document engineered, written, and verified in **Antigravity** on 1 November 2026._
+
+---
+
+
+### Feature-Oriented & Function-Oriented Programming (FOP, SPL, Combinators, Lenses, Transducers)
+
+_Source: `docs/02-language/feature-and-function-oriented-programming.md`_
+
+
+> Complete guide to **Feature-Oriented Programming (FOP)**, **Software Product Lines (SPL)**, and **Function-Oriented Programming (FP)** across SDEV v1, v2, the v2 bytecode VM, the Python runtime, and pure self-hosted `.sdev` modules.
+
+---
+
+#### 1. Overview & Cross-Runtime Support
+
+SDEV natively supports both **Feature-Oriented Programming (FOP)** — modularizing cross-cutting software variations into composable `feature`/`facet` layers and `refine`/`augment` collaborations — and **Function-Oriented Programming (FP)** — building programs from point-free pipelines, placeholder partial application, multi-clause guarded pattern functions, algebraic `Option`/`Result` monads, immutable lenses, and composable transducers.
+
+| Surface / File | Coverage |
+| --- | --- |
+| **Syntax & Parser** (`src/lang/keywords.ts`, `tokens.ts`, `parser.ts`) | Contextual `feature` / `facet`, `refine` / `augment`, `proceed` / `original`, `>>` / `<<`, `_` partial holes, multi-clause `when` guards, `=>` shorthand |
+| **JS Interpreter & v2 Bytecode VM** (`src/lang/builtins/fop.ts`, `functional.ts`, `interpreter.ts`, `compiler.ts`, `vm.ts`) | Full FOP feature registry, `proceed` layering stack, dynamic scoping (`with_features`, `feature_context`), SPL validation, FP combinators, lenses, transducers |
+| **Python Interpreter** (`public/sdev-interpreter.py`) | Parity for contextual `feature`/`refine`, class/function layers with `proceed`, `>>`/`<<`, `_` holes, multi-clause functions, and FOP/FP builtins |
+| **Self-Hosted v2 Modules** | [`lang/paradigms/feature.sdev`](../../lang/paradigms/feature.sdev), [`lang/paradigms/functional.sdev`](../../lang/paradigms/functional.sdev), [`lang/stdlib/v2/func.sdev`](../../lang/stdlib/v2/func.sdev) |
+| **Tooling** (`src/lang/linter.ts`, `agent/`, `registry/api-registry.ts`) | Static linter AST traversal for `FeatureDeclaration`/`RefineDeclaration`/`guard`, understander word recognition, and `V2_WASM_BUILTINS` targets |
+
+##### 1.1 Backwards Compatibility via Contextual Keywords
+
+`feature`, `facet`, `refine`, and `augment` are parsed **contextually** rather than reserved globally. Existing programs that use those words as variable names, parameter names, or dictionary keys continue to work unchanged:
+
+```sdev
+forge feature be "existing_value"
+forge refine be 42
+forge obj be { feature: feature, refine: refine }
+speak(obj["feature"], obj["refine"])
+```
+
+---
+
+#### 2. Feature-Oriented Programming (FOP)
+
+##### 2.1 Feature Declarations (`feature` / `facet`)
+
+A feature encapsulates fields, helper functions/methods, optional dependency constraints (`requires`, `excludes`), and refinements targeting existing functions or `essence`/`kind` classes. `facet` is the expressive synonym for `feature`.
+
+```text
+feature <Name> [requires <Dep1>, <Dep2>] [excludes <Conflict1>, ...] ::
+  forge <field> be <value>
+  conjure <helper>(...) :: ... ;;
+  refine <TargetFn>(...) :: ... proceed(...) ... ;;
+  refine <TargetClass> :: ... ;;
+;;
+```
+
+Features register in a **disabled** state by default so declarations never alter base behavior until activated with `enable_feature`, `toggle_feature`, or a scoped `with` block.
+
+##### 2.2 Function & Class Refinements (`refine` / `augment`) and `proceed`
+
+Inside a `feature` / `facet` block (or directly at top level using `refine` or `augment`), a refinement wraps the target function or class method. Calling `proceed(...)` (or its synonym `original(...)`) invokes the next lower active layer down to the base definition:
+
+```sdev
+conjure base_price(x) ::
+  yield x * 10
+;;
+
+feature Tax ::
+  forge rate be 15
+  refine base_price(x) ::
+    yield proceed(x) + 15
+  ;;
+;;
+
+facet VIP requires Tax ::
+  augment conjure base_price(x) ::
+    yield original(x) * 2
+  ;;
+;;
+
+speak(base_price(5))
+enable_feature("Tax")
+speak(base_price(5))
+enable_feature("VIP")
+speak(base_price(5))
+disable_feature("VIP")
+speak(base_price(5))
+```
+
+In this example:
+1. Base `base_price(5)` returns `50`.
+2. Enabling `"Tax"` produces `50 + 15 = 65`.
+3. Enabling `"VIP"` wraps `"Tax"`, returning `65 * 2 = 130`.
+4. Notice `"VIP"` specifies `requires Tax`: enabling `"VIP"` first automatically activates `"Tax"` if `"Tax"` is already registered (and raises an error if a requirement is unregistered or cyclic, or if an active feature excludes it).
+
+###### Refining Classes (`essence` / `kind`)
+
+Refinements can also add fields and wrap methods (including `init`) on classes:
+
+```sdev
+essence Account ::
+  conjure init(self, bal) ::
+    self.bal be bal
+  ;;
+  conjure describe(self) ::
+    yield "Account(" + str(self.bal) + ")"
+  ;;
+;;
+
+feature Bonus ::
+  refine Account ::
+    forge tier be "Gold"
+    conjure describe(self) ::
+      yield proceed() + "+" + self.tier
+    ;;
+  ;;
+;;
+
+facet Shield ::
+  augment Account ::
+    conjure describe(self) ::
+      yield "[" + proceed() + "]"
+    ;;
+  ;;
+;;
+
+forge acc be new Account(500)
+speak(acc.describe())
+
+with feature_context([Bonus]) ::
+  speak(acc.describe())
+  speak(acc.tier)
+  with_features([Shield], () -> speak(acc.describe()))
+;;
+
+speak(acc.describe())
+```
+
+Active class feature layers participate dynamically during method lookup (`acc.describe()`) and field lookup (`acc.tier`), even for instances constructed before the feature was activated.
+
+##### 2.3 Dynamic Toggles & Scoped Activation
+
+| Builtin | Signature | Behavior |
+| --- | --- | --- |
+| `feature_define` | `(name, spec?) -> feature` | Programmatically defines and registers a feature object `{ name, requires, excludes, fields, methods, active }`. |
+| `enable_feature` / `feature_enable` | `(featOrName) -> truth` | Enables a feature (transitively enabling registered `requires` and checking `excludes`). |
+| `disable_feature` / `feature_disable` | `(featOrName) -> truth` | Deactivates a feature (`nope`). |
+| `toggle_feature` / `feature_toggle` | `(featOrName) -> truth` | Flips active state; returns the new state (`yep`/`nope`). |
+| `is_feature_enabled` / `feature_enabled` | `(featOrName) -> truth` | Checks whether a feature is currently active. |
+| `active_features` | `() -> list` | Returns the ordered list of currently active feature names. |
+| `with_features` | `(features, fn?) -> result \| ctx` | With a callback `fn`, enables `features` for the call and restores the prior registry snapshot in `finally`. With 1 arg, returns a context manager for `with`. |
+| `feature_context` | `(features...) -> ctx` | Returns a context manager compatible with `with feature_context([...]) :: ... ;;`. |
+
+Both `with feature_context([...])` and `with_features([...], fn)` snapshot the full active state and restore it cleanly on normal exit, early return, or thrown error.
+
+##### 2.4 Programmatic Feature Composition & Application
+
+| Builtin | Signature | Behavior |
+| --- | --- | --- |
+| `compose_features` | `(listOrVarargs) -> feature` | Composes multiple features left-to-right into a new feature named `A+B`, merging fields, chaining same-named methods via `proceed`, and checking exclusions. |
+| `apply_feature` | `(target, featOrName) -> target` | Attaches a feature's fields and `proceed`-chained methods onto a class (`essence`) or dictionary/object. |
+| `refine_target` | `(target, wrapperOrOverrides) -> refined` | Wraps a function with `proceed` (`refine_target(fn, wrapper)`), adds a layer to a class, or returns an extended shallow copy of an object. |
+
+```sdev
+forge f1 be feature_define("F1", { a: 1, tag: (self) -> "F1" })
+forge f2 be feature_define("F2", { b: 2, tag: (self) -> proceed(self) + "+F2" })
+forge combined be compose_features([f1, f2])
+
+forge target be { name: "box" }
+apply_feature(target, combined)
+speak(target.a, target.b, target.tag())
+
+forge wrapped be refine_target((x) -> x + 1, (x) -> proceed(x) * 3)
+speak(wrapped(4))
+```
+
+##### 2.5 Software Product Line (SPL) Constraints & Resolution
+
+SDEV includes built-in SPL feature-model validation and transitive dependency resolution:
+
+| Builtin | Signature | Behavior |
+| --- | --- | --- |
+| `feature_model` | `(name, config?) -> model` | Creates an SPL model with `features`, `mandatory`, `optional`, `requires`, `excludes`, `alternatives` (exactly 1 required per group), and `or_groups` (at least 1 required per group). |
+| `feature_require` | `(featureA, featureB) -> truth` | Registers a global requirement rule `featureA -> featureB`. |
+| `feature_exclude` | `(featureA, featureB) -> truth` | Registers a global symmetric exclusion constraint between two features. |
+| `validate_features` | `(modelOrSelection, selection?) -> record` | Returns `{ valid, errors, resolved }`, checking unknown features, mandatory rules, alternative/OR cardinalities, requirements, and mutual exclusions. |
+| `resolve_features` | `(selectionOrModel, modelOrSelection?) -> list` | Computes the topologically ordered closure including mandatory features and transitive requirements; throws on exclusion conflicts. |
+
+```sdev
+forge mdl be feature_model("App", {
+  mandatory: ["Core"],
+  optional: ["Audit"],
+  alternatives: [["SQL", "NoSQL"]],
+  or_groups: [["Web", "CLI"]],
+  requires: { Audit: ["Core"] },
+  excludes: { Auth: ["LegacyAuth"] }
+})
+
+forge bad be validate_features(mdl, ["SQL"])
+forge good be validate_features(mdl, ["Core", "SQL", "Web", "Audit"])
+forge plan be resolve_features(mdl, ["SQL", "Web", "Audit"])
+
+speak(bad["valid"])
+speak(good["valid"])
+speak(measure(plan))
+```
+
+##### 2.6 Self-Hosted SDEV v2 FOP Module (`lang/paradigms/feature.sdev`)
+
+For self-hosted SDEV v2 targets (Seed VM WASM, `bin/sdev-vm`, native x86-64), [`lang/paradigms/feature.sdev`](../../lang/paradigms/feature.sdev) provides pure-SDEV FOP and SPL records:
+
+```sdev
+#!sdev v2
+use "lang/paradigms/feature.sdev"
+
+set f_core to feature_create("core", [], [])
+set _ to feature_add_field(f_core, "ver", 1)
+set f_auth to feature_create("auth", ["core"], [])
+set _ to feature_add_field(f_auth, "scheme", "token")
+set composed to feature_compose([f_core, f_auth])
+
+set mdl to feature_model_create("Product")
+set _ to feature_model_add(mdl, "core", 1)
+set _ to feature_model_add(mdl, "auth", 0)
+set _ to feature_model_add(mdl, "legacy", 0)
+set _ to feature_model_require(mdl, "auth", "core")
+set _ to feature_model_exclude(mdl, "auth", "legacy")
+
+set check_ok to feature_model_validate(mdl, ["core", "auth"])
+set resolved to feature_model_resolve(mdl, ["auth"])
+say composed["name"]
+say check_ok["valid"]
+say length(resolved)
+
+set reg to feature_registry_create()
+set _ to feature_enable_in(reg, "auth")
+say feature_is_enabled_in(reg, "auth")
+```
+
+Exported functions in `lang/paradigms/feature.sdev`:
+- Feature construction & composition: `feature_create(f_name, reqs, excls)`, `feature_add_field(feat, key, val)`, `feature_add_method(feat, m_name, fn_ref)`, `feature_compose(feats)`
+- SPL models: `feature_model_create(m_name)`, `feature_model_add(model, f_name, is_mandatory)`, `feature_model_require(model, a, b)`, `feature_model_exclude(model, a, b)`, `feature_model_validate(model, sel)`, `feature_model_resolve(model, sel)`
+- Scoped registry values: `feature_registry_create()`, `feature_enable_in(reg, f_name)`, `feature_disable_in(reg, f_name)`, `feature_is_enabled_in(reg, f_name)`
+
+---
+
+#### 3. Function-Oriented Programming (FP)
+
+##### 3.1 Tacit Composition Operators (`>>` and `<<`)
+
+When either operand of `>>` or `<<` is callable, the operators build a point-free composed function instead of performing bitwise shifts; numbers still execute standard bitwise shifts:
+
+- `f >> g` (**left-to-right pipeline**): `(x) -> g(f(x))`
+- `f << g` (**right-to-left mathematical composition**): `(x) -> f(g(x))`
+
+```sdev
+conjure inc(x) => x + 1
+conjure dbl(x) => x * 2
+
+forge forward be inc >> dbl
+forge backward be inc << dbl
+
+speak(forward(5))
+speak(backward(5))
+speak(8 << 2, 8 >> 1)
+```
+
+##### 3.2 Placeholder Partial Application (`_`)
+
+Passing bare `_` as an argument in a function call turns the call into an anonymous lambda taking one parameter per hole in left-to-right order. Inside `partial(...)` and `partial_right(...)`, `_` produces a placeholder sentinel so positions can be filled on later invocation:
+
+```sdev
+conjure sub3(a, b, c) => a - b - c
+
+forge fix_ends be sub3(100, _, 5)
+forge fix_mid be sub3(_, 10, _)
+forge using_partial be partial((x, y) -> x - y, _, 10)
+forge using_right be partial_right((x, y, z) -> x * 100 + y * 10 + z, 2, 3)
+
+speak(fix_ends(20))
+speak(fix_mid(50, 3))
+speak(using_partial(35))
+speak(using_right(1))
+```
+
+##### 3.3 Multi-Clause Pattern-Matched & Guarded Functions
+
+Multiple clauses can be declared for the same function name (`conjure`, `forge`, or `to`), with optional `when <guard>` predicates and `=> <expr>` single-expression bodies. Clauses are evaluated top to bottom until all parameter patterns match and any `when` guard holds true.
+
+Supported parameter patterns:
+- **Literals & Wildcards**: `0`, `-1`, `"quit"`, `yep`, `void`, `_`
+- **Sequences (lists)**: `[]`, `[h, *t]`
+- **Mappings / Tomes**: `{ kind: "rect", w: w, h: h }`
+- **ADTs**: `Some(x)`, `None()`, `Ok(v)`, `Err(e)`
+
+```sdev
+conjure fact(0) => 1
+conjure fact(n) when n > 0 => n * fact(n - 1)
+conjure fact(_) => 1
+
+conjure sum_list([]) => 0
+conjure sum_list([h, *t]) => h + sum_list(t)
+
+conjure area({ kind: "rect", w: w, h: h }) => w * h
+conjure area({ kind: "sq", s: s }) => s * s
+
+conjure show_opt(Some(v)) => v * 10
+conjure show_opt(None()) => -1
+
+conjure show_res(Ok(v)) => "ok:" + str(v)
+conjure show_res(Err(e)) => "err:" + str(e)
+
+speak(fact(5))
+speak(sum_list([1, 2, 3, 4]))
+speak(area({ kind: "rect", w: 3, h: 4 }))
+speak(show_opt(Some(7)))
+speak(show_res(Err("bad")))
+```
+
+##### 3.4 Higher-Order & Point-Free Combinators
+
+| Builtin | Signature | Description |
+| --- | --- | --- |
+| `compose` | `(f, g, ...fns) -> fn` | Right-to-left function composition (`compose(f, g)(x) == f(g(x))`). |
+| `pipe` | `(value, ...fns) -> value` | Threads an initial `value` left-to-right through functions. |
+| `curry` | `(fn, arity) -> fn` | Auto-curries `fn` until at least `arity` arguments have been supplied. |
+| `memoize` | `(fn) -> fn` | Caches calls by serialized argument key. |
+| `partial` | `(fn, ...boundArgs) -> fn` | Pre-fills leading arguments (filling `_` holes first on call). |
+| `partial_right` | `(fn, ...boundArgs) -> fn` | Appends trailing arguments (or fills `_` slots when present). |
+| `flip` | `(fn) -> fn` | Swaps the first two arguments passed to `fn`. |
+| `identity_fn` / `id_fn` | `(x) -> x` | Returns its argument unchanged. (`identity(size)` remains the identity matrix constructor; in the bytecode VM `identity(x)` also acts as identity value.) |
+| `constant` / `always` | `(x) -> (() -> x)` | Returns a constant function always yielding `x`. |
+| `juxt` | `(...fns \| [fns]) -> ((...args) -> list)` | Applies every function in `fns` to the same arguments and collects results into a list. |
+| `converge` | `(afterFn, branchFns) -> ((...args) -> result)` | Runs each branch function on the inputs, then passes the branch results as arguments to `afterFn`. |
+| `ap` | `(fnsOrADT, valuesOrADT) -> result` | Applicative apply across `[fns]` + `[vals]` (Cartesian application), `Some(fn)` + `Some(val)`, or `Ok(fn)` + `Ok(val)`. |
+| `tap` | `(val, fn) -> val` or `(fn) -> (x -> x)` | Runs side-effect `fn` on the value and passes the original value through unchanged. |
+| `thru` | `(val, fn) -> fn(val)` | Applies unary transform `fn(val)` in pipeline style. |
+| `once` | `(fn) -> fn` | Invokes `fn` at most once and caches its first return value forever. |
+| `trampoline` | `(fn, ...args) -> result` | Executes thunk-returning tail-recursive steps in a loop without overflowing the call stack. |
+| `complement` / `negate_fn` | `(pred) -> fn` | Boolean negation wrapper for a predicate function. |
+| `both` | `(p1, p2) -> fn` | Predicate combinator true when both `p1` and `p2` are truthy. |
+| `either_fn` | `(p1, p2) -> fn` | Predicate combinator true when either `p1` or `p2` is truthy. |
+| `all_pass` | `(predsList) -> fn` | True when every predicate in `predsList` holds. |
+| `any_pass` | `(predsList) -> fn` | True when at least one predicate in `predsList` holds. |
+| `cond` | `([[pred, handler], ...]) -> fn` | Builds a multi-branch dispatch function returning `handler(...args)` for the first truthy `pred`. |
+
+```sdev
+forge f_div be flip((a, b) -> a / b)
+speak(f_div(2, 10))
+speak(identity_fn(77))
+speak(always(314)(999))
+
+forge stats be juxt([x -> x + 1, x -> x * 2, x -> x * x])
+speak(stats(4))
+
+forge avg be converge((s, n) -> s / n, [xs -> sum(xs), xs -> measure(xs)])
+speak(avg([10, 20, 30]))
+
+conjure even_sum(n, acc) ::
+  ponder n <= 0 :: yield acc ;;
+  yield () -> even_sum(n - 1, acc + n)
+;;
+speak(trampoline(even_sum, 5, 0))
+
+forge classify be cond([
+  [x -> x < 0, constant("neg")],
+  [x -> x equals 0, constant("zero")],
+  [constant(yep), x -> "pos:" + str(x)]
+])
+speak(classify(9))
+```
+
+##### 3.5 Functional Lenses (Immutable Updates)
+
+Lenses focus on nested dictionary keys or list indices cleanly without mutating the source structure:
+
+| Builtin | Signature | Description |
+| --- | --- | --- |
+| `lens` | `(getter, setter) -> lens` | Builds a custom lens from `getter(target)` and `setter(value, target)`. |
+| `lens_prop` | `(keyOrIndex) -> lens` | Builds a single-property or list-index lens. |
+| `lens_path` | `(segmentsList) -> lens` | Builds a deep path lens through nested tomes and lists (`["user", "scores", 0]`). |
+| `view` | `(lens, target) -> value` | Reads the focused value through `lens`. |
+| `set_over` | `(lens, value, target) -> newTarget` | Returns an updated shallow-cloned structure with `value` set at the lens focus. |
+| `over` | `(lensOrKey, fn, target) -> newTarget` | Transforms the focused value via `fn(current)` and returns an updated structure. |
+
+```sdev
+forge lp be lens_path(["user", "score"])
+forge st1 be { user: { name: "Ada", score: 10 } }
+forge st2 be over(lp, x -> x + 5, st1)
+forge st3 be set_over(lens_prop("flag"), yep, st2)
+
+speak(view(lp, st1))
+speak(view(lp, st2))
+speak(st3["flag"])
+```
+
+##### 3.6 Composable Transducers
+
+Transducers decouple transformation steps (`xf_map`, `xf_filter`, `xf_take`) from input collections and final reducers, supporting single-pass fusion and early short-circuiting:
+
+| Builtin | Signature | Description |
+| --- | --- | --- |
+| `xf_map` | `(fn) -> xform` | Mapping transducer step. |
+| `xf_filter` | `(pred) -> xform` | Filtering transducer step. |
+| `xf_take` | `(n) -> xform` | Early-terminating transducer limiting emitted items to `n`. |
+| `transduce` | `(xformOrList, reducer, init, collection) -> result` | Executes composed transducers over `collection` in a single pass, stopping early on `__reduced__`. |
+
+```sdev
+forge xf be [
+  xf_filter(x -> x % 2 equals 0),
+  xf_map(x -> x * 10),
+  xf_take(2)
+]
+speak(transduce(xf, (acc, x) -> acc + [x], [], [1, 2, 3, 4, 5, 6]))
+```
+
+##### 3.7 Option/Result Catamorphisms & Safe Execution Helpers
+
+| Builtin | Signature | Description |
+| --- | --- | --- |
+| `attempt_result` | `(fn, ...args) -> Result` | Invokes `fn(...args)` and wraps the outcome in `Ok(value)` or `Err(message)`. |
+| `try_catch_fn` | `(fn, onErr) -> fn` | Returns a guarded wrapper calling `onErr(message, ...args)` if `fn` throws. |
+| `match_option` | `(opt, onSome, onNone) -> value` | Applies `onSome(val)` when `opt` is `Some`, otherwise invokes `onNone()` (or returns non-callable fallback `onNone`). |
+| `match_result` | `(res, onOk, onErr) -> value` | Applies `onOk(val)` when `res` is `Ok`, otherwise invokes `onErr(err)` (or returns non-callable fallback `onErr`). |
+
+```sdev
+forge safe_div be try_catch_fn((x) -> 10 / x, (err, x) -> "caught")
+forge ok_r be attempt_result(() -> 40 + 2)
+
+speak(match_option(Some(5), x -> x * 2, () -> 0))
+speak(match_option(None(), x -> x * 2, 99))
+speak(match_result(ok_r, v -> v, e -> -1))
+speak(safe_div(0))
+```
+
+##### 3.8 Self-Hosted SDEV v2 Functional Modules
+
+Two pure-SDEV modules compile directly onto the self-hosted v2 Seed VM and native backends:
+
+- [`lang/paradigms/functional.sdev`](../../lang/paradigms/functional.sdev):
+  - `Some`, `None`, `is_some`, `is_none`, `unwrap_or`, `map_some`, `flat_map_some`
+  - `Ok`, `Err`, `is_ok`, `is_err`, `result_unwrap_or`, `map_ok`, `flat_map_ok`, `match_adt`
+  - Newly added: `match_result(res, on_ok, on_err)`, `match_option_fn(opt, on_some, on_none)`, `func_pipe2(x, f, g)`, `func_pipe3(x, f, g, h)`, `func_compose2(f, g, x)`
+- [`lang/stdlib/v2/func.sdev`](../../lang/stdlib/v2/func.sdev):
+  - `func_take`, `func_drop`
+  - Newly added: `func_map(xs, fn)`, `func_filter(xs, pred)`, `func_fold(xs, init, fn)`, `func_scan(xs, init, fn)`, `func_juxt(fns, x)`, `func_converge(after_fn, branch_fns, x)`, `func_zip_with(xs, ys, fn)`, `func_partition(xs, pred)`, `func_flat_map(xs, fn)`, `func_find(xs, pred)`, `func_every(xs, pred)`, `func_some(xs, pred)`
+
+```sdev
+#!sdev v2
+use "lang/paradigms/functional.sdev"
+use "lang/stdlib/v2/func.sdev"
+
+to inc with x
+  return x + 1
+end
+to dbl with x
+  return x * 2
+end
+to is_even with x
+  return x % 2 is 0
+end
+to add2 with acc x
+  return acc + x
+end
+
+set ys to func_map([1, 2, 3], ref dbl)
+set evens to func_filter([1, 2, 3, 4], ref is_even)
+set total to func_fold([1, 2, 3, 4], 0, ref add2)
+set piped to func_pipe2(5, ref inc, ref dbl)
+
+say ys[2]
+say length(evens)
+say total
+say piped
+```
+
+---
+
+#### 4. Verification Suites
+
+Run the dedicated FOP & FP verification suite (covering interpreter, v2 bytecode VM, static linter, and `public/sdev-interpreter.py` parity) along with the multi-language parity gates:
+
+```sh
+node scripts/run-ts.mjs scripts/test-fop-fp.ts
+npm run test:features-ts
+npm run test:features
+```
 
 ---
 
@@ -6358,6 +6896,7 @@ that ties together all of the focused guides:
 | --- | --- |
 | [v1 Language Reference](../02-language/v1-reference.md) | v1 classic/mystic syntax, OOP, stdlib |
 | [v2 "Prism" Guide](../02-language/v2-prism-guide.md) | v2 plain-English syntax, diagnostics, modules |
+| [Feature & Function-Oriented Programming](../02-language/feature-and-function-oriented-programming.md) | `feature`/`facet`, `refine`/`augment`, `proceed`, SPL models, `>>`/`<<`, `_` partial holes, multi-clause patterns, combinators, lenses, transducers |
 | [AI Syntax Reference](../02-language/ai-syntax-reference.md) | Compact `!#ai` dialect for LLMs |
 | [Personal SDEV](../02-language/personal-dialects-and-libraries.md) | Custom dialects, extensions, `#⟨sdev⟩` signatures, `@user/lib` |
 | [v2 Stdlib & Web Toolkit](../03-standard-library/v2-stdlib-and-web-toolkit.md) | 21 pure-SDEV v2 stdlib modules & `lang/web/` |
@@ -6396,7 +6935,7 @@ cycle i < 10 ::
 ;;
 ```
 
-There are four ways people write SDEV, all compiling to the same underlying runtimes:
+There are five ways people write SDEV, all compiling to the same underlying runtimes:
 
 - **v1 (Classic / Mystic)** — the full professional language (`forge`, `conjure`, `::`/`;;`,
   classes with `essence`/`extend`/`super`, dict "tomes", the whole standard library).
@@ -6404,10 +6943,15 @@ There are four ways people write SDEV, all compiling to the same underlying runt
   `if/else/end`, `for each … in … end`) compiled by the **100% pure-SDEV self-hosted
   compiler** (`lang/compiler/*.sdev`) onto the WebAssembly Seed VM, zero-host native VM (`bin/sdev-vm`),
   or native machine code (Linux x86-64 ELF & Windows PE `.exe`).
+- **Syntax-Free SDEV (Code Understander)** — the version of SDEV with **no fixed syntax**:
+  anyone can write and learn in whatever way makes sense to them, and the Understanding Agent
+  turns their intent into canonical SDEV.
+- **Personal Dialects (`.sdev` dialect files)** — custom user-defined syntax (keywords,
+  style, operators, and helper functions) authored as pure `.sdev` files via Dialect Studio
+  (`/dialects`) or `sdev dialect`. Dialects translate automatically and deterministically into
+  canonical SDEV v2 straight into the v2 compiler — **without** using the AI code understander.
 - **`sdev:ai` (`!#ai`)** — a compact brace-delimited dialect optimized for AI generation,
   translated to canonical SDEV by `lang/agent/ai-dialect.sdev`.
-- **Personal Dialects** — custom user-defined keywords, operators, and scripts authored
-  as data via Dialect Studio (`/dialects`).
 
 Pick per file with a shebang, or globally with
 `localStorage.sdev_runtime = "v2"`:
@@ -6524,7 +7068,27 @@ reports cycles with a clear error.
 - **UI** — `app`, `button`, `slider`, `label`, …
 - **Web** — one builtin per HTML5 tag, `style`, `on`, `page()`
 - **Matrix** — transpose, multiply, determinant, inverse
+- **FOP** — `feature`/`facet`, `refine`/`augment`, `proceed`/`original`, `feature_define`, `enable_feature`, `disable_feature`, `toggle_feature`, `with_features`, `feature_context`, `compose_features`, `apply_feature`, `refine_target`, SPL `feature_model`/`validate_features`/`resolve_features`
+- **FP** — `>>`/`<<` tacit compose, `_` placeholders, multi-clause `when`-guarded `=>` functions, `partial`, `flip`, `identity_fn`/`id_fn`, `juxt`, `converge`, `trampoline`, `lens_path`/`over`/`view`, `xf_map`/`xf_filter`/`xf_take`/`transduce`, `match_option`/`match_result`
 - **FFI/GPU** — see sections 6–8
+
+##### 2.8 Feature-Oriented & Function-Oriented Programming
+
+```sdev
+conjure base(x) => x * 10
+feature PlusOne ::
+  refine base(x) ::
+    yield proceed(x) + 1
+  ;;
+;;
+forge inc be x -> x + 1
+with feature_context([PlusOne]) ::
+  speak((inc >> base)(3))
+;;
+speak(base(3))
+```
+
+See [Feature & Function-Oriented Programming](../02-language/feature-and-function-oriented-programming.md) for the full guide.
 
 ---
 
@@ -6872,7 +7436,7 @@ use "lang/stdlib/v2/oce.sdev"
 | --- | --- |
 | `bits.sdev` | Bitwise logic & wrapping (`bits_and`, `bits_or`, `bits_xor`, `bits_not_n`, `bits_shl`, `bits_shr`, `bits_test`, `bits_popcount`, `bits_to_hex`, `bits_from_hex`, `floor_div`, `floor_mod`, `wrap_u8`, `wrap_u16`, `wrap_i16`). |
 | `buffer.sdev` | Byte buffers, binary encoding, and low-level memory helpers. |
-| `func.sdev` | Functional combinators: `take`, `drop`, `compose`, higher-order helpers. |
+| `func.sdev` | Functional combinators: `func_take`, `func_drop`, `func_map`, `func_filter`, `func_fold`, `func_scan`, `func_juxt`, `func_converge`, `func_zip_with`, `func_partition`, `func_flat_map`, `func_find`, `func_every`, `func_some`. |
 | `graphics.sdev` | Self-hosted 2D canvas command recorder & SVG emitter (`canvas_create`, `gfx_background`, `gfx_fill`, `gfx_stroke`, `gfx_rect`, `gfx_circle`, `gfx_line`, `gfx_text`, `gfx_to_svg`). |
 | `json.sdev` | JSON serialization, string escaping, and parsing helpers. |
 | `list.sdev` | Core list operations: `list_append`, `list_concat_two`, `list_map`, `list_filter`, `list_fold`, `list_sort`, slicing, searching. |
@@ -6892,7 +7456,10 @@ use "lang/stdlib/v2/oce.sdev"
 | `ui.sdev` | Declarative UI & reactive window tree builder (`ui_window`, `ui_column`, `ui_card`, `ui_input`, `ui_slider`, `ui_checkbox`, `ui_button`, `ui_get`, `ui_set`, `ui_to_html`). |
 | `web.sdev` | Entry point importing the full Website Building Toolkit (`lang/web/*`). |
 
-Plus `lang/stdlib/testkit.sdev` for pure-SDEV test suites (`check`, `str_same`, `first_diff`, `shell`, `tk_report`).
+Plus `lang/stdlib/testkit.sdev` for pure-SDEV test suites (`check`, `str_same`, `first_diff`, `shell`, `tk_report`), and pure-SDEV v2 paradigm modules under `lang/paradigms/`:
+
+- `lang/paradigms/feature.sdev` — Feature-Oriented Programming & SPL records (`feature_create`, `feature_add_field`, `feature_add_method`, `feature_compose`, `feature_model_create`, `feature_model_add`, `feature_model_require`, `feature_model_exclude`, `feature_model_validate`, `feature_model_resolve`, `feature_registry_create`, `feature_enable_in`, `feature_disable_in`, `feature_is_enabled_in`).
+- `lang/paradigms/functional.sdev` — `Option`/`Result` ADTs & combinators (`Some`, `None`, `Ok`, `Err`, `match_adt`, `match_result`, `match_option_fn`, `func_pipe2`, `func_pipe3`, `func_compose2`).
 
 ---
 
@@ -6944,7 +7511,7 @@ npm run test:web            # Web toolkit TS & Python parity suite (51 cases)
 _Source: `docs/04-ai-and-causal-engine/understanding-agent-and-local-brain.md`_
 
 
-SDEV's **Understanding Agent** sits in front of the lexer, parser, and code generator across every entry point (Web IDE, Node CLI, WASM bridge). Its goal is simple: **let beginners write how they think, while guaranteeing that valid canonical programs always reach the compiler untouched (`asWritten()`).**
+SDEV's **Code Understander** is the **syntax-free version of SDEV** — alongside v1 and v2, it is the version with no fixed syntax. Rather than being just an error-fixer, it lets anyone write and learn in whatever style or mental model feels right to them, and turns their intent into canonical SDEV across every entry point (Web IDE, Node CLI, WASM bridge), while guaranteeing that valid canonical programs and deterministic [Personal Dialects](../02-language/personal-dialects-and-libraries.md) always reach the compiler untouched (`asWritten()`).
 
 ```text
 user source ─▶ [directives] ─▶ [sdev:ai] ─▶ [board mask] ─▶ [SDEV rules + memory] ─▶ [3-tier AI brain] ─▶ canonical sdev
@@ -15944,7 +16511,7 @@ Between 13 and 20 November 2026, SDEV completed its full self-hosted subsystem m
 
 Everything below is extracted from the implementation at build time.
 
-### Builtin index — v1 runtime (678 builtins)
+### Builtin index — v1 runtime (740 builtins)
 
 Every function registered into the interpreter's global environment, grouped by
 the module that installs it.
@@ -16162,30 +16729,99 @@ the module that installs it.
 | `etch(a)` | Evaluates `JSON.stringify(a)`. | — | `builtins/json.ts:6` |
 | `unetch(a)` | The inverse of `etch`: decodes an encoded string back to its original value. | Invalid JSON | `builtins/json.ts:7` |
 
-#### `src/lang/builtins/functional.ts` — Higher-order functional helpers (`map`, `filter`, `reduce`, `compose`)
+#### `src/lang/builtins/functional.ts` — Function-Oriented Programming (combinators, `>>`/`<<`, lenses, transducers, `Option`/`Result`)
 
-18 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
+54 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
 
 | Call | What it does | Rules | Source |
 | --- | --- | --- | --- |
+| `all_pass(a)` | Extended Function-Oriented Programming Combinators operation. | all_pass() takes a list of predicates | `builtins/functional.ts:480` |
+| `always()` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:292` |
+| `any_pass(a)` | Extended Function-Oriented Programming Combinators operation. | any_pass() takes a list of predicates | `builtins/functional.ts:494` |
+| `ap(a, b)` | ap(fnsOrFunctor, valuesOrFunctor). | ap() takes 2 arguments (fns, values); ap() requires lists, Options, or Results | `builtins/functional.ts:327` |
+| `attempt_result(…)` | attempt_result(fn, ...args) & try_catch_fn(fn, onErr). | attempt_result() takes at least 1 argument (fn, ...args) | `builtins/functional.ts:756` |
+| `both(a, b)` | both(p1, p2) & either_fn(p1, p2) & all_pass(preds) & any_pass(preds). | both() takes 2 predicates | `builtins/functional.ts:452` |
+| `complement()` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:448` |
 | `compose(…)` | compose(f, g) - function composition: compose(f, g)(x) = f(g(x)). | compose() takes at least 2 arguments; All arguments must be functions | `builtins/functional.ts:9` |
+| `cond(a)` | cond(pairs) - [[pred, fn], ...]. | cond() takes a list of [predicate, transform] pairs; Each cond() branch must be a [predicate, fn] pair | `builtins/functional.ts:509` |
+| `constant()` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:291` |
+| `converge(a, b)` | converge(afterFn, branchFns). | converge() takes 2 arguments (afterFn, branchFns); Second argument to converge() must be a list of functions | `builtins/functional.ts:309` |
 | `curry(a, b)` | curry(fn, arity) - currying. | curry() takes 2 arguments (fn, arity); First argument must be a function | `builtins/functional.ts:46` |
+| `either_fn(a, b)` | Extended Function-Oriented Programming Combinators operation. | either_fn() takes 2 predicates | `builtins/functional.ts:466` |
 | `Err(a)` | Evaluates `({ is_ok: false, is_err: true, val: null, err: a })`. | — | `builtins/functional.ts:152` |
 | `flat_map_ok(a, b)` | Monadic Option & Result (Rust/Functional Parity) operation. | Second argument must be a function | `builtins/functional.ts:194` |
 | `flat_map_some(a, b)` | Monadic Option & Result (Rust/Functional Parity) operation. | Second argument must be a function | `builtins/functional.ts:136` |
+| `flip(a)` | flip(fn) - reverses first two arguments. | flip() takes 1 argument | `builtins/functional.ts:259` |
+| `id_fn(…)` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:281` |
+| `identity()` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:279` |
+| `identity_fn()` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:280` |
 | `is_err(a)` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:165` |
 | `is_none(a)` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:105` |
 | `is_ok(a)` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:157` |
 | `is_some(a)` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:97` |
+| `juxt(a)` | juxt(...fns) or juxt(fnsList). | juxt() requires at least 1 function | `builtins/functional.ts:295` |
+| `lens(a, b)` | Extended Function-Oriented Programming Combinators operation. | lens() takes 2 arguments (getter, setter) | `builtins/functional.ts:564` |
+| `lens_path(a)` | Extended Function-Oriented Programming Combinators operation. | lens_path() takes 1 argument (list of keys/indices) | `builtins/functional.ts:583` |
+| `lens_prop(a)` | Extended Function-Oriented Programming Combinators operation. | lens_prop() takes 1 argument (key) | `builtins/functional.ts:574` |
 | `map_ok(a, b)` | Monadic Option & Result (Rust/Functional Parity) operation. | Second argument must be a function | `builtins/functional.ts:183` |
 | `map_some(a, b)` | Monadic Option & Result (Rust/Functional Parity) operation. | Second argument must be a function | `builtins/functional.ts:125` |
+| `match_option(a, b, c)` | match_option(opt, onSome, onNone) & match_result(res, onOk, onErr). | match_option() takes 3 arguments (opt, onSome, onNone) | `builtins/functional.ts:792` |
+| `match_result(a, b, c)` | Extended Function-Oriented Programming Combinators operation. | match_result() takes 3 arguments (res, onOk, onErr) | `builtins/functional.ts:807` |
 | `memoize(a)` | memoize(fn) - memoization. | memoize() takes 1 argument; Argument must be a function | `builtins/functional.ts:66` |
+| `negate_fn()` | Extended Function-Oriented Programming Combinators operation. | — | `builtins/functional.ts:449` |
 | `None()` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:92` |
 | `Ok(a)` | Evaluates `({ is_ok: true, is_err: false, val: a, err: null })`. | — | `builtins/functional.ts:147` |
+| `once(a)` | once(fn). | once() takes 1 argument | `builtins/functional.ts:393` |
+| `over(a, b, c)` | Extended Function-Oriented Programming Combinators operation. | over() takes 3 arguments (lensOrKey, fn, target); First argument to over() must be a lens or property key | `builtins/functional.ts:640` |
+| `partial(…)` | partial(fn, ...boundArgs) - supports `_` placeholder sentinels. | partial() takes at least 1 argument (fn, ...args) | `builtins/functional.ts:218` |
+| `partial_right(…)` | partial_right(fn, ...boundArgs). | partial_right() takes at least 1 argument (fn, ...args) | `builtins/functional.ts:237` |
 | `pipe(…)` | pipe(value, ...fns) - pipe value through functions. | pipe() takes at least 2 arguments (value, ...fns); Arguments after first must be functions | `builtins/functional.ts:31` |
 | `result_unwrap_or(a, b)` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:173` |
+| `set_over(a, b, c)` | Extended Function-Oriented Programming Combinators operation. | set_over() takes 3 arguments (lens, value, target); First argument to set_over() must be a lens | `builtins/functional.ts:630` |
 | `Some(a)` | ============= Monadic Option & Result (Rust/Functional Parity) =============. | — | `builtins/functional.ts:87` |
+| `tap(a, b)` | tap(fn) or tap(value, fn). | tap() takes 1 or 2 arguments | `builtins/functional.ts:359` |
+| `thru(a, b)` | thru(value, fn). | thru() takes 2 arguments (value, fn) | `builtins/functional.ts:383` |
+| `trampoline(a)` | trampoline(fn) or trampoline(fn, ...args). | trampoline() takes at least 1 argument; complement() takes 1 argument | `builtins/functional.ts:414` |
+| `transduce(a, b, c, d)` | Extended Function-Oriented Programming Combinators operation. | transduce() takes 4 arguments (xform, reducer, init, collection); transduce() 4th argument must be a list | `builtins/functional.ts:721` |
+| `try_catch_fn(a, b)` | Extended Function-Oriented Programming Combinators operation. | try_catch_fn() takes 2 arguments (fn, onErr) | `builtins/functional.ts:771` |
 | `unwrap_or(a, b)` | Monadic Option & Result (Rust/Functional Parity) operation. | — | `builtins/functional.ts:113` |
+| `view(a, b)` | Extended Function-Oriented Programming Combinators operation. | view() takes 2 arguments (lens, target); First argument to view() must be a lens | `builtins/functional.ts:620` |
+| `xf_filter(a)` | Extended Function-Oriented Programming Combinators operation. | xf_filter() takes 1 argument (pred) | `builtins/functional.ts:677` |
+| `xf_map(a)` | Transducers: xf_map, xf_filter, xf_take, transduce. | xf_map() takes 1 argument (fn) | `builtins/functional.ts:658` |
+| `xf_take(a)` | Extended Function-Oriented Programming Combinators operation. | xf_take() takes 1 argument (n) | `builtins/functional.ts:696` |
+
+#### `src/lang/builtins/fop.ts` — Feature-Oriented Programming (`feature`, `refine`, `proceed`, SPL `feature_model`, `with_features`)
+
+26 builtins. Signatures are inferred from the implementation; "Rules" lists the constraints the runtime enforces at call time.
+
+| Call | What it does | Rules | Source |
+| --- | --- | --- | --- |
+| `__fop_refine_class(a, b, c, d)` | Runtime primitive. | __fop_refine_class requires a class/constructor | `builtins/fop.ts:498` |
+| `__fop_refine_func(a, b, c)` | Runtime primitive. | __fop_refine_func requires two callable functions | `builtins/fop.ts:461` |
+| `__fop_register_feature(a)` | Internal helpers for Compiler/VM FOP support. | — | `builtins/fop.ts:430` |
+| `__register_clause(a, b, c)` | Internal helper for compiled multi-clause functions (Compiler/VM). | __register_clause requires matchFn and bodyFn; No matching function clause for provided arguments | `builtins/fop.ts:403` |
+| `active_features()` | Runtime primitive. | — | `builtins/fop.ts:600` |
+| `apply_feature(a, b)` | Runtime primitive. | apply_feature() takes 2 arguments (target, feature); First argument to apply_feature() must be an object, instance, or class | `builtins/fop.ts:701` |
+| `compose_features(a)` | Runtime primitive. | Cannot compose mutually excluding features including  | `builtins/fop.ts:666` |
+| `disable_feature()` | Runtime primitive. | — | `builtins/fop.ts:577` |
+| `enable_feature()` | Runtime primitive. | — | `builtins/fop.ts:567` |
+| `feature_context(a)` | Runtime primitive. | — | `builtins/fop.ts:658` |
+| `feature_define(a)` | Runtime primitive. | feature_define() takes 1-2 arguments (name, spec?); enable_feature() takes 1 argument | `builtins/fop.ts:530` |
+| `feature_disable(a)` | Runtime primitive. | toggle_feature() takes 1 argument | `builtins/fop.ts:578` |
+| `feature_enable(a)` | Runtime primitive. | disable_feature() takes 1 argument | `builtins/fop.ts:568` |
+| `feature_enabled()` | Runtime primitive. | — | `builtins/fop.ts:598` |
+| `feature_exclude(a, b)` | Runtime primitive. | feature_exclude() takes 2 arguments (featureA, featureB) | `builtins/fop.ts:832` |
+| `feature_model(…)` | Runtime primitive. | feature_model() takes 1-2 arguments (name, config?) | `builtins/fop.ts:771` |
+| `feature_require(a, b)` | Runtime primitive. | feature_require() takes 2 arguments (featureA, featureB) | `builtins/fop.ts:821` |
+| `feature_toggle(a)` | Runtime primitive. | is_feature_enabled() takes 1 argument | `builtins/fop.ts:588` |
+| `is_feature_enabled()` | Runtime primitive. | — | `builtins/fop.ts:597` |
+| `original()` | Runtime primitive. | — | `builtins/fop.ts:397` |
+| `proceed()` | Evaluates `registry.callProceed(args, line)`. | — | `builtins/fop.ts:392` |
+| `refine_target(a, b)` | Runtime primitive. | refine_target() takes 2 arguments (target, overrides); refine_target() expects (fn, wrapper) or (object/class, overrides) | `builtins/fop.ts:732` |
+| `resolve_features(…)` | Runtime primitive. | resolve_features() takes 1-2 arguments (selection, model?); resolve_features() expects a list of feature names | `builtins/fop.ts:870` |
+| `toggle_feature()` | Runtime primitive. | — | `builtins/fop.ts:587` |
+| `validate_features(…)` | Runtime primitive. | validate_features() takes 1-2 arguments (modelOrSelection, selection?); validate_features(selection) expects a list of feature names | `builtins/fop.ts:843` |
+| `with_features(…)` | Runtime primitive. | with_features() takes 1 or 2 arguments (features, fn?); Second argument to with_features() must be a function | `builtins/fop.ts:636` |
 
 #### `src/lang/builtins/buffer.ts` — Binary byte buffers and typed encoding
 
@@ -16876,7 +17512,7 @@ follow the opcode byte directly in the bytecode stream.
 | `0xFF` | `HALT` | Seed VM instruction. |
 
 
-### sdev-written source index (81 files, 1319 functions)
+### sdev-written source index (112 files, 1520 functions)
 
 Every function defined in sdev itself — the self-hosted compiler, the parity
 agent, and the standard library.
@@ -17038,6 +17674,25 @@ parser_eval.sdev — self-hosted canonical SDEV tokenizer, recursive- descent pa
 | `pe_exec_stmt` | `st, stmt` | Computes and yields `void`. | `void` | 1691 |
 | `sdev_eval_program` | `source, inputs` | Computes and yields `[nope, [], "Line " + str(first_err[0]) + ": " + first_err[1]]`. | `[nope, [], "Line " + str(first_err[0]) + ": " + first_err[1]]` | 1811 |
 
+#### `lang\agent\pipeline.sdev`
+
+SDEV Understander Agent — Full Pipeline, Directives, Repair & Promotion (sdev-zero/lang/agent/pipeline.sdev) 100% Pure SDEV v2 port of directives.ts, boards.ts, repair.ts, vocabulary.ts, sense.ts, promote.ts, ai-dialect, understander & index.ts
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `agent_scan_directives` | `source` | Computes and yields `{`. | `{` | 13 |
+| `ai_is_dialect` | `source` | Computes and yields `1`. | `1` | 73 |
+| `ai_to_sdev_line` | `raw_line` | Computes and yields `""`. | `""` | 90 |
+| `ai_to_sdev` | `source` | Computes and yields `join(out, "\n")`. | `join(out, "\n")` | 130 |
+| `agent_vocab_canonical` | `word` | Computes and yields `"say"`. | `"say"` | 145 |
+| `understand_line` | `raw_line` | Computes and yields `raw_line`. | `raw_line` | 177 |
+| `understand_source` | `source` | Computes and yields `join(out, "\n")`. | `join(out, "\n")` | 211 |
+| `agent_close_unclosed_blocks` | `source` | Computes and yields `out`. | `out` | 223 |
+| `agent_understand_pipeline` | `source` | Computes and yields `{`. | `{` | 248 |
+| `agent_promote_to_dialect` | `name slug learned_pairs` | Computes and yields `spec`. | `spec` | 303 |
+
 #### `lang\agent\project.sdev`
 
 project.sdev — the project index of the code understander, in sdev. Collects every name a file defines (variables, functions, kinds, parameters, loop names, lambda parameters) so the understander can tell a reference to another file apart from plain words. defined_names(source)   -> list of names one file defines project_names(sources)  -> names defined across many files, no repeats
@@ -17163,6 +17818,88 @@ SDEV WebAssembly Seed VM Specification & Binary Emitter — authored in SDEV. De
 | `wasm_magic_bytes` | _none_ | Part of the WebAssembly Binary Header & LEB128 Encoding section of this module. | `out` | 203 |
 | `leb128_encode_u32` | `val` | Encodes an unsigned integer into unsigned LEB128 byte sequence | `res` | 217 |
 
+#### `lang\bridge\self_bridge.sdev`
+
+SDEV Language Bridge — Pure-SDEV Self-Compiler Bridge & Oracle Runner (sdev-zero/lang/bridge/self_bridge.sdev) 100% Pure SDEV replacement for self-host.mjs, compile-self.mjs, driver-artifact.mjs, oracle/compile.mjs & oracle/v2.js
+
+6 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `bridge_parse_driver_stream` | `raw_stream` | Computes and yields `vm_from_driver_stream(raw_stream)`. | `vm_from_driver_stream(raw_stream)` | 11 |
+| `bridge_compile_v2_source` | `file_path` | Computes and yields `read_file("sdev:compile:self:" + file_path)`. | `read_file("sdev:compile:self:" + file_path)` | 15 |
+| `bridge_compile_v2_stage2` | `file_path` | Computes and yields `read_file("sdev:compile:stage2:" + file_path)`. | `read_file("sdev:compile:stage2:" + file_path)` | 19 |
+| `bridge_compile_v1_source` | `file_path` | Computes and yields `read_file("sdev:compile:v1-self:" + file_path)`. | `read_file("sdev:compile:v1-self:" + file_path)` | 23 |
+| `bridge_verify_driver_fixed_point` | _none_ | Computes and yields `{`. | `{` | 27 |
+| `bridge_execute_on_pure_vm` | `driver_stream` | Computes and yields `{`. | `{` | 48 |
+
+#### `lang\bridge\wasm_seed_emitter.sdev`
+
+SDEV Language Bridge — Pure-SDEV WebAssembly (.wasm & .wat) Seed Emitter (sdev-zero/lang/bridge/wasm_seed_emitter.sdev) 100% Pure SDEV replacement for seed.wat, seed.wasm & wasm-runtime.ts
+
+8 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `wasm_layout_constants` | _none_ | Computes and yields `{`. | `{` | 9 |
+| `wasm_uleb128` | `val` | Computes and yields `out`. | `out` | 21 |
+| `wasm_magic_header` | _none_ | Computes and yields `[0, 97, 115, 109, 1, 0, 0, 0]`. | `[0, 97, 115, 109, 1, 0, 0, 0]` | 38 |
+| `wasm_emit_section` | `section_id payload_bytes` | Computes and yields `list_concat_two([section_id], list_concat_two(size_bytes, payload_bytes))`. | `list_concat_two([section_id], list_concat_two(size_bytes, payload_bytes))` | 43 |
+| `wasm_emit_minimal_seed_module` | _none_ | Computes and yields `bin`. | `bin` | 48 |
+| `wasm_bytes_to_hex` | `byte_list` | Computes and yields `out`. | `out` | 59 |
+| `wasm_write_seed_binary` | `output_path` | Computes and yields `write_file("sdev:write_hex:" + output_path, hex_str)`. | `write_file("sdev:write_hex:" + output_path, hex_str)` | 74 |
+| `wasm_emit_seed_wat_source` | _none_ | Computes and yields `wat`. | `wat` | 80 |
+
+#### `lang\builtins\functional_list.sdev`
+
+SDEV Builtins Subsystem — Higher-Order List, Functional & Regex Guard (sdev-zero/lang/builtins/functional_list.sdev) 100% Pure SDEV port of functional.ts, list.ts, string.ts & regex-guard.ts
+
+8 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `builtin_reversed` | `xs` | Computes and yields `out`. | `out` | 9 |
+| `builtin_unique_ints` | `xs` | Computes and yields `out`. | `out` | 20 |
+| `builtin_zip` | `xs ys` | Computes and yields `out`. | `out` | 36 |
+| `builtin_enumerate` | `xs` | Computes and yields `out`. | `out` | 50 |
+| `builtin_chunk` | `xs chunk_size` | Computes and yields `out`. | `out` | 61 |
+| `builtin_filter_gt` | `xs threshold` | Computes and yields `out`. | `out` | 78 |
+| `builtin_reduce_sum` | `xs initial_val` | Computes and yields `acc`. | `acc` | 91 |
+| `regex_is_safe_pattern` | `pattern` | Computes and yields `0`. | `0` | 102 |
+
+#### `lang\builtins\json_dict.sdev`
+
+SDEV Builtins Subsystem — JSON Serializer/Parser & Dict Operations (sdev-zero/lang/builtins/json_dict.sdev) 100% Pure SDEV port of src/lang/builtins/json.ts & dict.ts
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `json_quote_str` | `s` | Computes and yields `"\"" + escaped + "\""`. | `"\"" + escaped + "\""` | 10 |
+| `json_stringify_kv` | `key_str val_str is_num` | Computes and yields `json_quote_str(key_str) + ":" + val_str`. | `json_quote_str(key_str) + ":" + val_str` | 16 |
+| `json_stringify_tome` | `t` | Computes and yields `"{" + join(pairs, ",") + "}"`. | `"{" + join(pairs, ",") + "}"` | 23 |
+| `json_parse_flat_object` | `raw_json` | Computes and yields `out`. | `out` | 39 |
+| `dict_get` | `d key fallback` | Computes and yields `tome_get_or(d, key, fallback)`. | `tome_get_or(d, key, fallback)` | 70 |
+| `dict_set` | `d key val` | Computes and yields `tome_put_kv(d, key, val)`. | `tome_put_kv(d, key, val)` | 74 |
+| `dict_has` | `d key` | Computes and yields `tome_has_key(d, key)`. | `tome_has_key(d, key)` | 78 |
+| `dict_keys` | `d` | Computes and yields `keys(d)`. | `keys(d)` | 82 |
+| `dict_values` | `d` | Computes and yields `values(d)`. | `values(d)` | 86 |
+| `dict_size` | `d` | Computes and yields `length(keys(d))`. | `length(keys(d))` | 90 |
+
+#### `lang\builtins\time_io_host.sdev`
+
+SDEV Builtins Subsystem — Time, Type Introspection, Math & Host I/O (sdev-zero/lang/builtins/time_io_host.sdev) 100% Pure SDEV port of time.ts, types.ts, math.ts, io.ts, host.ts & utils.ts
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `builtin_clamp` | `x lo hi` | Computes and yields `lo`. | `lo` | 9 |
+| `builtin_sign` | `x` | Computes and yields `1`. | `1` | 19 |
+| `builtin_format_duration_ms` | `ms` | Computes and yields `str(ms) + "ms"`. | `str(ms) + "ms"` | 29 |
+| `builtin_typeof_str` | `raw_repr` | Computes and yields `"boolean"`. | `"boolean"` | 38 |
+| `host_file_exists` | `path` | Computes and yields `1`. | `1` | 58 |
+
 #### `lang\compiler\codegen.sdev`
 
 SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM bytecode, entirely in SDEV. Emits the byte stream to a global buffer `bc` whose cell 0 holds the current byte count and cells 1..count hold the bytes. The scripts/test-self- codegen.mjs driver harvests the buffer via `say`, reconstructs it as a Uint8Array, feeds it into a fresh seed WASM instance, and verifies the executed output matches the JS bootstrap compiler's output. Grammar this milestone covers: program := stmt* stmt    := 'say' expr | 'set' IDENT 'to' expr | 'if' expr NL block ('else' NL block)? 'end' | 'while' expr NL block 'end' | 'to' IDENT ('with' IDENT*)? NL block 'end' | 'return' expr? block   := stmt*                              (until 'else' or 'end') expr    := cmp cmp     := add ( ('is' | 'is' 'not' | '<' | '>' | '<=' | '>=') add )? add     := mul (('+'|'-') mul)* mul     := atom (('*'|'/') atom)* atom    := INT | IDENT                              (variable load) | IDENT '(' args? ')'                (function call / builtin) | '(' expr ')' Restriction: functions must be defined before their call sites — the self-hosted compiler emits function bodies inline, bracketed by a JMP that skips over them, and records each body's byte offset in a global table. Forward references / mutual recursion land in a later milestone.
@@ -17192,34 +17929,34 @@ SDEV self-hosted codegen (Milestone 5g). Compiles SDEV source to real seed-VM by
 | `set_ident_type` | `name t` | Milestone 5t: retype an existing variable without emitting anything — used when `set t[k] to "s"` promotes a tome from int-valued to string-valued so later reads pick SAY_STR. | `0` | 378 |
 | `check_arity` | `name got want` | Part of the call emission (built-ins first, then user functions) section of this module. | `0` | 399 |
 | `emit_call` | `name nargs` | Emits the argument pushes plus the `CALL` instruction for a function call. | `0` | 408 |
-| `emit_ref` | `name` | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH_I32 → i32 target). | `0` | 746 |
-| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 775 |
-| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 803 |
-| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 830 |
-| `blank_tok` | `i` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 867 |
-| `prev_word_is` | `j w` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 872 |
-| `is_kind_opener` | `j` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 892 |
-| `desugar_kinds` | _none_ | Part of the Milestone 5y: kinds (classes) section of this module. | _no explicit yield_ | 945 |
-| `emit_new` | `cname` | `new NAME` — TNEW sized to the method count, then one PUSH_STR / function value / TSET triple per method, in declaration order. | `0` | 1114 |
-| `method_ret_type` | `name` | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule. | `1` | 1159 |
-| `emit_member_key` | `name` | Emit PUSH_STR for a member name (shared by field reads, writes and calls). | `0` | 1177 |
-| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 1188 |
-| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 1200 |
-| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 1217 |
-| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | _no explicit yield_ | 1590 |
-| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1665 |
-| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1679 |
-| `is_list_lit_span` | `s e` | 1 when tokens s .. e-1 are exactly one list literal `[ ... ]`. | `0` | 1723 |
-| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | _no explicit yield_ | 1747 |
-| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1826 |
-| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1934 |
-| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1944 |
-| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1970 |
-| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 1995 |
-| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 2001 |
-| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 2018 |
-| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 2053 |
-| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 2075 |
+| `emit_ref` | `name` | Milestone 5w: `ref NAME` pushes a function value — the callee's code offset as a plain i32. Unknown offsets reuse the pending-call table; the resolver tells the two site shapes apart by looking at the opcode byte that precedes the patch position (0x60 CALL → u16 target, otherwise 0x01 PUSH_I32 → i32 target). | `0` | 748 |
+| `resolve_pending_calls` | _none_ | Back-patch every deferred CALL now that all function offsets are known. | `0` | 777 |
+| `patch_breaks` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 805 |
+| `patch_conts` | `target` | Part of the Milestone 5s: loop-exit patch tables section of this module. | `0` | 832 |
+| `blank_tok` | `i` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 869 |
+| `prev_word_is` | `j w` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 874 |
+| `is_kind_opener` | `j` | Part of the Milestone 5y: kinds (classes) section of this module. | `0` | 894 |
+| `desugar_kinds` | _none_ | Part of the Milestone 5y: kinds (classes) section of this module. | _no explicit yield_ | 947 |
+| `emit_new` | `cname` | `new NAME` — TNEW sized to the method count, then one PUSH_STR / function value / TSET triple per method, in declaration order. | `0` | 1116 |
+| `method_ret_type` | `name` | A method call is string-typed when ANY kind declares a method of that name returning a string — mirrors the bootstrap oracle's name-based rule. | `1` | 1161 |
+| `emit_member_key` | `name` | Emit PUSH_STR for a member name (shared by field reads, writes and calls). | `0` | 1179 |
+| `is_op_c` | `pos c` | True when the character can begin an operator token. | `0` | 1190 |
+| `is_ident_word` | `pos w` | True when the token text is a plain identifier rather than a keyword. | `0` | 1202 |
+| `parse_atom` | `pos` | Parses the tightest-binding expression: literal, identifier, call, index, or parenthesised group. | `pos + 1` | 1219 |
+| `parse_postfix` | `pos` | Postfix indexing: after an atom, chain any number of `[ EXPR ]` reads, each emitting an LGET. | _no explicit yield_ | 1618 |
+| `parse_unary` | `pos` | Milestone 5r: unary layer. `-x` compiles exactly like the bootstrap oracle does — PUSH_I32 0, the operand, then SUB — so byte identity is preserved. Postfix indexing binds tighter than the unary minus. | `pos` | 1693 |
+| `parse_mul` | `pos` | Parses the multiplication / division / modulo precedence level. | `pos` | 1707 |
+| `is_list_lit_span` | `s e` | 1 when tokens s .. e-1 are exactly one list literal `[ ... ]`. | `0` | 1751 |
+| `parse_add` | `pos` | Parses the addition / subtraction precedence level. | _no explicit yield_ | 1775 |
+| `parse_cmp` | `pos` | Comparisons: `is`, `is not`, `<`, `>`, `<=`, `>=`. Two-char `<=` / `>=` are pre-folded by the driver's lexer into sentinel punctuation codes 300 / 301. Every comparison yields an int (0 / 1). When both operands are floats, `is`, `<` and `>` use the FEQ / FLT / FGT opcodes. | `pos` | 1854 |
+| `parse_not` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1962 |
+| `parse_and` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1972 |
+| `parse_or` | `pos` | Part of the and  := not ('and' not) section of this module. | `pos` | 1998 |
+| `parse_expr` | `pos` | Part of the and  := not ('and' not) section of this module. | `parse_or(pos)` | 2023 |
+| `skip_nl` | `pos` | Advances the cursor past newline tokens so statements may be separated freely. | `pos` | 2029 |
+| `parse_block` | `pos` | Parse a sequence of statements until `else`, `rescue`, `end`, or EOF. | `pos` | 2046 |
+| `parse_params` | `pos` | Parse the parameter list of a `to NAME with p1 p2 ...` declaration and push each param into loc_names. Returns (new_pos, n_params) packed into a two-cell scratch list. Since SDEV functions can only return one value, we return new_pos and stash n_params in a global scratch cell. | `pos` | 2081 |
+| `parse_stmt` | `pos` | Parses one statement and emits its bytecode: binding, assignment, control flow, or expression. | `pos` | 2103 |
 
 #### `lang\compiler\driver.sdev`
 
@@ -17567,6 +18304,64 @@ SDEV v1 Self-Hosted Compiler — authored 100% in SDEV v1 syntax. Self-compiling
 | `cg_run_pass` | `skip_defs` | Part of the Top-Level Compilation Driver section of this module. | `pos` | 2838 |
 | `v1_compile_source` | `src` | Part of the Top-Level Compilation Driver section of this module. | _no explicit yield_ | 2862 |
 
+#### `lang\core\collab_room.sdev`
+
+SDEV Core Engine — Multiplayer Classroom & Lamport CRDT Room (sdev-zero/lang/core/collab_room.sdev) 100% Pure SDEV port of src/lang/collab/live-room.ts
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `collab_create_room` | `room_code host_peer_id initial_file initial_content` | Computes and yields `{`. | `{` | 9 |
+| `collab_join_peer` | `room peer_id display_name role` | Computes and yields `room`. | `room` | 29 |
+| `collab_update_cursor` | `room peer_id line col` | Computes and yields `room`. | `room` | 42 |
+| `collab_apply_crdt_snapshot` | `room remote_clock remote_peer_id new_content is_teacher_broadcast` | Computes and yields `room`. | `room` | 54 |
+| `collab_share_execution` | `room peer_id output_lines` | Computes and yields `room`. | `room` | 79 |
+
+#### `lang\core\interpreter_live.sdev`
+
+SDEV Core Engine — Scoped Environment, Tree-Walker & Live Scratchpad (sdev-zero/lang/core/interpreter_live.sdev) 100% Pure SDEV port of environment.ts, runtime-values.ts, interpreter.ts, executor.ts & eval-live.ts
+
+6 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `env_create` | _none_ | Computes and yields `{ vars: {}, outputs: [], steps: 0, max_steps: 10000, error: "" }`. | `{ vars: {}, outputs: [], steps: 0, max_steps: 10000, error: "" }` | 10 |
+| `env_set` | `env name val` | Computes and yields `env`. | `env` | 14 |
+| `env_get` | `env name` | Computes and yields `0`. | `0` | 21 |
+| `live_infer_type` | `raw_val` | Computes and yields `"boolean"`. | `"boolean"` | 29 |
+| `live_eval_expr` | `env expr_str` | Computes and yields `substr(e, 1, length(e) - 2)`. | `substr(e, 1, length(e) - 2)` | 49 |
+| `evaluate_live_scratchpad` | `code max_instructions` | Computes and yields `{`. | `{` | 79 |
+
+#### `lang\core\keywords_ast.sdev`
+
+SDEV Core Engine — Keywords, Tokens, AST Nodes & Structured Errors (sdev-zero/lang/core/keywords_ast.sdev) 100% Pure SDEV port of keywords.ts, tokens.ts, ast.ts & errors.ts
+
+7 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `core_v1_keywords` | _none_ | Computes and yields `["forge", "be", "fixed", "conjure", "yield", "ponder", "otherwise", "cycle", "iterate", "t`. | `["forge", "be", "fixed", "conjure", "yield", "ponder", "otherwise", "cycle", "iterate", "t` | 9 |
+| `core_v2_keywords` | _none_ | Computes and yields `["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in",`. | `["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in",` | 13 |
+| `core_is_v1_keyword` | `word` | Computes and yields `1`. | `1` | 17 |
+| `core_is_v2_keyword` | `word` | Computes and yields `1`. | `1` | 30 |
+| `core_token` | `kind lexeme line col` | Computes and yields `{`. | `{` | 43 |
+| `core_ast_node` | `tag value children line` | Computes and yields `{`. | `{` | 52 |
+| `core_format_error` | `phase message line col source_line` | Computes and yields `header`. | `header` | 61 |
+
+#### `lang\core\linker_bench.sdev`
+
+SDEV Core Engine — Multi-File Linker, Module Runner & Benchmarks (sdev-zero/lang/core/linker_bench.sdev) 100% Pure SDEV port of linker.ts, sdev-module.ts, advanced.ts & benchmark.ts
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `link_sdev_modules` | `entry_source virtual_files` | Computes and yields `join(linked, "\n")`. | `join(linked, "\n")` | 9 |
+| `bench_fib` | `n` | Computes and yields `n`. | `n` | 38 |
+| `bench_sieve_count` | `limit` | Computes and yields `count`. | `count` | 54 |
+| `run_core_benchmark_suite` | _none_ | Computes and yields `{`. | `{` | 83 |
+
 #### `lang\dialect\dialect.sdev`
 
 SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets (lang/dialect/dialect.sdev) Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
@@ -17603,6 +18398,78 @@ SDEV Self-Hosted Dialect Engine: Canonicalizer, Address Codec & Presets (lang/di
 | `dialect_is_share_code` | `raw_input` | Computes and yields `0`. | `0` | 433 |
 | `dialect_preset_bg_data` | _none_ | Computes and yields `[names, syns, sample]`. | `[names, syns, sample]` | 453 |
 
+#### `lang\dialect\docs.sdev`
+
+SDEV Dialect Subsystem — Markdown Documentation Generator (docs.sdev) 100% Pure SDEV port of src/lang/dialect/docs.ts
+
+2 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `generate_dialect_docs` | `spec sample_src` | Computes and yields `out`. | `out` | 9 |
+| `dialect_doc_freshness` | `spec doc_markdown` | Computes and yields `"stale"`. | `"stale"` | 39 |
+
+#### `lang\dialect\extensions_registry.sdev`
+
+SDEV Dialect Subsystem — Extensions, Offline Cache & Registry (extensions_registry.sdev) 100% Pure SDEV port of extensions.ts, library-cache.ts & registry.ts
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `extract_library_references` | `source` | Computes and yields `refs`. | `refs` | 9 |
+| `create_library_cache` | _none_ | Computes and yields `{ entries: {} }`. | `{ entries: {} }` | 25 |
+| `cache_put_library` | `cache address version source_code` | Computes and yields `cache`. | `cache` | 29 |
+| `cache_get_library` | `cache address` | Computes and yields `{ found: 0, address: address, version: "", source: "", checksum: "" }`. | `{ found: 0, address: address, version: "", source: "", checksum: "" }` | 41 |
+| `resolve_cached_imports` | `source cache` | Computes and yields `source`. | `source` | 56 |
+
+#### `lang\dialect\presets.sdev`
+
+SDEV Dialect Subsystem — Ready-Made Presets & Samples (presets.sdev) 100% Pure SDEV port of src/lang/dialect/presets.ts & sample.ts
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `preset_bulgarian_spec` | _none_ | Computes and yields `s`. | `s` | 8 |
+| `preset_spanish_spec` | _none_ | Computes and yields `s`. | `s` | 21 |
+| `preset_pirate_spec` | _none_ | Computes and yields `s`. | `s` | 34 |
+| `preset_sample_program` | `slug` | Computes and yields `"нека x бъде 42\nкажи x"`. | `"нека x бъде 42\nкажи x"` | 45 |
+| `find_dialect_preset` | `slug` | Computes and yields `{ found: 1, spec: preset_bulgarian_spec(), sample: preset_sample_program("sdev-bg") }`. | `{ found: 1, spec: preset_bulgarian_spec(), sample: preset_sample_program("sdev-bg") }` | 58 |
+
+#### `lang\dialect\signature.sdev`
+
+SDEV Dialect Subsystem — Invisible File Signature & Address Codec (signature.sdev) 100% Pure SDEV port of src/lang/dialect/signature.ts & address.ts
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `signature_prefix` | _none_ | Computes and yields `"#⟨sdev⟩ "`. | `"#⟨sdev⟩ "` | 8 |
+| `strip_file_signature` | `source` | Computes and yields `""`. | `""` | 12 |
+| `write_file_signature` | `body rt dialect_addr translated_body` | Computes and yields `signature_prefix() + encoded + "\n" + clean_body`. | `signature_prefix() + encoded + "\n" + clean_body` | 24 |
+| `read_file_signature` | `source` | Computes and yields `{`. | `{` | 39 |
+| `repair_file_signature` | `source` | Computes and yields `write_file_signature(source, "v2", "canonical", "")`. | `write_file_signature(source, "v2", "canonical", "")` | 96 |
+
+#### `lang\dialect\spec_catalog.sdev`
+
+SDEV Dialect Subsystem — Catalog, Spec Validator & Translator (spec_catalog.sdev) 100% Pure SDEV port of catalog.ts, spec.ts & canonicalize.ts
+
+10 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `catalog_words` | _none_ | Computes and yields `["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in",`. | `["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in",` | 8 |
+| `catalog_category` | `word` | Computes and yields `"declarations"`. | `"declarations"` | 12 |
+| `empty_dialect_spec` | `name slug lang_tag` | Computes and yields `{`. | `{` | 31 |
+| `dialect_spec_set_word` | `spec canonical_word custom_word` | Computes and yields `spec`. | `spec` | 56 |
+| `dialect_inherit` | `base_spec child_spec` | Computes and yields `child_spec`. | `child_spec` | 63 |
+| `validate_dialect_spec` | `spec` | Computes and yields `errors`. | `errors` | 84 |
+| `is_dialect_publishable` | `spec` | Computes and yields `1`. | `1` | 114 |
+| `dialect_spec_to_engine` | `spec` | Computes and yields `d`. | `d` | 122 |
+| `dialectize_source` | `canonical_src spec` | Computes and yields `out`. | `out` | 139 |
+| `translate_between_dialects` | `src from_spec to_spec` | Computes and yields `dialectize_source(canon, to_spec)`. | `dialectize_source(canon, to_spec)` | 156 |
+
 #### `lang\formatter\formatter.sdev`
 
 SDEV Self-Hosted Code Formatter — authored in SDEV. Formats SDEV source code: - Reindents based on `::` opens and `;;` closes - Configurable indentation size - Trims trailing whitespace - Normalizes excessive blank lines - String and comment safe
@@ -17617,6 +18484,126 @@ SDEV Self-Hosted Code Formatter — authored in SDEV. Formats SDEV source code: 
 | `starts_with_closer` | `s` | Part of the String and comment safe section of this module. | `1` | 84 |
 | `slice_list` | `xs count` | Part of the String and comment safe section of this module. | `out` | 94 |
 | `sdev_format` | `code indent_size` | Part of the String and comment safe section of this module. | `join(final_list, "\n")` | 104 |
+
+#### `lang\hardware\arduino_api.sdev`
+
+SDEV Hardware Subsystem — Arduino API Catalogue (arduino_api.sdev) 100% Pure SDEV port of src/lang/hardware/arduino-api.ts
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `arduino_core_functions` | _none_ | Computes and yields `["pinMode", "digitalWrite", "digitalRead", "analogRead", "analogWrite", "analogReference",`. | `["pinMode", "digitalWrite", "digitalRead", "analogRead", "analogWrite", "analogReference",` | 8 |
+| `arduino_constants` | _none_ | Computes and yields `["HIGH", "LOW", "INPUT", "OUTPUT", "INPUT_PULLUP", "INPUT_PULLDOWN", "LED_BUILTIN", "MSBFI`. | `["HIGH", "LOW", "INPUT", "OUTPUT", "INPUT_PULLUP", "INPUT_PULLDOWN", "LED_BUILTIN", "MSBFI` | 12 |
+| `find_arduino_library` | `raw_name` | Computes and yields `{`. | `{` | 16 |
+| `is_arduino_function` | `fn_name` | Computes and yields `1`. | `1` | 99 |
+
+#### `lang\hardware\board_db.sdev`
+
+SDEV Hardware Subsystem — Board Database (board_db.sdev) 100% Pure SDEV port of src/lang/hardware/board-db.ts
+
+3 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `hw_all_board_ids` | _none_ | Computes and yields `["uno", "uno-r4-minima", "uno-r4-wifi", "uno-q", "nano", "mega", "leonardo", "micro", "esp`. | `["uno", "uno-r4-minima", "uno-r4-wifi", "uno-q", "nano", "mega", "leonardo", "micro", "esp` | 8 |
+| `find_board_by_id` | `raw_id` | Computes and yields `{`. | `{` | 12 |
+| `find_board_by_usb` | `vid pid` | Computes and yields `find_board_by_id("uno")`. | `find_board_by_id("uno")` | 210 |
+
+#### `lang\hardware\serial_cloud.sdev`
+
+SDEV Hardware Subsystem — STK500v1, Intel HEX & Cloud Compile (serial_cloud.sdev) 100% Pure SDEV port of src/lang/hardware/web-serial.ts & cloud-compile.ts
+
+8 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `stk500_get_sync_packet` | _none_ | STK500v1 Protocol Constants (ATmega328P Optiboot bootloader) Resp_STK_INSYNC = 0x14 (20), Resp_STK_OK = 0x10 (16), Sync_CRC_EOP = 0x20 (32) | `[48, 32]` | 12 |
+| `stk500_enter_progmode_packet` | _none_ | Computes and yields `[80, 32]`. | `[80, 32]` | 17 |
+| `stk500_leave_progmode_packet` | _none_ | Computes and yields `[81, 32]`. | `[81, 32]` | 22 |
+| `stk500_load_address_packet` | `word_addr` | Computes and yields `[85, lo, hi, 32]`. | `[85, lo, hi, 32]` | 27 |
+| `ihex_byte_hex` | `b` | Computes and yields `substr(digits, hi, 1) + substr(digits, lo, 1)`. | `substr(digits, hi, 1) + substr(digits, lo, 1)` | 34 |
+| `ihex_encode_record` | `addr rec_type data_bytes` | Computes and yields `out + ihex_byte_hex(checksum)`. | `out + ihex_byte_hex(checksum)` | 45 |
+| `ihex_eof_record` | _none_ | Computes and yields `":00000001FF"`. | `":00000001FF"` | 62 |
+| `cloud_compile_request` | `board_id sdev_source` | Computes and yields `{`. | `{` | 66 |
+
+#### `lang\hardware\simulator.sdev`
+
+SDEV Hardware Subsystem — Virtual MCU & Breadboard Simulator (simulator.sdev) 100% Pure SDEV port of src/lang/hardware/simulator.ts
+
+7 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `sim_create` | `board_id` | Computes and yields `{`. | `{` | 11 |
+| `sim_pin_mode` | `sim pin_str mode_str` | Computes and yields `sim`. | `sim` | 35 |
+| `sim_digital_write` | `sim pin_str val` | Computes and yields `sim`. | `sim` | 42 |
+| `sim_digital_read` | `sim pin_str` | Computes and yields `0`. | `0` | 54 |
+| `sim_analog_write` | `sim pin_str val` | Computes and yields `sim`. | `sim` | 62 |
+| `sim_exec_line` | `sim raw_line` | Computes and yields `sim`. | `sim` | 69 |
+| `sim_run_sketch` | `source max_cycles` | Computes and yields `sim_create("uno")`. | `sim_create("uno")` | 149 |
+
+#### `lang\hardware\strip.sdev`
+
+SDEV Hardware Subsystem — Board Block Finder & Stripper (strip.sdev) 100% Pure SDEV port of src/lang/hardware/strip.ts & block spans
+
+2 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `extract_board_block` | `source` | Computes and yields `{ found: 0, board_id: "", body: "", start_idx: 0, end_idx: 0 }`. | `{ found: 0, board_id: "", body: "", start_idx: 0, end_idx: 0 }` | 8 |
+| `strip_board_blocks` | `source` | Computes and yields `source`. | `source` | 103 |
+
+#### `lang\hardware\transpile.sdev`
+
+SDEV Hardware Subsystem — Arduino C++ (.ino) Transpiler (transpile.sdev) 100% Pure SDEV port of src/lang/hardware/transpile.ts
+
+2 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `transpile_board_body` | `board_id raw_body` | Performs a step of this module's pipeline; the result is produced through its side effects. | _no explicit yield_ | 12 |
+| `transpile_board_source` | `source` | Computes and yields `""`. | `""` | 135 |
+
+#### `lang\hardware\understand.sdev`
+
+SDEV Hardware Subsystem — Natural-English Hardware Reader (understand.sdev) 100% Pure SDEV port of src/lang/hardware/understand.ts
+
+3 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `hw_number_word` | `word` | Computes and yields `"1"`. | `"1"` | 8 |
+| `hw_understand_line` | `raw_line` | Computes and yields `""`. | `""` | 31 |
+| `hw_understand_body` | `body_src` | Computes and yields `join(out, "\n")`. | `join(out, "\n")` | 119 |
+
+#### `lang\ide\intelligence.sdev`
+
+SDEV IDE Intelligence — Autocomplete, Symbol Outline, Search & Problems (sdev-zero/lang/ide/intelligence.sdev) 100% Pure SDEV port of languageData.ts, IdeAutocomplete.tsx, IdeOutline.tsx, IdeSearchPanel.tsx, IdeCommandPalette.tsx & IdeProblems.tsx
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `ide_default_keywords` | _none_ | Computes and yields `["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in",`. | `["set", "to", "with", "return", "end", "if", "else", "elif", "while", "for", "each", "in",` | 11 |
+| `ide_autocomplete` | `prefix_str` | Computes and yields `[]`. | `[]` | 15 |
+| `ide_extract_outline` | `source` | Computes and yields `symbols`. | `symbols` | 34 |
+| `ide_collect_problems` | `source` | Computes and yields `problems`. | `problems` | 77 |
+| `ide_search_in_source` | `file_name source query` | Computes and yields `hits`. | `hits` | 92 |
+
+#### `lang\ide\scene_router.sdev`
+
+SDEV IDE & Homepage Engine — App Router, 3D Scene Math & Launch Gate (sdev-zero/lang/ide/scene_router.sdev) 100% Pure SDEV port of src/lib/app-router.ts, launchGate.ts, inviteCode.ts, countdownI18n.ts, googleCalendar.ts & compilerScene.ts
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `app_router_for_protocol` | `protocol_str` | Project Architecture Rule: Select hash routing only for `file:` desktop entries and browser routing for hosted entries, so bundled `index.html#/ide` opens the IDE. | `"HashRouter"` | 13 |
+| `scene_smoothstep_milli` | `start_m end_m p_m` | 3D Compiler Scene scroll progress math (port of compilerScene.ts) Progress p is in 0..1000 (milli-units of scroll progress 0.000..1.000) | `0` | 22 |
+| `scene_compute_rig_state` | `scroll_milli` | Computes and yields `{`. | `{` | 34 |
+| `launch_verify_invite_code` | `raw_code` | Computes and yields `1`. | `1` | 50 |
+| `google_calendar_event_url` | `title details iso_start iso_end` | Computes and yields `base + "&text=" + t + "&details=" + d + "&dates=" + iso_start + "/" + iso_end`. | `base + "&text=" + t + "&details=" + d + "&dates=" + iso_start + "/" + iso_end` | 58 |
 
 #### `lang\legacy\v1_frontend.sdev`
 
@@ -17648,6 +18635,19 @@ SDEV Static Linter & Diagnostic Engine — authored in SDEV. Inspects SDEV sourc
 | `sdev_lint_line` | `line line_no` | Computes and yields `""`. | `""` | 61 |
 | `sdev_strip_line_comment` | `line` | Computes and yields `substr(line, 0, i)`. | `substr(line, 0, i)` | 88 |
 
+#### `lang\mcp\mcp_server.sdev`
+
+SDEV MCP Subsystem — Model Context Protocol (MCP) JSON-RPC 2.0 Server (sdev-zero/lang/mcp/mcp_server.sdev) 100% Pure SDEV port of src/lib/mcp/index.ts, tools/files.ts, tools/community.ts & supabase/functions/mcp/index.ts
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `mcp_server_metadata` | _none_ | Computes and yields `{`. | `{` | 10 |
+| `mcp_tool_names` | _none_ | Computes and yields `["list_files", "read_file", "save_file", "list_dialects", "list_gists", "read_gist", "run_`. | `["list_files", "read_file", "save_file", "list_dialects", "list_gists", "read_gist", "run_` | 19 |
+| `mcp_create_workspace` | _none_ | Computes and yields `{`. | `{` | 23 |
+| `mcp_call_tool` | `ws tool_name arg1 arg2` | Computes and yields `{ ok: 1, tool: "list_files", result: join(f, ",") }`. | `{ ok: 1, tool: "list_files", result: join(f, ",") }` | 36 |
+
 #### `lang\native\build.sdev`
 
 SDEV native build driver — 100% SDEV, runs on the zero-host VM. sdev-vm lang/native/build.sdev <program.sdev> [-o out] [--asm-only] 1. compiles <program.sdev> with the self-hosted compiler (host key sdev:compile:self:<path>, answered natively by sdev-vm), 2. translates the bytecode to x86-64 assembly with codegen_x64.sdev, 3. assembles + links it against bin/runtime.s into a static Linux ELF. No Node.js, no JavaScript compiler takes part.
@@ -17674,9 +18674,9 @@ SDEV x86-64 Native Assembly Codegen — authored in SDEV. Emits System V AMD64 G
 | `x64_emit_exit_syscall` | `code` | Part of the x86-64 GAS Instruction Builders section of this module. | `"    movq $" + str(code) + ", %rdi\n    movq $60, %rax\n    syscall\n"` | 145 |
 | `x64_sign16` | `u` | Part of the x86-64 GAS Instruction Builders section of this module. | `u - 65536` | 149 |
 | `x64_sign32` | `b0 b1 b2 b3` | Part of the x86-64 GAS Instruction Builders section of this module. | `(b3 - 256) * 16777216 + b2 * 65536 + b1 * 256 + b0` | 156 |
-| `x64_extra_len` | `op` | Instruction length of the opcodes handled by x64_extra_op. | `9` | 168 |
-| `x64_extra_op` | `bc pc` | Floats are raw IEEE-754 bits in a 64-bit stack cell on the native track. | `s + "    .popsection\n    movq .Lf64_" + str(pc) + "(%rip), %rax\n" + pushax` | 179 |
-| `x64_compile_bytecode` | `bc pool` | Part of the Pure-SDEV Bytecode -> x86-64 Native Assembly Compiler section of this module. | _no explicit yield_ | 263 |
+| `x64_extra_len` | `op` | Instruction length of an opcode in SDEV bytecode. | `9` | 168 |
+| `x64_extra_op` | `bc pc` | Floats are raw IEEE-754 bits in a 64-bit stack cell on the native track. | `"    subq $8, %r15\n    movq (%r15), %rcx\n    subq $8, %r15\n    movq (%r15), %rax\n    c` | 188 |
+| `x64_compile_bytecode` | `bc pool` | Part of the Pure-SDEV Bytecode -> x86-64 Native Assembly Compiler section of this module. | _no explicit yield_ | 296 |
 
 #### `lang\native\link.sdev`
 
@@ -17693,7 +18693,7 @@ SDEV Native ELF Linker Driver — authored in SDEV. Automates invoking the GNU A
 
 SDEV Native Backend: Windows x86-64 PE/COFF (.exe) Emitter (lang/native/pe_x64.sdev) Authored in 100% pure SDEV — compiled by the self-hosted SDEV compiler.
 
-5 functions.
+12 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
@@ -17702,6 +18702,13 @@ SDEV Native Backend: Windows x86-64 PE/COFF (.exe) Emitter (lang/native/pe_x64.s
 | `pe_push_u32` | `buf v` | Computes and yields `0`. | `0` | 22 |
 | `pe_build_minimal_exe` | `exit_code` | Emits MS-DOS MZ header + PE\0\0 signature + COFF x86-64 header + code section | `buf` | 31 |
 | `pe_verify_header` | `buf` | Computes and yields `0`. | `0` | 68 |
+| `pe_put_u8` | `buf off b` | Computes and yields `0`. | `0` | 84 |
+| `pe_put_u16` | `buf off v` | Computes and yields `0`. | `0` | 93 |
+| `pe_put_u32` | `buf off v` | Computes and yields `0`. | `0` | 99 |
+| `pe_put_str` | `buf off s` | Computes and yields `0`. | `0` | 127 |
+| `pe_build_console_exe` | `msg_text exit_code` | Builds a complete 2,048-byte 64-bit Windows PE32+ Console Executable (.exe) in 100% pure SDEV that prints `msg_text` via KERNEL32.dll (GetStdHandle, WriteFile, ExitProcess) and exits with `exit_code`. | _no explicit yield_ | 140 |
+| `pe_to_hex` | `buf` | Computes and yields `join(parts, "")`. | `join(parts, "")` | 293 |
+| `pe_write_exe` | `path msg_text exit_code` | Computes and yields `buf[0]`. | `buf[0]` | 308 |
 
 #### `lang\native\runtime_x64.sdev`
 
@@ -17727,11 +18734,37 @@ SDEV Paradigms: Relational Tables & DataFrames — authored in SDEV.
 | `table_to_csv` | `tbl` | Computes and yields `out`. | `out` | 24 |
 | `table_to_markdown` | `tbl` | Computes and yields `out`. | `out` | 60 |
 
+#### `lang\paradigms\feature.sdev`
+
+SDEV Feature-Oriented Programming (FOP) Runtime & SPL Module (v2) — authored in pure SDEV. Provides composable feature objects, field/method registration, Software Product Line feature models (mandatory/optional/requires/excludes), and dynamic feature registries.
+
+17 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `_feat_list_has` | `xs target` | Computes and yields `1`. | `1` | 5 |
+| `_feat_list_append` | `xs item` | Computes and yields `out`. | `out` | 17 |
+| `_feat_list_append_unique` | `xs item` | Computes and yields `xs`. | `xs` | 29 |
+| `feature_create` | `f_name reqs excls` | Computes and yields `{`. | `{` | 36 |
+| `feature_add_field` | `feat key val` | Computes and yields `feat`. | `feat` | 46 |
+| `feature_add_method` | `feat m_name fn_ref` | Computes and yields `feat`. | `feat` | 53 |
+| `feature_compose` | `feats` | Computes and yields `feature_create("empty", [], [])`. | `feature_create("empty", [], [])` | 60 |
+| `feature_model_create` | `m_name` | Computes and yields `{`. | `{` | 135 |
+| `feature_model_add` | `model f_name is_mandatory` | Computes and yields `model`. | `model` | 146 |
+| `feature_model_require` | `model a b` | Computes and yields `model`. | `model` | 157 |
+| `feature_model_exclude` | `model a b` | Computes and yields `model`. | `model` | 162 |
+| `feature_model_validate` | `model sel` | Computes and yields `{ valid: ok, errors: errs }`. | `{ valid: ok, errors: errs }` | 167 |
+| `feature_model_resolve` | `model sel` | Computes and yields `out`. | `out` | 220 |
+| `feature_registry_create` | _none_ | Computes and yields `{ features: {}, active: [] }`. | `{ features: {}, active: [] }` | 255 |
+| `feature_enable_in` | `reg f_name` | Computes and yields `1`. | `1` | 259 |
+| `feature_disable_in` | `reg f_name` | Computes and yields `0`. | `0` | 265 |
+| `feature_is_enabled_in` | `reg f_name` | Computes and yields `_feat_list_has(reg["active"], f_name)`. | `_feat_list_has(reg["active"], f_name)` | 279 |
+
 #### `lang\paradigms\functional.sdev`
 
 SDEV Paradigms: Functional Programming & Algebraic Types — authored in SDEV.
 
-15 functions.
+20 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
@@ -17750,6 +18783,11 @@ SDEV Paradigms: Functional Programming & Algebraic Types — authored in SDEV.
 | `map_ok` | `res fn` | Part of the Result Type section of this module. | `Ok(call fn(res["val"]))` | 67 |
 | `flat_map_ok` | `res fn` | Part of the Result Type section of this module. | `call fn(res["val"])` | 74 |
 | `match_adt` | `adt on_some on_none` | Part of the Pattern Matching Helper section of this module. | `on_some` | 83 |
+| `match_result` | `res on_ok on_err` | Part of the Pattern Matching Helper section of this module. | `call on_ok(res["val"])` | 90 |
+| `match_option_fn` | `opt on_some on_none` | Part of the Pattern Matching Helper section of this module. | `call on_some(opt["val"])` | 97 |
+| `func_pipe2` | `x f g` | Part of the Pattern Matching Helper section of this module. | `call g(r1)` | 104 |
+| `func_pipe3` | `x f g h` | Part of the Pattern Matching Helper section of this module. | `call h(r2)` | 109 |
+| `func_compose2` | `f g x` | Part of the Pattern Matching Helper section of this module. | `call f(r1)` | 115 |
 
 #### `lang\paradigms\hardware.sdev`
 
@@ -17902,6 +18940,19 @@ SDEV Runtime: WASI Component Model Binary Emitter (lang/runtime/wasi.sdev) Autho
 | `wasi_binding_py` | `world_name sample_fn sample_args` | Computes and yields `out`. | `out` | 137 |
 | `wasi_binding_rust` | `sample_fn sample_args rust_param_types` | Computes and yields `out`. | `out` | 156 |
 | `wasi_binding_go` | `world_name sample_fn sample_args` | Computes and yields `out`. | `out` | 173 |
+
+#### `lang\server\edge_functions.sdev`
+
+SDEV Cloud Edge Functions & AI Provider Router (sdev-zero/lang/server/edge_functions.sdev) 100% Pure SDEV port of supabase/functions/_shared/ai.ts, auth.ts, sdev-agent, sdev-fix, sdev-chat, draft-dialect, translate-code & compile-firmware
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `ai_resolve_provider` | `sdev_ai_api_key custom_base_url custom_model` | Mirrors supabase/functions/_shared/ai.ts rule: Uses project's own OpenAI-compatible provider when SDEV_AI_API_KEY is set, and only falls back to the legacy hosted gateway otherwise. | `{` | 15 |
+| `edge_sdev_agent_handler` | `source_code` | Computes and yields `{`. | `{` | 40 |
+| `edge_sdev_fix_handler` | `broken_code` | Computes and yields `{`. | `{` | 50 |
+| `edge_compile_firmware_handler` | `board_id sdev_code` | Computes and yields `{`. | `{` | 59 |
 
 #### `lang\stdlib\ffi.sdev`
 
@@ -18189,7 +19240,7 @@ SDEV Standard Library: Byte Buffers, Hex, Base64 & Hashing (lang/stdlib/v2/buffe
 | `base64_encode` | `s` | Computes and yields `concat(out, "")`. | `concat(out, "")` | 119 |
 | `base64_decode` | `b64_str` | Computes and yields `concat(out, "")`. | `concat(out, "")` | 156 |
 | `hash_djb2` | `s` | Computes and yields `h`. | `h` | 192 |
-| `hash_fnv1a_hex` | `s` | Computes and yields `bits_to_hex(h)`. | `bits_to_hex(h)` | 203 |
+| `hash_fnv1a_hex` | `s` | Computes and yields `concat(bits_to_hex(h), "")`. | `concat(bits_to_hex(h), "")` | 203 |
 | `buf_byte` | `val` | Computes and yields `b`. | `b` | 210 |
 | `mem_arena_new` | `cap` | Computes and yields `a`. | `a` | 218 |
 | `mem_arena_alloc` | `a n` | Computes and yields `0 - 1`. | `0 - 1` | 232 |
@@ -18207,12 +19258,25 @@ SDEV Standard Library: Byte Buffers, Hex, Base64 & Hashing (lang/stdlib/v2/buffe
 
 SDEV Standard Library: Functional Combinators (v2) — authored in SDEV.
 
-2 functions.
+15 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
 | `func_take` | `xs count` | Computes and yields `out`. | `out` | 3 |
 | `func_drop` | `xs count` | Computes and yields `mklist(0)`. | `mklist(0)` | 18 |
+| `_func_append` | `xs item` | Computes and yields `out`. | `out` | 33 |
+| `func_map` | `xs fn` | Computes and yields `out`. | `out` | 45 |
+| `func_filter` | `xs pred` | Computes and yields `out`. | `out` | 56 |
+| `func_fold` | `xs init fn` | Computes and yields `acc`. | `acc` | 70 |
+| `func_scan` | `xs init fn` | Computes and yields `out`. | `out` | 81 |
+| `func_juxt` | `fns x` | Computes and yields `out`. | `out` | 94 |
+| `func_converge` | `after_fn branch_fns x` | Computes and yields `call after_fn(vals)`. | `call after_fn(vals)` | 106 |
+| `func_zip_with` | `xs ys fn` | Computes and yields `out`. | `out` | 111 |
+| `func_partition` | `xs pred` | Computes and yields `[pass_list, fail_list]`. | `[pass_list, fail_list]` | 127 |
+| `func_flat_map` | `xs fn` | Computes and yields `out`. | `out` | 144 |
+| `func_find` | `xs pred` | Computes and yields `item`. | `item` | 161 |
+| `func_every` | `xs pred` | Computes and yields `0`. | `0` | 174 |
+| `func_some` | `xs pred` | Computes and yields `1`. | `1` | 186 |
 
 #### `lang\stdlib\v2\graphics.sdev`
 
@@ -18544,31 +19608,46 @@ SDEV Standard Library: Relational SQL Primitives — authored in pure SDEV.
 | `sql_distinct` | `rows col` | Computes and yields `out`. | `out` | 116 |
 | `sql_join` | `left right left_key right_key` | Computes and yields `out`. | `out` | 133 |
 
+#### `lang\stdlib\v2\test.sdev`
+
+SDEV Standard Library: Test Runner Harness (v2) — authored in SDEV.
+
+5 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `test_begin` | `title` | Computes and yields `title`. | `title` | 6 |
+| `assert_eq` | `ts actual expected msg` | Computes and yields `ts`. | `ts` | 11 |
+| `assert_str_eq` | `ts actual expected msg` | Computes and yields `ts`. | `ts` | 16 |
+| `assert_true` | `ts cond msg` | Computes and yields `ts`. | `ts` | 21 |
+| `test_summary` | `ts` | Computes and yields `tk_report(concat(ts, ""))`. | `tk_report(concat(ts, ""))` | 26 |
+
 #### `lang\stdlib\v2\text.sdev`
 
 SDEV Standard Library: Text & Strings (v2) — authored in SDEV.
 
-17 functions.
+18 functions.
 
 | Function | Parameters | What it does | Returns | Line |
 | --- | --- | --- | --- | --- |
-| `str_eq` | `a b` | Byte-exact string comparison, used instead of host equality so both tracks agree. | `1` | 3 |
-| `text_upper` | `s` | Computes and yields `upper(s)`. | `upper(s)` | 10 |
-| `text_lower` | `s` | Computes and yields `lower(s)`. | `lower(s)` | 14 |
-| `text_trim` | `s` | Computes and yields `trim(s)`. | `trim(s)` | 18 |
-| `text_contains` | `s sub` | Computes and yields `contains(s, sub)`. | `contains(s, sub)` | 22 |
-| `text_replace` | `s target rep` | Computes and yields `replace(s, target, rep)`. | `replace(s, target, rep)` | 26 |
-| `text_split` | `s delim` | Computes and yields `split(s, delim)`. | `split(s, delim)` | 30 |
-| `text_join` | `items delim` | Computes and yields `join(items, delim)`. | `join(items, delim)` | 34 |
-| `text_starts_with` | `s prefix` | Computes and yields `0`. | `0` | 38 |
-| `text_ends_with` | `s suffix` | Computes and yields `0`. | `0` | 49 |
-| `text_repeat` | `s count` | Computes and yields `out`. | `out` | 61 |
-| `text_pad_left` | `s target_len pad_char` | Computes and yields `s`. | `s` | 71 |
-| `text_pad_right` | `s target_len pad_char` | Computes and yields `s`. | `s` | 79 |
-| `text_reverse` | `s` | Computes and yields `out`. | `out` | 87 |
-| `etch` | `a b` | SDEV v1 Compatibility Aliases | `a + b` | 99 |
-| `shatter` | `s delim` | Computes and yields `text_split(s, delim)`. | `text_split(s, delim)` | 103 |
-| `weave` | `list delim` | Computes and yields `text_join(list, delim)`. | `text_join(list, delim)` | 107 |
+| `index_of` | `s sub` | Computes and yields `find(s, sub)`. | `find(s, sub)` | 5 |
+| `str_eq` | `a b` | Byte-exact string comparison, used instead of host equality so both tracks agree. | `1` | 9 |
+| `text_upper` | `s` | Computes and yields `upper(s)`. | `upper(s)` | 16 |
+| `text_lower` | `s` | Computes and yields `lower(s)`. | `lower(s)` | 20 |
+| `text_trim` | `s` | Computes and yields `trim(s)`. | `trim(s)` | 24 |
+| `text_contains` | `s sub` | Computes and yields `contains(s, sub)`. | `contains(s, sub)` | 28 |
+| `text_replace` | `s target rep` | Computes and yields `replace(s, target, rep)`. | `replace(s, target, rep)` | 32 |
+| `text_split` | `s delim` | Computes and yields `split(s, delim)`. | `split(s, delim)` | 36 |
+| `text_join` | `items delim` | Computes and yields `join(items, delim)`. | `join(items, delim)` | 40 |
+| `text_starts_with` | `s prefix` | Computes and yields `0`. | `0` | 44 |
+| `text_ends_with` | `s suffix` | Computes and yields `0`. | `0` | 55 |
+| `text_repeat` | `s count` | Computes and yields `out`. | `out` | 67 |
+| `text_pad_left` | `s target_len pad_char` | Computes and yields `s`. | `s` | 77 |
+| `text_pad_right` | `s target_len pad_char` | Computes and yields `s`. | `s` | 85 |
+| `text_reverse` | `s` | Computes and yields `out`. | `out` | 93 |
+| `etch` | `a b` | SDEV v1 Compatibility Aliases | `a + b` | 105 |
+| `shatter` | `s delim` | Computes and yields `text_split(s, delim)`. | `text_split(s, delim)` | 109 |
+| `weave` | `list delim` | Computes and yields `text_join(list, delim)`. | `text_join(list, delim)` | 113 |
 
 #### `lang\stdlib\v2\time.sdev`
 
@@ -18691,6 +19770,43 @@ _No top-level functions — this file is a script or data module._
 lang/stdlib/webgpu.sdev Milestone 10 — WebGPU acceleration for the browser IDE Provides a thin, sdev-native wrapper over the host's WebGPU bindings. The runtime exposes a handful of host calls (`__wgpu_*`) that the browser build implements through `navigator.gpu`. On Node/native builds without a GPU adapter, every entry point falls back to the pure-sdev CPU tensor kernels so user code stays portable. This module is written entirely in sdev and is compiled by the self-hosted compiler like the rest of the stdlib.
 
 _No top-level functions — this file is a script or data module._
+
+#### `lang\studio\time_travel.sdev`
+
+SDEV Studio Engine — Time-Travel Chrono Debugger & Live Lens Tracer (sdev-zero/lang/studio/time_travel.sdev) 100% Pure SDEV port of src/studio/runner.ts, src/studio/store.ts & TimeTravelDebugger.tsx
+
+4 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `studio_create_session` | `source max_steps` | Computes and yields `{`. | `{` | 9 |
+| `studio_eval_value` | `vars expr_str` | Computes and yields `substr(e, 1, length(e) - 2)`. | `substr(e, 1, length(e) - 2)` | 23 |
+| `studio_run_traced` | `source max_steps` | Computes and yields `sess`. | `sess` | 46 |
+| `studio_seek_step` | `sess target_idx` | Computes and yields `{ index: 0, line: 0, node_type: "Empty", code: "", summary: "", result_value: "" }`. | `{ index: 0, line: 0, node_type: "Empty", code: "", summary: "", result_value: "" }` | 106 |
+
+#### `lang\tools\mirror_1to1.sdev`
+
+SDEV 1:1 Repository Mirror & Source-to-SDEV Transpiler Engine (sdev-zero/lang/tools/mirror_1to1.sdev) Authored in 100% Pure SDEV
+
+3 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `mirror_map_path` | `rel_path` | Computes and yields `"extension/interpreter/sdev-interpreter-py.sdev"`. | `"extension/interpreter/sdev-interpreter-py.sdev"` | 9 |
+| `mirror_transpile_declaration` | `line_str` | Computes and yields `"to " + fname`. | `"to " + fname` | 35 |
+| `mirror_file_present` | `sdev_rel_path` | Computes and yields `1`. | `1` | 70 |
+
+#### `lang\tools\release_docs.sdev`
+
+SDEV Release Pipeline, Book Builder & Hardware Reference Generator (sdev-zero/lang/tools/release_docs.sdev) 100% Pure SDEV port of scripts/release.mjs, scripts/build-book.ts, scripts/gen-hardware-docs.ts & scripts/build-ultimate-docs.mjs
+
+3 functions.
+
+| Function | Parameters | What it does | Returns | Line |
+| --- | --- | --- | --- | --- |
+| `release_build_manifest` | `version_str` | Project Architecture Rule: release.json holds the single version for the IDE, CLI, VS Code extension and desktop app; every installed tool reads releases.json to update itself. | `{` | 15 |
+| `generate_hardware_reference_md` | _none_ | Computes and yields `out`. | `out` | 27 |
+| `build_sdev_book_markdown` | `version_str` | Computes and yields `book`. | `book` | 43 |
 
 #### `lang\translator\translator.sdev`
 
@@ -19195,6 +20311,7 @@ Registry: **209 features** across **3 tracks**.
 - `lang\stdlib\v2\random.sdev`
 - `lang\stdlib\v2\regex.sdev`
 - `lang\stdlib\v2\sql.sdev`
+- `lang\stdlib\v2\test.sdev`
 - `lang\stdlib\v2\text.sdev`
 - `lang\stdlib\v2\time.sdev`
 - `lang\stdlib\v2\tome.sdev`
@@ -19217,6 +20334,11 @@ Registry: **209 features** across **3 tracks**.
 #### `lang/dialect/` — Personal SDEV dialect rules and canonicalizers
 
 - `lang\dialect\dialect.sdev`
+- `lang\dialect\docs.sdev`
+- `lang\dialect\extensions_registry.sdev`
+- `lang\dialect\presets.sdev`
+- `lang\dialect\signature.sdev`
+- `lang\dialect\spec_catalog.sdev`
 
 #### `lang/formatter/` — Pure-SDEV canonical code formatter
 
@@ -19241,6 +20363,7 @@ Registry: **209 features** across **3 tracks**.
 #### `lang/paradigms/` — Multi-paradigm extensions (functional ADTs, systems, data, hardware)
 
 - `lang\paradigms\data.sdev`
+- `lang\paradigms\feature.sdev`
 - `lang\paradigms\functional.sdev`
 - `lang\paradigms\hardware.sdev`
 - `lang\paradigms\systems.sdev`
@@ -19253,6 +20376,7 @@ Registry: **209 features** across **3 tracks**.
 - `lang\agent\math.sdev`
 - `lang\agent\memory.sdev`
 - `lang\agent\parser_eval.sdev`
+- `lang\agent\pipeline.sdev`
 - `lang\agent\project.sdev`
 - `lang\agent\tasks.sdev`
 - `lang\agent\understander.sdev`
@@ -19288,6 +20412,7 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\builtins.ts`
 - `src\lang\builtins\buffer.ts`
 - `src\lang\builtins\dict.ts`
+- `src\lang\builtins\fop.ts`
 - `src\lang\builtins\functional.ts`
 - `src\lang\builtins\host.ts`
 - `src\lang\builtins\io.ts`
@@ -19314,9 +20439,12 @@ Registry: **209 features** across **3 tracks**.
 - `src\lang\dialect\docs.ts`
 - `src\lang\dialect\extensions.ts`
 - `src\lang\dialect\index.ts`
+- `src\lang\dialect\library-cache.ts`
 - `src\lang\dialect\presets.ts`
 - `src\lang\dialect\registry.ts`
+- `src\lang\dialect\resolve.ts`
 - `src\lang\dialect\sample.ts`
+- `src\lang\dialect\sdev-format.ts`
 - `src\lang\dialect\signature.ts`
 - `src\lang\dialect\spec.ts`
 - `src\lang\environment.ts`
@@ -19444,8 +20572,10 @@ Registry: **209 features** across **3 tracks**.
 - `scripts\test-dialect.ts`
 - `scripts\test-driver-artifact.sdev`
 - `scripts\test-expansion-features.ts`
+- `scripts\test-fop-fp.ts`
 - `scripts\test-formatter.sdev`
 - `scripts\test-formatter.ts`
+- `scripts\test-ide-loading.ts`
 - `scripts\test-linker.ts`
 - `scripts\test-local-brain.ts`
 - `scripts\test-math.ts`
@@ -19524,8 +20654,10 @@ Registry: **209 features** across **3 tracks**.
 | `node scripts/run-ts.mjs scripts\test-dialect.ts` | ---- a Bulgarian dialect with braces and `=` assignment ------------------- |
 | `node bin/sdevhost.mjs scripts\test-driver-artifact.sdev` | The checked-in driver artifact must stay honest — authored in SDEV. |
 | `node scripts/run-ts.mjs scripts\test-expansion-features.ts` | Calculate factorial and print |
+| `node scripts/run-ts.mjs scripts\test-fop-fp.ts` | ── 1. Preserving existing identifiers & syntax ───────────────────────────── |
 | `node bin/sdevhost.mjs scripts\test-formatter.sdev` | SDEV Formal Formatter Test Suite — authored in SDEV. |
 | `node scripts/run-ts.mjs scripts\test-formatter.ts` | 1. Basic indentation |
+| `node scripts/run-ts.mjs scripts\test-ide-loading.ts` | Follow real static dependencies, not comments or dynamic imports. A new |
 | `node scripts/run-ts.mjs scripts\test-linker.ts` | Test data |
 | `node scripts/run-ts.mjs scripts\test-local-brain.ts` | 1. LM Studio endpoint normalization |
 | `node scripts/run-ts.mjs scripts\test-math.ts` |  |

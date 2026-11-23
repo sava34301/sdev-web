@@ -1,0 +1,281 @@
+# SDEV Feature-Oriented Programming (FOP) Runtime & SPL Module (v2) — authored in pure SDEV.
+# Provides composable feature objects, field/method registration, Software Product Line
+# feature models (mandatory/optional/requires/excludes), and dynamic feature registries.
+
+to _feat_list_has with xs target
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if xs[i] is target
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to _feat_list_append with xs item
+  set n to length(xs)
+  set out to mklist(n + 1)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  set out[n] to item
+  return out
+end
+
+to _feat_list_append_unique with xs item
+  if _feat_list_has(xs, item) is 1
+    return xs
+  end
+  return _feat_list_append(xs, item)
+end
+
+to feature_create with f_name reqs excls
+  return {
+    name: f_name,
+    requires: reqs,
+    excludes: excls,
+    fields: {},
+    methods: {}
+  }
+end
+
+to feature_add_field with feat key val
+  set flds to feat["fields"]
+  set flds[key] to val
+  set feat["fields"] to flds
+  return feat
+end
+
+to feature_add_method with feat m_name fn_ref
+  set mtds to feat["methods"]
+  set mtds[m_name] to fn_ref
+  set feat["methods"] to mtds
+  return feat
+end
+
+to feature_compose with feats
+  set n to length(feats)
+  if n is 0
+    return feature_create("empty", [], [])
+  end
+  set composed_name to ""
+  set names to []
+  set reqs to []
+  set excls to []
+  set fields to {}
+  set methods to {}
+
+  set i to 0
+  while i < n
+    set f to feats[i]
+    if i is 0
+      set composed_name to f["name"]
+    else
+      set composed_name to concat(composed_name, concat("+", f["name"]))
+    end
+    set names to _feat_list_append(names, f["name"])
+
+    set freq to f["requires"]
+    set r to 0
+    while r < length(freq)
+      set reqs to _feat_list_append_unique(reqs, freq[r])
+      set r to r + 1
+    end
+
+    set fex to f["excludes"]
+    set e to 0
+    while e < length(fex)
+      set excls to _feat_list_append_unique(excls, fex[e])
+      set e to e + 1
+    end
+
+    set sf to f["fields"]
+    set fks to keys(sf)
+    set k to 0
+    while k < length(fks)
+      set fk to fks[k]
+      set fields[fk] to sf[fk]
+      set k to k + 1
+    end
+
+    set sm to f["methods"]
+    set mks to keys(sm)
+    set m to 0
+    while m < length(mks)
+      set mk to mks[m]
+      set methods[mk] to sm[mk]
+      set m to m + 1
+    end
+
+    set i to i + 1
+  end
+
+  set final_reqs to []
+  set ri to 0
+  while ri < length(reqs)
+    if _feat_list_has(names, reqs[ri]) is 0
+      set final_reqs to _feat_list_append(final_reqs, reqs[ri])
+    end
+    set ri to ri + 1
+  end
+
+  return {
+    name: composed_name,
+    requires: final_reqs,
+    excludes: excls,
+    fields: fields,
+    methods: methods
+  }
+end
+
+to feature_model_create with m_name
+  return {
+    name: m_name,
+    features: [],
+    mandatory: [],
+    optional: [],
+    requires: [],
+    excludes: []
+  }
+end
+
+to feature_model_add with model f_name is_mandatory
+  set all_f to _feat_list_append_unique(model["features"], f_name)
+  set model["features"] to all_f
+  if is_mandatory is 1
+    set model["mandatory"] to _feat_list_append_unique(model["mandatory"], f_name)
+  else
+    set model["optional"] to _feat_list_append_unique(model["optional"], f_name)
+  end
+  return model
+end
+
+to feature_model_require with model a b
+  set model["requires"] to _feat_list_append(model["requires"], [a, b])
+  return model
+end
+
+to feature_model_exclude with model a b
+  set model["excludes"] to _feat_list_append(model["excludes"], [a, b])
+  return model
+end
+
+to feature_model_validate with model sel
+  set errs to []
+  set known to model["features"]
+  if length(known) > 0
+    set si to 0
+    while si < length(sel)
+      if _feat_list_has(known, sel[si]) is 0
+        set errs to _feat_list_append(errs, concat("Unknown feature: ", sel[si]))
+      end
+      set si to si + 1
+    end
+  end
+
+  set mand to model["mandatory"]
+  set mi to 0
+  while mi < length(mand)
+    if _feat_list_has(sel, mand[mi]) is 0
+      set errs to _feat_list_append(errs, concat("Missing mandatory feature: ", mand[mi]))
+    end
+    set mi to mi + 1
+  end
+
+  set reqs to model["requires"]
+  set ri to 0
+  while ri < length(reqs)
+    set pair to reqs[ri]
+    if _feat_list_has(sel, pair[0]) is 1
+      if _feat_list_has(sel, pair[1]) is 0
+        set errs to _feat_list_append(errs, concat(pair[0], concat(" requires ", pair[1])))
+      end
+    end
+    set ri to ri + 1
+  end
+
+  set excls to model["excludes"]
+  set ei to 0
+  while ei < length(excls)
+    set pair to excls[ei]
+    if _feat_list_has(sel, pair[0]) is 1
+      if _feat_list_has(sel, pair[1]) is 1
+        set errs to _feat_list_append(errs, concat(pair[0], concat(" excludes ", pair[1])))
+      end
+    end
+    set ei to ei + 1
+  end
+
+  set ok to 0
+  if length(errs) is 0
+    set ok to 1
+  end
+  return { valid: ok, errors: errs }
+end
+
+to feature_model_resolve with model sel
+  set out to []
+  set mand to model["mandatory"]
+  set mi to 0
+  while mi < length(mand)
+    set out to _feat_list_append_unique(out, mand[mi])
+    set mi to mi + 1
+  end
+  set si to 0
+  while si < length(sel)
+    set out to _feat_list_append_unique(out, sel[si])
+    set si to si + 1
+  end
+
+  set reqs to model["requires"]
+  set changed to 1
+  set guard to 0
+  while changed is 1 and guard < 64
+    set changed to 0
+    set guard to guard + 1
+    set ri to 0
+    while ri < length(reqs)
+      set pair to reqs[ri]
+      if _feat_list_has(out, pair[0]) is 1
+        if _feat_list_has(out, pair[1]) is 0
+          set out to _feat_list_append(out, pair[1])
+          set changed to 1
+        end
+      end
+      set ri to ri + 1
+    end
+  end
+  return out
+end
+
+to feature_registry_create
+  return { features: {}, active: [] }
+end
+
+to feature_enable_in with reg f_name
+  set act to _feat_list_append_unique(reg["active"], f_name)
+  set reg["active"] to act
+  return 1
+end
+
+to feature_disable_in with reg f_name
+  set cur to reg["active"]
+  set nxt to []
+  set i to 0
+  while i < length(cur)
+    if cur[i] is not f_name
+      set nxt to _feat_list_append(nxt, cur[i])
+    end
+    set i to i + 1
+  end
+  set reg["active"] to nxt
+  return 0
+end
+
+to feature_is_enabled_in with reg f_name
+  return _feat_list_has(reg["active"], f_name)
+end

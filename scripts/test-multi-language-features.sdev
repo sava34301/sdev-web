@@ -6,6 +6,8 @@ use "lang/stdlib/testkit.sdev"
 use "lang/stdlib/v2/sql.sdev"
 use "lang/paradigms/functional.sdev"
 use "lang/paradigms/systems.sdev"
+use "lang/paradigms/feature.sdev"
+use "lang/stdlib/v2/func.sdev"
 
 to run_snippet with code
   set p to ".tmp_snippet_mlf.sdev"
@@ -83,6 +85,44 @@ set _ to check("Option unwrap", unwrap_or(opt, 0) is 42)
 set res_ok to Ok("success")
 set _ to check("Result is_ok", is_ok(res_ok) is 1)
 set _ to check("Result unwrap", result_unwrap_or(res_ok, "err") is "success")
+
+# 7. Feature-Oriented Programming (FOP) Pure Self-Hosted
+set f_core to feature_create("core", [], [])
+set _ to feature_add_field(f_core, "ver", 1)
+set f_auth to feature_create("auth", ["core"], [])
+set _ to feature_add_field(f_auth, "scheme", "token")
+set f_comp to feature_compose([f_core, f_auth])
+set _ to check("Feature compose merges name and fields", f_comp["name"] is "core+auth" and f_comp["fields"]["scheme"] is "token")
+
+set f_mdl to feature_model_create("Product")
+set _ to feature_model_add(f_mdl, "core", 1)
+set _ to feature_model_add(f_mdl, "auth", 0)
+set _ to feature_model_add(f_mdl, "legacy", 0)
+set _ to feature_model_require(f_mdl, "auth", "core")
+set _ to feature_model_exclude(f_mdl, "auth", "legacy")
+set val_ok to feature_model_validate(f_mdl, ["core", "auth"])
+set val_bad to feature_model_validate(f_mdl, ["auth", "legacy"])
+set _ to check("SPL model valid selection", val_ok["valid"] is 1)
+set _ to check("SPL model detects conflict and missing mandatory", val_bad["valid"] is 0)
+set reg to feature_registry_create()
+set _ to feature_enable_in(reg, "auth")
+set _ to check("SPL registry enable/check", feature_is_enabled_in(reg, "auth") is 1)
+
+# 8. Function-Oriented Programming (FP) Stdlib v2
+to _mlf_inc with x
+  return x + 1
+end
+to _mlf_dbl with x
+  return x * 2
+end
+to _mlf_even with x
+  return x % 2 is 0
+end
+set mapped to func_map([1, 2, 3], ref _mlf_dbl)
+set evens to func_filter([1, 2, 3, 4], ref _mlf_even)
+set _ to check("func_map doubles list", mapped[0] is 2 and mapped[2] is 6)
+set _ to check("func_filter keeps evens", length(evens) is 2 and evens[1] is 4)
+set _ to check("func_pipe2 threads value", func_pipe2(5, ref _mlf_inc, ref _mlf_dbl) is 12)
 
 # Cleanup scratch
 set _ to write_file(".tmp_snippet_mlf.sdev", "")

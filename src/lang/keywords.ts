@@ -32,6 +32,8 @@ export const KEYWORD_SPECS: KeywordSpec[] = [
   { token: 'CONJURE', mystic: 'conjure', plain: 'func', aliases: ['def'], about: 'function declaration' },
   { token: 'ESSENCE_KW', mystic: 'essence', plain: 'kind', aliases: ['class'], about: 'class declaration' },
   { token: 'EXTEND', mystic: 'extend', plain: 'extends', about: 'inheritance' },
+  { token: 'FEATURE', mystic: 'facet', plain: 'feature', about: 'feature module declaration' },
+  { token: 'REFINE', mystic: 'augment', plain: 'refine', about: 'feature class/function refinement' },
   { token: 'BE', mystic: 'be', plain: 'be', about: 'assignment' },
 
   // ---- control flow -------------------------------------------------

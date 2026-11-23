@@ -12,6 +12,7 @@ that ties together all of the focused guides:
 | --- | --- |
 | [v1 Language Reference](../02-language/v1-reference.md) | v1 classic/mystic syntax, OOP, stdlib |
 | [v2 "Prism" Guide](../02-language/v2-prism-guide.md) | v2 plain-English syntax, diagnostics, modules |
+| [Feature & Function-Oriented Programming](../02-language/feature-and-function-oriented-programming.md) | `feature`/`facet`, `refine`/`augment`, `proceed`, SPL models, `>>`/`<<`, `_` partial holes, multi-clause patterns, combinators, lenses, transducers |
 | [AI Syntax Reference](../02-language/ai-syntax-reference.md) | Compact `!#ai` dialect for LLMs |
 | [Personal SDEV](../02-language/personal-dialects-and-libraries.md) | Custom dialects, extensions, `#⟨sdev⟩` signatures, `@user/lib` |
 | [v2 Stdlib & Web Toolkit](../03-standard-library/v2-stdlib-and-web-toolkit.md) | 21 pure-SDEV v2 stdlib modules & `lang/web/` |
@@ -183,7 +184,27 @@ reports cycles with a clear error.
 - **UI** — `app`, `button`, `slider`, `label`, …
 - **Web** — one builtin per HTML5 tag, `style`, `on`, `page()`
 - **Matrix** — transpose, multiply, determinant, inverse
+- **FOP** — `feature`/`facet`, `refine`/`augment`, `proceed`/`original`, `feature_define`, `enable_feature`, `disable_feature`, `toggle_feature`, `with_features`, `feature_context`, `compose_features`, `apply_feature`, `refine_target`, SPL `feature_model`/`validate_features`/`resolve_features`
+- **FP** — `>>`/`<<` tacit compose, `_` placeholders, multi-clause `when`-guarded `=>` functions, `partial`, `flip`, `identity_fn`/`id_fn`, `juxt`, `converge`, `trampoline`, `lens_path`/`over`/`view`, `xf_map`/`xf_filter`/`xf_take`/`transduce`, `match_option`/`match_result`
 - **FFI/GPU** — see sections 6–8
+
+### 2.8 Feature-Oriented & Function-Oriented Programming
+
+```sdev
+conjure base(x) => x * 10
+feature PlusOne ::
+  refine base(x) ::
+    yield proceed(x) + 1
+  ;;
+;;
+forge inc be x -> x + 1
+with feature_context([PlusOne]) ::
+  speak((inc >> base)(3))
+;;
+speak(base(3))
+```
+
+See [Feature & Function-Oriented Programming](../02-language/feature-and-function-oriented-programming.md) for the full guide.
 
 ---
 

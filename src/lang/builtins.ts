@@ -15,10 +15,12 @@ import { registerOce } from './builtins/oce';
 import { registerHost } from './builtins/host';
 import { registerText } from './builtins/text';
 import { registerSql } from './builtins/sql';
+import { registerFop, FopRegistry } from './builtins/fop';
 
 export * from './builtins/utils';
+export { FopRegistry } from './builtins/fop';
 
-export function createBuiltins(output: OutputCallback): Map<string, SdevFunction> {
+export function createBuiltins(output: OutputCallback, fopRegistry?: FopRegistry): Map<string, SdevFunction> {
     const builtins = new Map<string, SdevFunction>();
     registerIo(builtins, output);
     registerMath(builtins, output);
@@ -36,5 +38,6 @@ export function createBuiltins(output: OutputCallback): Map<string, SdevFunction
     registerText(builtins, output);
     registerSql(builtins, output);
     registerOce(builtins);
+    registerFop(builtins, output, fopRegistry);
     return builtins;
 }

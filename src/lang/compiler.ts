@@ -16,6 +16,7 @@ class FunctionCompiler {
   name: string;
   params: string[];
   loopStack: LoopContext[] = [];
+  multiClauseFuncs: Set<string> = new Set();
 
   constructor(name: string, params: string[]) {
     this.name = name;
@@ -201,6 +202,68 @@ export class Compiler {
       }
 
       case 'FuncDeclaration': {
+        const hasPatterns = Boolean(node.patternParams?.some((p) => p !== null));
+        const hasClauseSpec = hasPatterns || Boolean(node.guard);
+        const alreadyMulti = fn.multiClauseFuncs.has(node.name);
+        if (hasClauseSpec || alreadyMulti) {
+          const isFirst = !alreadyMulti;
+          fn.multiClauseFuncs.add(node.name);
+
+          const matchFn = new FunctionCompiler('<match>', node.params);
+          matchFn.emit(OpCode.PUSH_BOOL, true, node.line);
+          if (node.patternParams) {
+            for (let i = 0; i < node.patternParams.length; i++) {
+              const pat = node.patternParams[i];
+              if (!pat) continue;
+              this.compileMatchPattern(pat, node.params[i], matchFn, node.line);
+              matchFn.emit(OpCode.AND, undefined, node.line);
+            }
+          }
+          if (node.guard) {
+            this.compileNode(node.guard, matchFn);
+            matchFn.emit(OpCode.AND, undefined, node.line);
+          }
+          matchFn.emit(OpCode.RETURN, undefined, node.line);
+          const matchDef: FunctionDef = {
+            name: '<match>',
+            params: node.params,
+            code: matchFn.code,
+            functions: matchFn.functions,
+          };
+          const matchIdx = fn.functions.length;
+          fn.functions.push(matchDef);
+
+          const bodyFn = new FunctionCompiler(node.name, node.params);
+          if (node.patternParams) {
+            for (let i = 0; i < node.patternParams.length; i++) {
+              const pat = node.patternParams[i];
+              if (!pat) continue;
+              this.compileMatchPattern(pat, node.params[i], bodyFn, node.line);
+              bodyFn.emit(OpCode.POP, undefined, node.line);
+            }
+          }
+          this.compileStatements(node.body.statements, bodyFn);
+          bodyFn.emit(OpCode.PUSH_NULL, undefined, node.line);
+          bodyFn.emit(OpCode.RETURN, undefined, node.line);
+          const bodyDef: FunctionDef = {
+            name: node.name,
+            params: node.params,
+            code: bodyFn.code,
+            functions: bodyFn.functions,
+          };
+          const bodyIdx = fn.functions.length;
+          fn.functions.push(bodyDef);
+
+          fn.emit(OpCode.LOAD, '__register_clause', node.line);
+          if (isFirst) fn.emit(OpCode.PUSH_NULL, undefined, node.line);
+          else fn.emit(OpCode.LOAD, node.name, node.line);
+          fn.emit(OpCode.MAKE_FUNC, matchIdx, node.line);
+          fn.emit(OpCode.MAKE_FUNC, bodyIdx, node.line);
+          fn.emit(OpCode.CALL, 3, node.line);
+          fn.emit(OpCode.DEFINE, node.name, node.line);
+          break;
+        }
+
         const funcFn = new FunctionCompiler(node.name, node.params);
         this.compileStatements(node.body.statements, funcFn);
         funcFn.emit(OpCode.PUSH_NULL, undefined, node.line);
@@ -262,6 +325,14 @@ export class Compiler {
 
       case 'ClassDeclaration':
         this.compileClass(node, fn);
+        break;
+
+      case 'FeatureDeclaration':
+        this.compileFeature(node, fn);
+        break;
+
+      case 'RefineDeclaration':
+        this.compileRefine(node, fn);
         break;
 
       case 'NewExpr':
@@ -587,6 +658,37 @@ export class Compiler {
         }
         break;
       }
+      case 'PatSequence': {
+        fn.emit(OpCode.LOAD, 'len', line);
+        fn.emit(OpCode.LOAD, tempVar, line);
+        fn.emit(OpCode.CALL, 1, line);
+        fn.emit(OpCode.PUSH_NUM, pat.elements.length, line);
+        fn.emit(pat.restName ? OpCode.GTE : OpCode.EQ, undefined, line);
+        const failJumps: number[] = [fn.emitJump(OpCode.JUMP_IF_FALSE, line)];
+        const at = pat.restIndex ?? pat.elements.length;
+        for (let i = 0; i < at; i++) {
+          const elVar = `__seq_${fn.code.length}_${i}_${line}`;
+          fn.emit(OpCode.LOAD, tempVar, line);
+          fn.emit(OpCode.PUSH_NUM, i, line);
+          fn.emit(OpCode.INDEX_GET, undefined, line);
+          fn.emit(OpCode.DEFINE, elVar, line);
+          this.compileMatchPattern(pat.elements[i], elVar, fn, line);
+          failJumps.push(fn.emitJump(OpCode.JUMP_IF_FALSE, line));
+        }
+        if (pat.restName) {
+          fn.emit(OpCode.LOAD, 'portion', line);
+          fn.emit(OpCode.LOAD, tempVar, line);
+          fn.emit(OpCode.PUSH_NUM, at, line);
+          fn.emit(OpCode.CALL, 2, line);
+          fn.emit(OpCode.DEFINE, pat.restName, line);
+        }
+        fn.emit(OpCode.PUSH_BOOL, true, line);
+        const okJump = fn.emitJump(OpCode.JUMP, line);
+        for (const fj of failJumps) fn.patchJump(fj);
+        fn.emit(OpCode.PUSH_BOOL, false, line);
+        fn.patchJump(okJump);
+        break;
+      }
       default:
         fn.emit(OpCode.PUSH_BOOL, true, line);
         break;
@@ -837,5 +939,133 @@ export class Compiler {
     fn.functions.push(def);
     fn.emit(OpCode.MAKE_FUNC, idx, node.line);
     fn.emit(OpCode.DEFINE, node.name, node.line);
+  }
+
+  private compileFeature(node: AST.FeatureDeclaration, fn: FunctionCompiler): void {
+    fn.emit(OpCode.LOAD, '__fop_register_feature', node.line);
+
+    fn.emit(OpCode.PUSH_STR, 'name', node.line);
+    fn.emit(OpCode.PUSH_STR, node.name, node.line);
+
+    fn.emit(OpCode.PUSH_STR, 'requires', node.line);
+    const reqs = node.requires ?? [];
+    for (const r of reqs) fn.emit(OpCode.PUSH_STR, r, node.line);
+    fn.emit(OpCode.MAKE_LIST, reqs.length, node.line);
+
+    fn.emit(OpCode.PUSH_STR, 'excludes', node.line);
+    const excls = node.excludes ?? [];
+    for (const e of excls) fn.emit(OpCode.PUSH_STR, e, node.line);
+    fn.emit(OpCode.MAKE_LIST, excls.length, node.line);
+
+    fn.emit(OpCode.PUSH_STR, 'fields', node.line);
+    for (const f of node.fields) {
+      fn.emit(OpCode.PUSH_STR, f.name, f.line);
+      this.compileNode(f.value, fn);
+    }
+    fn.emit(OpCode.MAKE_DICT, node.fields.length, node.line);
+
+    fn.emit(OpCode.PUSH_STR, 'methods', node.line);
+    for (const m of node.methods) {
+      fn.emit(OpCode.PUSH_STR, m.name, m.line);
+      const mFn = new FunctionCompiler(m.name, m.params);
+      this.compileStatements(m.body.statements, mFn);
+      mFn.emit(OpCode.PUSH_NULL, undefined, m.line);
+      mFn.emit(OpCode.RETURN, undefined, m.line);
+      const mDef: FunctionDef = { name: m.name, params: mFn.params, code: mFn.code, functions: mFn.functions };
+      const mIdx = fn.functions.length;
+      fn.functions.push(mDef);
+      fn.emit(OpCode.MAKE_FUNC, mIdx, m.line);
+    }
+    fn.emit(OpCode.MAKE_DICT, node.methods.length, node.line);
+
+    fn.emit(OpCode.PUSH_STR, 'refinements', node.line);
+    for (const r of node.refinements) {
+      fn.emit(OpCode.PUSH_STR, 'targetName', r.line);
+      fn.emit(OpCode.PUSH_STR, r.targetName, r.line);
+      fn.emit(OpCode.PUSH_STR, 'isFunctionRefine', r.line);
+      fn.emit(OpCode.PUSH_BOOL, Boolean(r.isFunctionRefine), r.line);
+      fn.emit(OpCode.PUSH_STR, 'fields', r.line);
+      for (const rf of r.fields) {
+        fn.emit(OpCode.PUSH_STR, rf.name, rf.line);
+        this.compileNode(rf.value, fn);
+      }
+      fn.emit(OpCode.MAKE_DICT, r.fields.length, r.line);
+      fn.emit(OpCode.PUSH_STR, 'methods', r.line);
+      for (const rm of r.methods) {
+        fn.emit(OpCode.PUSH_STR, rm.name, rm.line);
+        const rmIdx = this.compileMethodClosure(rm, fn, rm.line);
+        fn.emit(OpCode.MAKE_FUNC, rmIdx, rm.line);
+      }
+      fn.emit(OpCode.MAKE_DICT, r.methods.length, r.line);
+      fn.emit(OpCode.PUSH_STR, 'fnWrapper', r.line);
+      if (r.isFunctionRefine && r.body) {
+        const wFn = new FunctionCompiler(`${r.targetName}#refine`, r.params ?? []);
+        this.compileStatements(r.body.statements, wFn);
+        wFn.emit(OpCode.PUSH_NULL, undefined, r.line);
+        wFn.emit(OpCode.RETURN, undefined, r.line);
+        const wDef: FunctionDef = { name: wFn.name, params: wFn.params, code: wFn.code, functions: wFn.functions };
+        const wIdx = fn.functions.length;
+        fn.functions.push(wDef);
+        fn.emit(OpCode.MAKE_FUNC, wIdx, r.line);
+      } else {
+        fn.emit(OpCode.PUSH_NULL, undefined, r.line);
+      }
+      fn.emit(OpCode.MAKE_DICT, 5, r.line);
+    }
+    fn.emit(OpCode.MAKE_LIST, node.refinements.length, node.line);
+
+    fn.emit(OpCode.MAKE_DICT, 6, node.line);
+    fn.emit(OpCode.CALL, 1, node.line);
+    fn.emit(OpCode.DEFINE, node.name, node.line);
+    this.compileStatements(node.statements, fn);
+    for (const r of node.refinements) {
+      this.compileRefine(r, fn, node.name);
+    }
+  }
+
+  private compileRefine(node: AST.RefineDeclaration, fn: FunctionCompiler, ownerFeatureName?: string): void {
+    if (node.isFunctionRefine) {
+      fn.emit(OpCode.LOAD, '__fop_refine_func', node.line);
+      fn.emit(OpCode.LOAD, node.targetName, node.line);
+      const rFn = new FunctionCompiler(`${node.targetName}#refine`, node.params ?? []);
+      if (node.body) {
+        this.compileStatements(node.body.statements, rFn);
+      }
+      rFn.emit(OpCode.PUSH_NULL, undefined, node.line);
+      rFn.emit(OpCode.RETURN, undefined, node.line);
+      const def: FunctionDef = { name: rFn.name, params: rFn.params, code: rFn.code, functions: rFn.functions };
+      const idx = fn.functions.length;
+      fn.functions.push(def);
+      fn.emit(OpCode.MAKE_FUNC, idx, node.line);
+      if (ownerFeatureName) {
+        fn.emit(OpCode.PUSH_STR, ownerFeatureName, node.line);
+        fn.emit(OpCode.CALL, 3, node.line);
+      } else {
+        fn.emit(OpCode.CALL, 2, node.line);
+      }
+      fn.emit(OpCode.STORE, node.targetName, node.line);
+      return;
+    }
+
+    fn.emit(OpCode.LOAD, '__fop_refine_class', node.line);
+    fn.emit(OpCode.LOAD, node.targetName, node.line);
+    for (const f of node.fields) {
+      fn.emit(OpCode.PUSH_STR, f.name, f.line);
+      this.compileNode(f.value, fn);
+    }
+    fn.emit(OpCode.MAKE_DICT, node.fields.length, node.line);
+    for (const m of node.methods) {
+      fn.emit(OpCode.PUSH_STR, m.name, m.line);
+      const mIdx = this.compileMethodClosure(m, fn, m.line);
+      fn.emit(OpCode.MAKE_FUNC, mIdx, m.line);
+    }
+    fn.emit(OpCode.MAKE_DICT, node.methods.length, node.line);
+    if (ownerFeatureName) {
+      fn.emit(OpCode.PUSH_STR, ownerFeatureName, node.line);
+      fn.emit(OpCode.CALL, 4, node.line);
+    } else {
+      fn.emit(OpCode.CALL, 3, node.line);
+    }
+    fn.emit(OpCode.STORE, node.targetName, node.line);
   }
 }

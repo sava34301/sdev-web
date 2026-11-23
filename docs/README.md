@@ -22,7 +22,8 @@ Every guide lives here once under a categorized, structured path and is served d
 | [v1-reference.md](02-language/v1-reference.md) | **SDEV v1 Language Reference** — classic/mystic syntax (`forge`, `conjure`, `ponder`, `::` / `;;`, `essence` OOP). |
 | [v2-prism-guide.md](02-language/v2-prism-guide.md) | **SDEV v2 "Prism" Guide** — plain-English syntax, `use` library loading, compiler diagnostics, and backends. |
 | [ai-syntax-reference.md](02-language/ai-syntax-reference.md) | **sdev:ai Syntax Reference** — compact `!#ai` brace dialect designed for fast, reliable LLM code generation. |
-| [multi-paradigm-parity.md](02-language/multi-paradigm-parity.md) | **Multi-Paradigm Parity** — SQL queries, Kotlin/C# null-safety, Rust `Option`/`Result`, and C/C++ memory arenas. |
+| [multi-paradigm-parity.md](02-language/multi-paradigm-parity.md) | **Multi-Paradigm Parity** — SQL queries, Kotlin/C# null-safety, Rust `Option`/`Result`, FOP/FP paradigms, and C/C++ memory arenas. |
+| [feature-and-function-oriented-programming.md](02-language/feature-and-function-oriented-programming.md) | **Feature-Oriented & Function-Oriented Programming** — `feature`/`facet`, `refine`/`augment`, `proceed`, SPL `feature_model`, tacit `>>`/`<<`, `_` partial application, multi-clause functions, combinators, lenses, and transducers. |
 | [python-parity-reference.md](02-language/python-parity-reference.md) | **Python Feature-Parity Reference** — dual mystic/plain keywords, comprehensions, dunders, C3 MRO, exceptions, and `py_*` builtins. |
 | [personal-dialects-and-libraries.md](02-language/personal-dialects-and-libraries.md) | **Personal SDEV** — Dialect Studio, `#⟨sdev⟩` file signatures, extensions, `@user/lib` registry, and sharing pages. |
 

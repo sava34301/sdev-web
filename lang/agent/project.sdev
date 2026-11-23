@@ -33,7 +33,7 @@ conjure pn_split(list_text) ::
 ;;
 
 conjure defined_names_into(source, seen, out) ::
-  forge kw be "\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon)\\s+"
+  forge kw be "\\b(set|let|forge|var|const|kind|class|conjure|to|func|function|fn|def|as|catch|rescue|import|use|summon|feature|facet|refine|augment)\\s+"
   iterate w through pn_tails(source, kw + PNAME, kw) ::
     out be pn_add(seen, out, w)
   ;;

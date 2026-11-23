@@ -37,6 +37,8 @@ export enum TokenType {
   ESSENCE = 'ESSENCE',     // class (contextual, legacy)
   ESSENCE_KW = 'ESSENCE_KW', // class (kind / class spellings)
   EXTEND = 'EXTEND',       // extends
+  FEATURE = 'FEATURE',     // feature / facet declaration (contextual)
+  REFINE = 'REFINE',       // refine / augment refinement (contextual)
   NEW = 'NEW',             // new instance
   SELF = 'SELF',           // self reference
   SUPER = 'SUPER',         // super call
@@ -135,7 +137,7 @@ export const KEYWORDS: Record<string, TokenType> = (() => {
     // common variable names, so they declare a constant only when a name
     // follows (`fixed x be 1`) and stay identifiers everywhere else.
     if (word === 'essence' || word === 'kind') continue;
-    if (token === 'FIXED') continue;
+    if (token === 'FIXED' || token === 'FEATURE' || token === 'REFINE') continue;
     const tt = (TokenType as unknown as Record<string, TokenType>)[token];
     if (tt) map[word] = tt;
   }

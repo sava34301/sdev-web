@@ -69,6 +69,7 @@ const SOURCES: DocSource[] = [
   { id: 'ai-syntax',      title: 'sdev:ai Syntax',               relPath: '02-language/ai-syntax-reference.md',               url: docUrl('02-language/ai-syntax-reference.md'),               category: 'language', icon: Brain },
   { id: 'personal',       title: 'Personal SDEV & @user/lib',    relPath: '02-language/personal-dialects-and-libraries.md',   url: docUrl('02-language/personal-dialects-and-libraries.md'),   category: 'language', icon: Code2 },
   { id: 'multi-paradigm', title: 'Multi-Paradigm Parity',        relPath: '02-language/multi-paradigm-parity.md',             url: docUrl('02-language/multi-paradigm-parity.md'),             category: 'language', icon: ScrollText },
+  { id: 'fop-fp',         title: 'Feature & Function-Oriented',  relPath: '02-language/feature-and-function-oriented-programming.md', url: docUrl('02-language/feature-and-function-oriented-programming.md'), category: 'language', icon: Layers },
   { id: 'python',         title: 'Python Parity',                relPath: '02-language/python-parity-reference.md',           url: docUrl('02-language/python-parity-reference.md'),           category: 'language', icon: Code2 },
 
   // 03 — Standard Library & Acceleration
@@ -114,6 +115,10 @@ const SOURCE_ALIASES: Record<string, string> = {
   book: 'book-en',
   v1: 'reference',
   'v2-prism': 'v2',
+  fop: 'fop-fp',
+  fp: 'fop-fp',
+  functional: 'fop-fp',
+  'feature-oriented': 'fop-fp',
   ai: 'ai-syntax',
   dialects: 'personal',
   extensions: 'personal',

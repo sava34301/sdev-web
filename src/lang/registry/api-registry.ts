@@ -160,6 +160,22 @@ const V2_WASM_BUILTINS = new Set<string>([
   'leading_space', 'is_letter', 'is_digit', 'is_space', 'is_name',
   'regex_test', 'regex_capture', 'regex_find_all', 'regex_replace',
   'evaluate', 'quote_text',
+  // FOP & FP builtins supported in v2 VM
+  'proceed', 'original',
+  'feature_define', 'enable_feature', 'feature_enable', 'disable_feature', 'feature_disable',
+  'toggle_feature', 'feature_toggle', 'is_feature_enabled', 'feature_enabled',
+  'active_features', 'with_features', 'feature_context', 'compose_features',
+  'apply_feature', 'refine_target', 'feature_model', 'feature_require',
+  'feature_exclude', 'validate_features', 'resolve_features',
+  'compose', 'pipe', 'curry', 'memoize',
+  'Some', 'None', 'is_some', 'is_none', 'unwrap_or', 'map_some', 'flat_map_some',
+  'Ok', 'Err', 'is_ok', 'is_err', 'result_unwrap_or', 'map_ok', 'flat_map_ok',
+  'partial', 'partial_right', 'flip', 'identity', 'identity_fn', 'id_fn', 'constant', 'always',
+  'juxt', 'converge', 'ap', 'tap', 'thru', 'once', 'trampoline',
+  'complement', 'negate_fn', 'both', 'either_fn', 'all_pass', 'any_pass', 'cond',
+  'lens', 'lens_prop', 'lens_path', 'view', 'set_over', 'over',
+  'xf_map', 'xf_filter', 'xf_take', 'transduce',
+  'attempt_result', 'try_catch_fn', 'match_option', 'match_result',
 ]);
 
 // ----------------------------------------------------------------------------

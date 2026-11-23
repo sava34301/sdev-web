@@ -53,7 +53,9 @@ export type ASTNode =
   | PassStatement
   | ImportStatement
   | AugAssignStatement
-  | PatternNode;
+  | PatternNode
+  | FeatureDeclaration
+  | RefineDeclaration;
 
 export interface NumberLiteral {
   type: 'NumberLiteral';
@@ -236,6 +238,8 @@ export interface FuncDeclaration {
   name: string;
   params: string[];
   paramSpecs?: Param[];
+  patternParams?: (PatternNode | null)[];
+  guard?: ASTNode;
   decorators?: ASTNode[];
   isAsync?: boolean;
   isGenerator?: boolean;
@@ -510,4 +514,28 @@ export interface ExceptHandler {
   body: BlockStatement;
   /** except* group handler */
   star?: boolean;
+}
+
+export interface FeatureDeclaration {
+  type: 'FeatureDeclaration';
+  name: string;
+  requires?: string[];
+  excludes?: string[];
+  refinements: RefineDeclaration[];
+  methods: FuncDeclaration[];
+  fields: LetStatement[];
+  statements: ASTNode[];
+  line: number;
+}
+
+export interface RefineDeclaration {
+  type: 'RefineDeclaration';
+  targetName: string;
+  isFunctionRefine?: boolean;
+  params?: string[];
+  paramSpecs?: Param[];
+  methods: FuncDeclaration[];
+  fields: LetStatement[];
+  body?: BlockStatement;
+  line: number;
 }

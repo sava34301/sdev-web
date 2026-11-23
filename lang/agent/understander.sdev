@@ -12,7 +12,7 @@
 // memory), so cross-file references are never mistaken for typos.
 // =====================================================================
 
-forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat"]
+forge CANON be ["forge", "conjure", "speak", "ponder", "otherwise", "cycle", "iterate", "yield", "yeet", "skip", "attempt", "rescue", "summon", "essence", "within", ";;", "//", "#", "if", "else", "end", "while", "for", "say", "set", "repeat", "feature", "facet", "refine", "augment"]
 
 // ---------- small helpers ----------
 

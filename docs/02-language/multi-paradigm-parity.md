@@ -15,8 +15,10 @@
 6. [Modern Language Conveniences: Null-Safety & Data Records (Kotlin / C# Parity)](#6-modern-language-conveniences-null-safety--data-records)
 7. [Systems Programming & Low-Level Memory Arenas (C / C++ Parity)](#7-systems-programming--low-level-memory-arenas)
 8. [Monadic Algebraic Data Types: `Option` & `Result` (Rust / Haskell Parity)](#8-monadic-algebraic-data-types-option--result)
-9. [Formal Code Formatter & Developer Tooling](#9-formal-code-formatter--developer-tooling)
-10. [Dual-Runtime Parity & Verification Matrix](#10-dual-runtime-parity--verification-matrix)
+9. [Feature-Oriented Programming (FOP) & Software Product Lines](#9-feature-oriented-programming-fop--software-product-lines)
+10. [Extended Function-Oriented Programming (Combinators, Lenses & Transducers)](#10-extended-function-oriented-programming-combinators-lenses--transducers)
+11. [Formal Code Formatter & Developer Tooling](#11-formal-code-formatter--developer-tooling)
+12. [Dual-Runtime Parity & Verification Matrix](#12-dual-runtime-parity--verification-matrix)
 
 ---
 
@@ -453,7 +455,54 @@ speak("Doubled result: {doubled['val']}") # 50
 
 ---
 
-## 9. Formal Code Formatter & Developer Tooling
+## 9. Feature-Oriented Programming (FOP) & Software Product Lines
+
+See [Feature-Oriented & Function-Oriented Programming](feature-and-function-oriented-programming.md) for the complete reference. SDEV provides first-class feature modules (`feature` / `facet`), non-invasive function and class refinements (`refine` / `augment` with `proceed` / `original`), dynamic activation (`enable_feature`, `disable_feature`, `toggle_feature`, `with_features`, `with feature_context([...])`), feature algebra (`compose_features`, `apply_feature`, `refine_target`), and SPL model validation (`feature_model`, `validate_features`, `resolve_features`):
+
+```sdev
+conjure shipping(weight) :: yield weight * 5 ;;
+
+feature Express requires [] ::
+  refine shipping(weight) ::
+    yield proceed(weight) + 12
+  ;;
+;;
+
+speak(shipping(4))
+with feature_context([Express]) ::
+  speak(shipping(4))
+;;
+speak(shipping(4))
+```
+
+Pure SDEV v2 self-hosted equivalents (`feature_create`, `feature_compose`, `feature_model_validate`, `feature_model_resolve`, `feature_registry_create`) live in `lang/paradigms/feature.sdev`.
+
+---
+
+## 10. Extended Function-Oriented Programming (Combinators, Lenses & Transducers)
+
+See [Feature-Oriented & Function-Oriented Programming](feature-and-function-oriented-programming.md) for full details. SDEV supports tacit composition operators `>>` (left-to-right) and `<<` (right-to-left), placeholder holes (`_`) in calls and `partial`/`partial_right`, multi-clause pattern-matched and `when`-guarded function declarations (`=>` shorthand), point-free combinators (`flip`, `identity_fn`/`id_fn`, `constant`/`always`, `juxt`, `converge`, `ap`, `tap`, `thru`, `once`, `trampoline`, `complement`/`negate_fn`, `both`, `either_fn`, `all_pass`, `any_pass`, `cond`), immutable lenses (`lens`, `lens_prop`, `lens_path`, `view`, `set_over`, `over`), composable transducers (`xf_map`, `xf_filter`, `xf_take`, `transduce`), and `match_option`/`match_result`/`attempt_result`/`try_catch_fn`:
+
+```sdev
+conjure inc(x) => x + 1
+conjure dbl(x) => x * 2
+conjure fact(0) => 1
+conjure fact(n) when n > 0 => n * fact(n - 1)
+
+speak((inc >> dbl)(5))
+speak(fact(5))
+
+forge lp be lens_path(["score", 0])
+forge updated be over(lp, x -> x + 10, { score: [30] })
+speak(view(lp, updated))
+speak(transduce([xf_filter(x -> x > 1), xf_map(x -> x * 2)], (a, b) -> a + [b], [], [1, 2, 3]))
+```
+
+Pure SDEV v2 functional utilities also live in `lang/paradigms/functional.sdev` and `lang/stdlib/v2/func.sdev`.
+
+---
+
+## 11. Formal Code Formatter & Developer Tooling
 
 ### 9.1 SDEV Code Formatter
 SDEV includes a formal, deterministic formatter tested against edge cases:
@@ -484,7 +533,7 @@ Formatter suite: 8 passed, 0 failed
 
 ---
 
-## 10. Dual-Runtime Parity & Verification Matrix
+## 12. Dual-Runtime Parity & Verification Matrix
 
 All features adhere to dual-runtime parity requirements:
 
@@ -499,6 +548,8 @@ All features adhere to dual-runtime parity requirements:
 | **Null-Safety Helpers** | `coalesce`, `safe_get` | `coalesce`, `safe_get` | `scripts/test-multi-language-features.ts` |
 | **Arena Memory** | `src/lang/builtins/buffer.ts` | `lang/paradigms/systems.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
 | **Option & Result** | `src/lang/builtins/functional.ts` | `lang/paradigms/functional.sdev` | `scripts/test-selfhosted-subsystems.sdev` |
+| **Feature-Oriented (FOP & SPL)** | `src/lang/builtins/fop.ts` & Python | `lang/paradigms/feature.sdev` & VM | `scripts/test-fop-fp.ts` |
+| **FP Combinators, Lenses & Transducers** | `src/lang/builtins/functional.ts` & Python | `lang/stdlib/v2/func.sdev` & VM | `scripts/test-fop-fp.ts` |
 | **Code Formatter** | Standard AST printer | Standard AST printer | `scripts/test-formatter.ts` |
 
 ### Automated Test Execution
@@ -510,7 +561,7 @@ All 15 test suites, 209 track features, and 616 API registry entries pass with 1
 
 ---
 
-## 11. Code Understander & Local Model Server Integration
+## 13. Code Understander & Local Model Server Integration
 
 The SDEV Code Understander combines deterministic self-hosted rules written in pure SDEV with local large language models (LM Studio, Ollama, llama.cpp, LocalAI) and in-browser WebGPU models, providing seamless offline code understanding and repair with zero AI cloud credits.
 

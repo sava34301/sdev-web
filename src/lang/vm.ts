@@ -148,8 +148,36 @@ export class VM {
       case OpCode.BIT_OR: { const r = this.pop(); const l = this.pop(); this.push((l as number) | (r as number)); break; }
       case OpCode.BIT_XOR: { const r = this.pop(); const l = this.pop(); this.push((l as number) ^ (r as number)); break; }
       case OpCode.BIT_NOT: { this.push(~(this.pop() as number)); break; }
-      case OpCode.BIT_SHL: { const r = this.pop(); const l = this.pop(); this.push((l as number) << (r as number)); break; }
-      case OpCode.BIT_SHR: { const r = this.pop(); const l = this.pop(); this.push((l as number) >> (r as number)); break; }
+      case OpCode.BIT_SHL: {
+        const r = this.pop();
+        const l = this.pop();
+        if (l && typeof l === 'object' && 'call' in l && r && typeof r === 'object' && 'call' in r) {
+          const lf = l as SdevFunction;
+          const rf = r as SdevFunction;
+          this.push({
+            type: 'builtin',
+            call: (args: unknown[], callLine: number) => lf.call([rf.call(args, callLine)], callLine),
+          } as SdevFunction);
+        } else {
+          this.push((l as number) << (r as number));
+        }
+        break;
+      }
+      case OpCode.BIT_SHR: {
+        const r = this.pop();
+        const l = this.pop();
+        if (l && typeof l === 'object' && 'call' in l && r && typeof r === 'object' && 'call' in r) {
+          const lf = l as SdevFunction;
+          const rf = r as SdevFunction;
+          this.push({
+            type: 'builtin',
+            call: (args: unknown[], callLine: number) => rf.call([lf.call(args, callLine)], callLine),
+          } as SdevFunction);
+        } else {
+          this.push((l as number) >> (r as number));
+        }
+        break;
+      }
 
       // Comparison
       case OpCode.EQ:  { const r = this.pop(); const l = this.pop(); this.push(this.isEqual(l, r)); break; }

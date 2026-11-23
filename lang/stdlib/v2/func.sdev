@@ -29,3 +29,168 @@ to func_drop with xs count
   end
   return out
 end
+
+to _func_append with xs item
+  set n to length(xs)
+  set out to mklist(n + 1)
+  set i to 0
+  while i < n
+    set out[i] to xs[i]
+    set i to i + 1
+  end
+  set out[n] to item
+  return out
+end
+
+to func_map with xs fn
+  set n to length(xs)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to call fn(xs[i])
+    set i to i + 1
+  end
+  return out
+end
+
+to func_filter with xs pred
+  set n to length(xs)
+  set out to []
+  set i to 0
+  while i < n
+    set item to xs[i]
+    if call pred(item)
+      set out to _func_append(out, item)
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to func_fold with xs init fn
+  set acc to init
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set acc to call fn(acc, xs[i])
+    set i to i + 1
+  end
+  return acc
+end
+
+to func_scan with xs init fn
+  set acc to init
+  set out to [acc]
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set acc to call fn(acc, xs[i])
+    set out to _func_append(out, acc)
+    set i to i + 1
+  end
+  return out
+end
+
+to func_juxt with fns x
+  set n to length(fns)
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set f to fns[i]
+    set out[i] to call f(x)
+    set i to i + 1
+  end
+  return out
+end
+
+to func_converge with after_fn branch_fns x
+  set vals to func_juxt(branch_fns, x)
+  return call after_fn(vals)
+end
+
+to func_zip_with with xs ys fn
+  set nx to length(xs)
+  set ny to length(ys)
+  set n to nx
+  if ny < n
+    set n to ny
+  end
+  set out to mklist(n)
+  set i to 0
+  while i < n
+    set out[i] to call fn(xs[i], ys[i])
+    set i to i + 1
+  end
+  return out
+end
+
+to func_partition with xs pred
+  set pass_list to []
+  set fail_list to []
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set item to xs[i]
+    if call pred(item)
+      set pass_list to _func_append(pass_list, item)
+    else
+      set fail_list to _func_append(fail_list, item)
+    end
+    set i to i + 1
+  end
+  return [pass_list, fail_list]
+end
+
+to func_flat_map with xs fn
+  set out to []
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set sub to call fn(xs[i])
+    set m to length(sub)
+    set j to 0
+    while j < m
+      set out to _func_append(out, sub[j])
+      set j to j + 1
+    end
+    set i to i + 1
+  end
+  return out
+end
+
+to func_find with xs pred
+  set n to length(xs)
+  set i to 0
+  while i < n
+    set item to xs[i]
+    if call pred(item)
+      return item
+    end
+    set i to i + 1
+  end
+  return 0
+end
+
+to func_every with xs pred
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if not call pred(xs[i])
+      return 0
+    end
+    set i to i + 1
+  end
+  return 1
+end
+
+to func_some with xs pred
+  set n to length(xs)
+  set i to 0
+  while i < n
+    if call pred(xs[i])
+      return 1
+    end
+    set i to i + 1
+  end
+  return 0
+end
