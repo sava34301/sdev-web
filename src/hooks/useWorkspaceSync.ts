@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useAuth } from './useAuth';
-import type { IdeFile, IdeFolder } from '@/components/ide/types';
+import type { IdeFile, IdeFolder } from '@/ide/types';
 import { checksum, readSignature, stripSignature, writeSignature } from '@/lang/dialect/signature';
 
 interface SnapshotInput {
@@ -115,10 +115,8 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
       setSyncError('Your session expired — sign in again to keep saving to the cloud.');
       if (!warnedRef.current) {
         warnedRef.current = true;
-        toast({
-          title: 'Not saved to the cloud',
+        toast.error('Not saved to the cloud', {
           description: 'Your sign-in expired. Sign in again to keep your files backed up.',
-          variant: 'destructive',
         });
       }
       return;
@@ -226,10 +224,8 @@ export function useWorkspaceSync(snapshot: SnapshotInput | null, enabled: boolea
         setSyncError('Some files could not be saved to the cloud.');
         if (!warnedRef.current) {
           warnedRef.current = true;
-          toast({
-            title: 'Some files were not saved',
+          toast.error('Some files were not saved', {
             description: 'The cloud rejected the save. Try signing out and back in; your work stays in this browser meanwhile.',
-            variant: 'destructive',
           });
         }
       } else {

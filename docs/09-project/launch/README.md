@@ -56,3 +56,25 @@ Stretch target: 1,000 sign-ups · 300 programs run · 25 public Gists · HN fron
 - No new IDE features.
 - No schema migrations.
 - No Milestone 5n code.
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `blog-launch-post.md` | Blog post — "sdev is here" (~800 words) |
+| `email-launch.md` | Email to invite-code subscribers |
+| `hn-show-hn.md` | Hacker News — Show HN post |
+| `instagram-carousel.md` | Instagram — launch carousel + reel |
+| `linkedin.md` | LinkedIn — launch post |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+| `reddit-programming.md` | Reddit — r/programming |
+| `reddit-programminglanguages.md` | Reddit — r/ProgrammingLanguages |
+| `reddit-webdev.md` | Reddit — r/webdev |
+| `twitter-thread.md` | Twitter/X — launch thread |
+
+<!-- FOLDER_INVENTORY_END -->

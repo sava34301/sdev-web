@@ -69,7 +69,7 @@ check('Leaves strings containing :: and ;; intact', formatSdev(stringCode, 2) ==
 const commentCode = `// comment with :: opener
 speak("test")`;
 const formattedComment = formatSdev(commentCode, 2);
-check('Ignores :: inside single-line comments', !formattedComment.startsWith('  speak'));
+check('Ignores :: inside single-line comments', formattedComment === commentCode);
 
 // 7. Trailing whitespace stripping
 const trailingWs = `speak("hello")     \nspeak("world")  `;

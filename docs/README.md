@@ -79,3 +79,31 @@ Every guide lives here once under a categorized, structured path and is served d
 | [complete-project-history.md](09-project/complete-project-history.md) | **Complete Project History** — full chronological record from December 2025 through November 2026 (Edition v7). |
 | [roadmap.md](09-project/roadmap.md) | **Roadmap** — pure-SDEV milestones (A–J), feature/IDE tracking, and self-hosting status. |
 | [launch/README.md](09-project/launch/README.md) | **Launch Playbook** — archived July 12, 2026 launch campaign materials. |
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`01-overview/`](./01-overview/) | High-level language overviews, the full English and Bulgarian editions of *The sdev Book*, and the machine-assembled single-file Ultimate Reference compendium. |
+| [`02-language/`](./02-language/) | Language reference manuals for sdev v1 (Classic), sdev v2 ("Prism"), `sdev:ai` (`!#ai`), Personal SDEV dialects/extensions/signatures, multi-paradigm features (SQL, Rust `Option`/`Result`, Kotlin/C#, C/C++ arenas), Feature- & Function-Oriented Programming, and Python parity. |
+| [`03-standard-library/`](./03-standard-library/) | Reference guides for the self-hosted v2 standard library, Website Building Toolkit (`lang/web/`), Machine Learning & LLM standard library, FFI & native C ABI acceleration, WebGPU compute shaders, CUDA fast path, and gated autonomous evolution. |
+| [`04-ai-and-causal-engine/`](./04-ai-and-causal-engine/) | Documentation for the rule-first SDEV Code Understander (`understander.sdev`), the 3-tier local/online AI brain (Micro-Brain, WebLLM, Ollama/LM Studio, cloud edge fallback), and the 64 KB weightless Ontological Causal Engine (OCE). |
+| [`05-ide-and-tooling/`](./05-ide-and-tooling/) | User and architecture guides for the Web IDE, Time-Travel Debugger, Live Scratchpad, Notebooks, Live Classroom, CLI & terminal editor (`sdev edit`), Canonical API Registry & static linter (`SDEV001`–`SDEV015`), Electron desktop app, VS Code extension, and MCP server. |
+| [`06-compiler-and-internals/`](./06-compiler-and-internals/) | Deep-dive technical specifications for the self-hosted v2 & v1 compilers, Seed VM (`seed.wat`), virtual OS kernel, zero-host native x86-64 ELF & Windows PE32+ (`.exe`) backends, WASI 0.2 Component Model export, and the 209-feature Track Parity Matrix. |
+| [`07-domains/`](./07-domains/) | Domain-specific reference guides for microcontroller firmware & hardware simulation (30 boards, 10,232 Arduino libraries, 7 browser uploaders) and Leaflet/GIS geospatial mapping. |
+| [`08-operations/`](./08-operations/) | Contributor guidelines, architectural invariants, environment variable reference, and production operations runbook. |
+| [`09-project/`](./09-project/) | Chronological project history, milestone roadmap, and launch campaign archive. |
+| [`noit/`](./noit/) | Official NOIT (Национална олимпиада по информационни технологии) Appendix 5 declaration documenting AI usage, methodology, and verification. |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+
+<!-- FOLDER_INVENTORY_END -->

@@ -125,6 +125,6 @@ set _ to check("func_filter keeps evens", length(evens) is 2 and evens[1] is 4)
 set _ to check("func_pipe2 threads value", func_pipe2(5, ref _mlf_inc, ref _mlf_dbl) is 12)
 
 # Cleanup scratch
-set _ to write_file(".tmp_snippet_mlf.sdev", "")
+set _ to write_file("sdev:rm:.tmp_snippet_mlf.sdev", "")
 
 set _ to tk_report("multi-language features suite")

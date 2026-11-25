@@ -62,3 +62,18 @@ on it stays hidden in the browser.
 ## Updates
 
 The desktop app opens the live editor from the website, so it is always the newest version; without internet it uses the bundled copy. When the desktop shell itself changes, it offers the new download.
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `main.cjs` | SDEV Desktop IDE — Electron main process. |
+| `preload.cjs` | Preload bridge — exposes a minimal, safe API to the renderer. |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+
+<!-- FOLDER_INVENTORY_END -->

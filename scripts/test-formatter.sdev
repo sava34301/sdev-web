@@ -37,7 +37,7 @@ set _ to check("Leaves strings containing :: and ;; intact", str_same(res5, stri
 # 6. Comment safety: :: inside comments are not counted
 set commentCode to "// comment with :: opener\nspeak(\"test\")"
 set res6 to sdev_format(commentCode, 2)
-set _ to check("Ignores :: inside single-line comments", find(res6, "  speak") is 0 - 1)
+set _ to check("Ignores :: inside single-line comments", str_same(res6, commentCode))
 
 # 7. Trailing whitespace stripping
 set trailingWs to "speak(\"hello\")     \nspeak(\"world\")  "

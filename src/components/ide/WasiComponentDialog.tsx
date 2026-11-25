@@ -21,6 +21,7 @@ import {
 } from '@/lang/runtime/wasi-component';
 import { toast } from 'sonner';
 import { useClipboard } from '@/hooks/useClipboard';
+import { downloadBlob, downloadText } from '@/lib/download';
 
 interface WasiComponentDialogProps {
   open: boolean;
@@ -55,24 +56,12 @@ export function WasiComponentDialog({
   };
 
   const downloadWasm = () => {
-    const blob = new Blob([bundle.wasmBytes.buffer as ArrayBuffer], { type: 'application/wasm' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${bundle.worldName}.wasm`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([bundle.wasmBytes.buffer as ArrayBuffer], { type: 'application/wasm' }), `${bundle.worldName}.wasm`);
     toast.success(`Downloaded ${bundle.worldName}.wasm (${bundle.wasmBytes.byteLength} bytes)`);
   };
 
   const downloadWit = () => {
-    const blob = new Blob([bundle.wit], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${bundle.worldName}.wit`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(bundle.wit, `${bundle.worldName}.wit`);
     toast.success(`Downloaded ${bundle.worldName}.wit`);
   };
 

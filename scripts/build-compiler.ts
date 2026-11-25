@@ -11,7 +11,7 @@
 // feature the interpreter supports (classes, async, await, summon, kernel,
 // matrix, graphics, etc.) also works after compile.
 import { build } from 'esbuild';
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs';
 
 const ENTRY = `
 import { Lexer } from '../src/lang/core/lexer';
@@ -288,17 +288,23 @@ try {
 
 writeFileSync('scripts/_compiler-entry.ts', ENTRY);
 
-await build({
-  entryPoints: ['scripts/_compiler-entry.ts'],
-  bundle: true,
-  platform: 'node',
-  target: 'node18',
-  format: 'esm',
-  outfile: 'public/sdev-compiler.mjs',
-  banner: { js: '#!/usr/bin/env node\n// sdev compiler & runtime v4.0 — Interpreter-first, full feature parity\n// Bundled, self-contained CLI. Generated from scripts/build-compiler.ts' },
-  minify: false,
-  legalComments: 'none',
-});
+try {
+  await build({
+    entryPoints: ['scripts/_compiler-entry.ts'],
+    bundle: true,
+    platform: 'node',
+    target: 'node18',
+    format: 'esm',
+    outfile: 'public/sdev-compiler.mjs',
+    banner: { js: '#!/usr/bin/env node\n// sdev compiler & runtime v4.0 — Interpreter-first, full feature parity\n// Bundled, self-contained CLI. Generated from scripts/build-compiler.ts' },
+    minify: false,
+    legalComments: 'none',
+  });
+} finally {
+  if (existsSync('scripts/_compiler-entry.ts')) {
+    try { unlinkSync('scripts/_compiler-entry.ts'); } catch { /* ignore */ }
+  }
+}
 
 const out = readFileSync('public/sdev-compiler.mjs', 'utf-8');
 console.log(`Built public/sdev-compiler.mjs (${(out.length/1024).toFixed(1)} KB)`);

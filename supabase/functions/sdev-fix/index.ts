@@ -1,12 +1,7 @@
 import { requireUser } from '../_shared/auth.ts';
-import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SDEV_INTERNALS } from "../_shared/sdev-internals.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { aiKey, aiUrl, aiHeaders, aiModel, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
+import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/http.ts';
+import { SDEV_INTERNALS } from '../_shared/sdev-internals.ts';
 
 const SDEV_REF = `
 SDEV LANGUAGE QUICK REFERENCE (use these exact keywords — never invent new ones):
@@ -41,8 +36,9 @@ Use the internals reference to diagnose root causes — e.g. if the lexer
 would reject a character, if the parser expects \`::\`/\`;;\`, if a
 builtin lives in graphics/web/ui, or if a link cycle is at fault.`;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+Deno.serve(async (req) => {
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
   const denied = await requireUser(req, corsHeaders);
   if (denied) return denied;
@@ -50,28 +46,19 @@ serve(async (req) => {
   try {
     const { code, error, note } = await req.json();
     if (typeof code !== "string") {
-      return new Response(JSON.stringify({ error: "code is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("code is required", 400);
     }
     if (code.length > 50000) {
-      return new Response(JSON.stringify({ error: "Code too long (max 50000 chars)" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Code too long (max 50000 chars)", 400);
     }
     if (error != null && (typeof error !== "string" || error.length > 5000)) {
-      return new Response(JSON.stringify({ error: "Error field invalid or too long (max 5000 chars)" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Error field invalid or too long (max 5000 chars)", 400);
     }
     if (note != null && (typeof note !== "string" || note.length > 2000)) {
-      return new Response(JSON.stringify({ error: "Note too long (max 2000 chars)" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Note too long (max 2000 chars)", 400);
     }
 
-    const AI_KEY = aiKey();
-    if (!AI_KEY) throw new Error(AI_NOT_CONFIGURED);
+    if (!aiKey()) return errorResponse(AI_NOT_CONFIGURED, 500);
 
     const userMsg = [
       note ? `User note:\n${note}` : null,
@@ -81,7 +68,7 @@ serve(async (req) => {
 
     const resp = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
-      headers: { Authorization: `Bearer ${AI_KEY}`, "Content-Type": "application/json" },
+      headers: aiHeaders(),
       body: JSON.stringify({
         model: aiModel("google/gemini-3-flash-preview"),
         messages: [
@@ -112,24 +99,22 @@ serve(async (req) => {
     });
 
     if (!resp.ok) {
-      if (resp.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded — try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (resp.status === 402) return new Response(JSON.stringify({ error: "AI usage limit reached. Add credits to keep using the assistant." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (resp.status === 429) return errorResponse("Rate limit exceeded — try again shortly.", 429);
+      if (resp.status === 402) return errorResponse("AI usage limit reached. Add credits to keep using the assistant.", 402);
       const t = await resp.text();
       console.error("ai gateway", resp.status, t);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return errorResponse("AI gateway error", 500);
     }
 
     const json = await resp.json();
     const call = json?.choices?.[0]?.message?.tool_calls?.[0];
     if (!call?.function?.arguments) {
-      return new Response(JSON.stringify({ error: "No fix returned by AI" }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return errorResponse("No fix returned by AI", 502);
     }
     const parsed = JSON.parse(call.function.arguments);
-    return new Response(JSON.stringify(parsed), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return jsonResponse(parsed);
   } catch (e) {
     console.error("sdev-fix error", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return errorResponse(e instanceof Error ? e.message : "Unknown error", 500);
   }
 });

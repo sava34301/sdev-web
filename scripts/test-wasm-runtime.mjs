@@ -1,20 +1,17 @@
 // Standalone Node harness: compile + run via the seed WASM. No browser.
-import { readFile, writeFile, readFile as fsReadFile } from 'node:fs/promises';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { compile as selfCompile } from '../src/lang-bridge/compile-self.mjs';
-// The JS bootstrap survives ONLY as a build/test tool: the self-hosted
-// codegen does not speak floats or host I/O yet (Milestone 5q). Cases
-// tagged `compiler: 'bootstrap'` still exercise those seed VM opcodes.
 import { compile as bootstrapCompile } from '../src/lang-bridge/oracle/compile.mjs';
+import { applyFmath, writeBlobToMemory, readSliceFromMemory } from '../src/lang-bridge/seed-vm.mjs';
 
 const wasmBytes = await readFile('./public/wasm/sdev-seed.wasm');
 const module = await WebAssembly.compile(wasmBytes);
 
 const decoder = new TextDecoder();
-const encoder = new TextEncoder();
 
 async function runProgram(src, which = 'self') {
   const { bytecode, stringPool } =
@@ -23,45 +20,37 @@ async function runProgram(src, which = 'self') {
   let mem;
   let alloc_str;
 
-  // Host: read a file synchronously and materialise its bytes as a
-  // length-prefixed blob inside VM memory.
   const host_read_file = (ptr, len) => {
     try {
-      const path = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
-      const buf = readFileSync(path);
-      const dst = alloc_str(buf.length);
-      new Uint8Array(mem.buffer, dst + 4, buf.length).set(buf);
-      return dst;
+      const p = decoder.decode(readSliceFromMemory(mem, ptr, len));
+      const buf = readFileSync(p);
+      return writeBlobToMemory(mem, alloc_str, buf);
     } catch {
-      // Return an empty length-prefixed blob so `length()` reports 0.
       return alloc_str(0);
     }
   };
   const host_write_file = (pPtr, pLen, dPtr, dLen) => {
     try {
-      const path = decoder.decode(new Uint8Array(mem.buffer, pPtr, pLen));
-      const data = new Uint8Array(mem.buffer, dPtr, dLen).slice();
-      writeFileSync(path, data);
+      const p = decoder.decode(readSliceFromMemory(mem, pPtr, pLen));
+      const data = readSliceFromMemory(mem, dPtr, dLen).slice();
+      writeFileSync(p, data);
       return 0;
     } catch { return -1; }
   };
   const host_http_get = (ptr, len) => {
     try {
-      const url = decoder.decode(new Uint8Array(mem.buffer, ptr, len));
-      // Use curl as a sync HTTP client; skipped in offline test envs.
+      const url = decoder.decode(readSliceFromMemory(mem, ptr, len));
       const out = execFileSync('curl', ['-sSL', '--max-time', '10', url], { maxBuffer: 8 * 1024 * 1024 });
-      const dst = alloc_str(out.length);
-      new Uint8Array(mem.buffer, dst + 4, out.length).set(out);
-      return dst;
+      return writeBlobToMemory(mem, alloc_str, out);
     } catch { return 0; }
   };
 
   const inst = await WebAssembly.instantiate(module, {
     env: {
       host_say_i32: (n) => output.push(String(n)),
-      host_say_str: (ptr, len) => output.push(decoder.decode(new Uint8Array(mem.buffer, ptr, len))),
+      host_say_str: (ptr, len) => output.push(decoder.decode(readSliceFromMemory(mem, ptr, len))),
       host_say_f64: (x) => output.push(String(x)),
-      host_fmath: (op,a,b) => [Math.sin,Math.cos,Math.tan,Math.exp,Math.log,(x,y)=>Math.pow(x,y)][op](a,b),
+      host_fmath: (op, a, b) => applyFmath(op, a, b),
       host_read_file, host_write_file, host_http_get,
     },
   });
@@ -669,6 +658,11 @@ for (const c of cases) {
   } catch (e) {
     failed++;
     console.log(`✗ ${c.name} — threw: ${e.message}`);
+  }
+}
+for (const f of [MOD_A, MOD_B, TMP_M7]) {
+  if (existsSync(f)) {
+    try { unlinkSync(f); } catch { /* ignore */ }
   }
 }
 process.exit(failed);

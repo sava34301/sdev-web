@@ -21,9 +21,8 @@ import {
 import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 
-import { SDEV_KEYWORDS, SDEV_BUILTINS, SDEV_CONSTANTS, SDEV_SNIPPETS } from './languageData';
-import { getHoverDoc } from './IdeAutocomplete';
-import type { IdeSettings } from './types';
+import { SDEV_KEYWORDS, SDEV_BUILTINS, SDEV_CONSTANTS, SDEV_SNIPPETS, getHoverDoc } from '@/lang/registry/builtin-docs';
+import type { IdeSettings } from '@/ide/types';
 import type { Problem } from './IdeProblems';
 
 export interface IdeEditorHandle {

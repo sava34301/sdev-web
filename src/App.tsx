@@ -1,10 +1,11 @@
 import { Suspense, lazy } from "react";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
 import { appRouterForProtocol } from "@/lib/app-router";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { DialectsProvider } from "@/contexts/DialectsContext";
 const Index = lazy(() => import("./pages/Index"));
 
 const Launch = lazy(() => import("./pages/Launch"));
@@ -36,10 +37,11 @@ const AppRouter = appRouterForProtocol(window.location.protocol);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppRouter>
+    <AuthProvider>
+      <DialectsProvider>
+        <TooltipProvider>
+          <Sonner />
+          <AppRouter>
         <Suspense fallback={<PageFallback />}>
           <Routes>
             {/* sdev has launched — the site is fully public */}
@@ -69,11 +71,13 @@ const App = () => (
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </AppRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            </Routes>
+          </Suspense>
+        </AppRouter>
+      </TooltipProvider>
+    </DialectsProvider>
+  </AuthProvider>
+</QueryClientProvider>
 );
 
 export default App;

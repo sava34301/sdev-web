@@ -10,8 +10,12 @@ setMemoryStore({ load: () => mem, save: (m) => { mem = m; } });
 // Quick connectivity check: verify the online brain is reachable before running full suite
 const probe = await executeAsync('FizzBuzz up to 15', { agent: { brain: 'online' } });
 if (!probe.success || !probe.output.some((o) => /fizz/i.test(o))) {
+  if (process.env.REQUIRE_ONLINE === '1') {
+    console.error('Online AI brain failed with REQUIRE_ONLINE=1:', probe.error ?? probe.output);
+    process.exit(1);
+  }
   console.log('  [skip] Online AI brain is unreachable or credentials are not configured in this environment.');
-  console.log('         Skipping scripts/test-brain.ts (requires live sdev-agent edge function).');
+  console.log('         Skipping scripts/test-brain.ts (set REQUIRE_ONLINE=1 to fail on skip).');
   process.exit(0);
 }
 

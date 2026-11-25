@@ -18,6 +18,8 @@ import {
 import { Button } from '@/components/ui/button';
 import type { WebState } from '@/lang/stdlib/web';
 import { renderWebDocument, stripSafeMarkers } from '@/lang/stdlib/web';
+import { downloadText } from '@/lib/download';
+import { useClipboard } from '@/hooks/useClipboard';
 
 interface Props {
   state: WebState | null;
@@ -38,7 +40,7 @@ export function WebPreviewPanel({ state }: Props) {
   const [viewTab, setViewTab] = useState<ViewTab>('preview');
   const [showConsole, setShowConsole] = useState(false);
   const [logs, setLogs] = useState<ConsoleEntry[]>([]);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copySource } = useClipboard({ timeoutMs: 1600 });
 
   const doc = useMemo(() => (state ? renderWebDocument(state) : ''), [state]);
   const bodyHtml = useMemo(
@@ -102,19 +104,7 @@ export function WebPreviewPanel({ state }: Props) {
   };
 
   const downloadFile = (content: string, ext: string, mime: string) => {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (state.title || 'page').replace(/[^\w.-]+/g, '_') + ext;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copySource = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    downloadText(content, (state.title || 'page').replace(/[^\w.-]+/g, '_') + ext, mime);
   };
 
   const viewportWidth =

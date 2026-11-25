@@ -56,12 +56,11 @@ const BUILTIN_MODULES = [
   ['builtins/sql.ts', 'Embedded relational/SQL query builtins'],
   ['builtins/oce.ts', 'Ontological Causal Engine (`bits`, `mem`, `ring`, `oce` dual-runtime parity)'],
   ['builtins/misc.ts', 'Utilities, randomness, debugging helpers'],
-  ['advanced.ts', 'Pro layer — file I/O, hashing, base64, JSON, async, OS glue, buffers, FFI bridge'],
-  ['matrix.ts', 'Matrix and linear algebra'],
-  ['graphics.ts', 'Canvas 2D drawing and turtle graphics'],
-  ['ui.ts', 'App widget runtime used by the IDE App preview'],
-  ['web.ts', 'Web DSL — HTML tags, CSS, JS hooks, raw passthrough'],
-  ['kernel.ts', 'Virtual kernel — tasks, syscalls, IPC, GC, process table'],
+  ['stdlib/matrix.ts', 'Matrix and linear algebra'],
+  ['stdlib/graphics.ts', 'Canvas 2D drawing and turtle graphics'],
+  ['stdlib/ui.ts', 'App widget runtime used by the IDE App preview'],
+  ['stdlib/web.ts', 'Web DSL — HTML tags, CSS, JS hooks, raw passthrough'],
+  ['stdlib/kernel.ts', 'Virtual kernel — tasks, syscalls, IPC, GC, process table'],
 ];
 
 /**

@@ -1,7 +1,7 @@
 // SDEV v2 compiler rules added for the OCE work.
 //   node scripts/test-v2-diagnostics.mjs
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { compile as selfCompile } from '../src/lang-bridge/compile-self.mjs';
@@ -76,5 +76,6 @@ check('self-hosted compiler error channel: list + without list.sdev', /joining l
 check('self-hosted compiler error channel: unknown kind', /unknown kind Ghost/.test((await selfCompileErr('set g to new Ghost()\n')) ?? ''));
 check('self-hosted compiler error channel: break outside loop', /break outside of a loop/.test((await selfCompileErr('break\n')) ?? ''));
 
+rmSync(dir, { recursive: true, force: true });
 console.log(`\nv2 diagnostics: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

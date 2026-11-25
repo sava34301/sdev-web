@@ -14,10 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { installExtension } from '@/lang/dialect/extensions';
 
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 interface Extension {
   id: string;
   name: string;
@@ -47,12 +43,12 @@ export default function Extensions() {
   const load = useCallback(async () => {
     try {
       if (user) {
-        const { data } = await db.from('sdev_extensions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-        setMine(Array.isArray(data) ? data : []);
+        const { data } = await supabase.from('sdev_extensions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+        setMine(Array.isArray(data) ? (data as unknown as Extension[]) : []);
       }
-      const { data: pub } = await db.from('sdev_extensions').select('*').eq('visibility', 'public').limit(30);
-      setPublicOnes(Array.isArray(pub) ? pub : []);
-    } catch { /* tables arrive with the draft */ }
+      const { data: pub } = await supabase.from('sdev_extensions').select('*').eq('visibility', 'public').limit(30);
+      setPublicOnes(Array.isArray(pub) ? (pub as unknown as Extension[]) : []);
+    } catch { /* offline */ }
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
@@ -62,7 +58,7 @@ export default function Extensions() {
     if (!draft.name.trim()) { toast.error('Name your extension.'); return; }
     setBusy(true);
     try {
-      const { error } = await db.from('sdev_extensions').upsert({
+      const { error } = await supabase.from('sdev_extensions').upsert({
         user_id: user.id,
         name: draft.name.trim(),
         kind: draft.kind,
@@ -85,7 +81,7 @@ export default function Extensions() {
     if (!user) return;
     const rationale = prompt('Why should this be part of core sdev?') ?? '';
     try {
-      const { error } = await db.from('core_requests').insert({
+      const { error } = await supabase.from('core_requests').insert({
         user_id: user.id, extension_id: ext.id, title: ext.name, rationale, source: ext.source,
       });
       if (error) throw error;
@@ -96,7 +92,13 @@ export default function Extensions() {
   };
 
   const remove = async (ext: Extension) => {
-    try { await db.from('sdev_extensions').delete().eq('id', ext.id); load(); } catch { /* noop */ }
+    try {
+      const { error } = await supabase.from('sdev_extensions').delete().eq('id', ext.id);
+      if (error) throw error;
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not delete extension');
+    }
   };
 
   return (

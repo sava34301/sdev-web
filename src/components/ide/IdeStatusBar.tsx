@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Zap, Cpu, AlertTriangle, CheckCircle2, Clock, GitBranch, Wifi } from 'lucide-react';
-import type { IdeFile, RunMode } from './types';
+import type { IdeFile, RunMode } from '@/ide/types';
 
 interface Props {
   statusMsg: string;

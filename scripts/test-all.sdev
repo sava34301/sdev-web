@@ -84,6 +84,13 @@ end
 
 # 6. Self-Hosted Stdlib v2
 set ok to run_suite("Self-Hosted Stdlib v2", "node bin/sdevhost.mjs scripts/test-selfhosted-stdlib.sdev")
+if ok is 1
+  set total_passed to total_passed + 1
+else
+  set total_failed to total_failed + 1
+end
+
+# 6b. OCE Causal Engine
 set ok to run_suite("OCE causal engine", "node bin/sdevhost.mjs scripts/test-oce.sdev")
 if ok is 1
   set total_passed to total_passed + 1
@@ -107,8 +114,8 @@ else
   set total_failed to total_failed + 1
 end
 
-# 9. Parity Gate (pure SDEV)
-set ok to run_suite("Parity Gate (209 features)", "node bin/sdevhost.mjs scripts/test-parity.sdev")
+# 9. Parity Gate
+set ok to run_suite("Parity Gate (209 features)", "node scripts/run-ts.mjs scripts/test-parity.ts")
 if ok is 1
   set total_passed to total_passed + 1
 else
@@ -123,8 +130,8 @@ else
   set total_failed to total_failed + 1
 end
 
-# 11. Parser Literals (pure SDEV)
-set ok to run_suite("Parser Literals (names & strings)", "node bin/sdevhost.mjs scripts/test-parser-literals.sdev")
+# 11. Parser Literals
+set ok to run_suite("Parser Literals (names & strings)", "node scripts/run-ts.mjs scripts/test-parser-literals.ts")
 if ok is 1
   set total_passed to total_passed + 1
 else

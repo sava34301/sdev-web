@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { FileCode, FolderOpen, Folder, Plus, Trash2, Edit3, Check, X, Upload, ChevronRight, ChevronDown, FolderPlus, Cloud } from 'lucide-react';
-import type { IdeFile, IdeFolder } from './types';
+import type { IdeFile, IdeFolder } from '@/ide/types';
 
 interface Props {
   files: IdeFile[];

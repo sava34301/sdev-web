@@ -17,9 +17,6 @@ import { installExtension, type ExtensionRecord } from '@/lang/dialect/extension
 import { readLocalDialects, writeLocalDialects } from '@/hooks/useDialects';
 import type { DialectSpec } from '@/lang/dialect/spec';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 interface PublicDialect {
   id: string;
   user_id: string;
@@ -64,20 +61,20 @@ export default function Explore() {
     setLoading(true);
     try {
       const [d, e, g] = await Promise.all([
-        db.from('dialects').select('*').eq('visibility', 'public').order('install_count', { ascending: false }).limit(60),
-        db.from('sdev_extensions').select('*').eq('visibility', 'public').order('created_at', { ascending: false }).limit(60),
-        db.from('gists').select('id, user_id, slug, title, description, language, view_count').order('created_at', { ascending: false }).limit(60),
+        supabase.from('dialects').select('*').eq('visibility', 'public').order('install_count', { ascending: false }).limit(60),
+        supabase.from('sdev_extensions').select('*').eq('visibility', 'public').order('created_at', { ascending: false }).limit(60),
+        supabase.from('gists').select('id, user_id, slug, title, description, language, view_count').order('created_at', { ascending: false }).limit(60),
       ]);
-      const ds: PublicDialect[] = Array.isArray(d.data) ? d.data : [];
-      const es: PublicExtension[] = Array.isArray(e.data) ? e.data : [];
-      const gs: PublicProgram[] = Array.isArray(g.data) ? g.data : [];
+      const ds: PublicDialect[] = Array.isArray(d.data) ? (d.data as unknown as PublicDialect[]) : [];
+      const es: PublicExtension[] = Array.isArray(e.data) ? (e.data as unknown as PublicExtension[]) : [];
+      const gs: PublicProgram[] = Array.isArray(g.data) ? (g.data as unknown as PublicProgram[]) : [];
       setDialects(ds);
       setExtensions(es);
       setPrograms(gs);
 
       const ids = [...new Set([...ds, ...es, ...gs].map((r) => r.user_id).filter(Boolean))];
       if (ids.length) {
-        const { data: names } = await db.from('usernames').select('user_id, username').in('user_id', ids);
+        const { data: names } = await supabase.from('usernames').select('user_id, username').in('user_id', ids);
         const map: Record<string, string> = {};
         for (const row of names ?? []) map[row.user_id] = row.username;
         setAuthors(map);

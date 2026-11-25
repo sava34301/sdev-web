@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { SEO } from '@/components/SEO';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { IdeFileTree } from '@/components/ide/IdeFileTree';
 import { CodeMirrorEditor as IdeEditor, type IdeEditorHandle } from '@/components/ide/CodeMirrorEditor';
@@ -9,479 +9,77 @@ import { IdeTerminal } from '@/components/ide/IdeTerminal';
 import { IdeStatusBar } from '@/components/ide/IdeStatusBar';
 import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
 import { FileInfoPopover } from '@/components/ide/FileInfoPopover';
-const PersonalPanel = lazy(() => import('@/components/ide/PersonalPanel').then(m => ({ default: m.PersonalPanel })));
+import { IdeTitleBar } from '@/components/ide/IdeTitleBar';
+import { IdeActivityBar } from '@/components/ide/IdeActivityBar';
+import { IdeBreadcrumbs } from '@/components/ide/IdeBreadcrumbs';
+import { IdeGoToLine } from '@/components/ide/IdeGoToLine';
+import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
+import { CanvasPanel, CanvasHandle } from '@/components/CanvasPanel';
+import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  Download, Terminal, Code, SplitSquareHorizontal, Palette, X,
+  RefreshCw, CheckCircle2, Eye, EyeOff, AlertCircle, Sparkles, Globe, History,
+} from 'lucide-react';
+import { toast } from 'sonner';
+
 import { getActiveDialect, findLocalDialect } from '@/hooks/useDialects';
+import { useWorkspaceSync } from '@/hooks/useWorkspaceSync';
+import { useCodeTranslation } from '@/hooks/useCodeTranslation';
+import { useCloudFiles } from '@/hooks/useCloudFiles';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { stripSignature, readSignature, checksum, buildTranslationRecipe } from '@/lang/dialect/signature';
+import { formatSdev } from '@/lang/tools/formatter';
+import { downloadText } from '@/lib/download';
+import { loadJson, saveJson } from '@/lib/storage';
+import { DEFAULT_SETTINGS, IDE_THEME_VARS } from '@/ide/themes';
+import { STARTER_FILES, nextFileId, uniqueUntitled } from '@/ide/starterFiles';
+import {
+  translationHasDiff,
+  signFileForExport,
+  downloadElectronWrapper,
+  packageSourceAsExe,
+} from '@/ide/export';
 
-import { stripSignature, writeSignature, readSignature, checksum, buildTranslationRecipe } from '@/lang/dialect/signature';
+import type { Problem } from '@/components/ide/lintSdev';
+import type { GraphicsCommand, TurtleState } from '@/lang/stdlib/graphics';
+import type { IdeFile, IdeFolder, SidePanel, BottomPanel, IdeSettings } from '@/ide/types';
+import type { UiState, UiCallback } from '@/lang/stdlib/ui';
+import type { WebState } from '@/lang/stdlib/web';
 
-function translationHasDiff(writtenBody: string, translatedSource: string | null | undefined): boolean {
-  return Boolean(translatedSource && translatedSource.trim() !== writtenBody.trim());
-}
-
-function translationDownloadName(fileName: string, variant: 'written' | 'translated', hasDiff: boolean): string {
-  if (variant !== 'translated' || !hasDiff) return fileName;
-  return fileName.endsWith('.sdev')
-    ? fileName.replace(/(\.translated)?\.sdev$/i, '.translated.sdev')
-    : `${fileName}.translated.sdev`;
-}
-
-
-
+const PersonalPanel = lazy(() => import('@/components/ide/PersonalPanel').then(m => ({ default: m.PersonalPanel })));
 const IdeCommandPalette = lazy(() => import('@/components/ide/IdeCommandPalette').then(m => ({ default: m.IdeCommandPalette })));
 const IdeSearchPanel = lazy(() => import('@/components/ide/IdeSearchPanel').then(m => ({ default: m.IdeSearchPanel })));
 const IdeSettingsPanel = lazy(() => import('@/components/ide/IdeSettingsPanel').then(m => ({ default: m.IdeSettingsPanel })));
 const IdeOutline = lazy(() => import('@/components/ide/IdeOutline').then(m => ({ default: m.IdeOutline })));
-import type { Problem } from '@/components/ide/lintSdev';
 const IdeProblems = lazy(() => import('@/components/ide/IdeProblems').then(m => ({ default: m.IdeProblems })));
-import { IdeBreadcrumbs } from '@/components/ide/IdeBreadcrumbs';
-import { IdeGoToLine } from '@/components/ide/IdeGoToLine';
 const IdeAssistantPanel = lazy(() => import('@/components/ide/IdeAssistantPanel').then(m => ({ default: m.IdeAssistantPanel })));
-import { formatSdev } from '@/lang/tools/formatter';
-import { CanvasPanel, CanvasHandle } from '@/components/CanvasPanel';
-import type { GraphicsCommand, TurtleState } from '@/lang/stdlib/graphics';
-
-
-
-
-
-import { supabase } from '@/integrations/supabase/client';
-
-
-import { Button } from '@/components/ui/button';
-import {
-  Play, Zap, ArrowLeft, Download, Cpu, Save, Settings,
-  ChevronDown, Search, Terminal, Code, BookOpen, RotateCcw,
-  Maximize2, Minimize2, SplitSquareHorizontal, FolderOpen, Command,
-  Bug, Palette, X, Languages, RefreshCw, CheckCircle2, Eye, EyeOff,
-  AlertCircle, Hash, Wand2, ListTree, ArrowRight, Sparkles, Github, Globe, Usb, Users, History, Boxes,
-} from 'lucide-react';
 const HardwarePanel = lazy(() => import('@/components/ide/HardwarePanel').then(m => ({ default: m.HardwarePanel })));
 const RuntimeExplorerPanel = lazy(() => import('@/components/ide/RuntimeExplorerPanel').then(m => ({ default: m.RuntimeExplorerPanel })));
 const TimeTravelDebugger = lazy(() => import('@/components/ide/TimeTravelDebugger').then(m => ({ default: m.TimeTravelDebugger })));
 const LiveClassroomPanel = lazy(() => import('@/components/ide/LiveClassroomPanel').then(m => ({ default: m.LiveClassroomPanel })));
 const LiveScratchpadPanel = lazy(() => import('@/components/ide/LiveScratchpadPanel').then(m => ({ default: m.LiveScratchpadPanel })));
 const WasiComponentDialog = lazy(() => import('@/components/ide/WasiComponentDialog').then(m => ({ default: m.WasiComponentDialog })));
-
 const GitHubPushDialog = lazy(() => import('@/components/ide/GitHubPushDialog').then(m => ({ default: m.GitHubPushDialog })));
-import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
-import { toast } from 'sonner';
-
-import type { IdeFile, IdeFolder, SidePanel, IdeSettings } from '@/components/ide/types';
-import type { UiState, UiCallback } from '@/lang/stdlib/ui';
-import type { WebState } from '@/lang/stdlib/web';
 const AppPreviewPanel = lazy(() => import('@/components/ide/AppPreviewPanel').then(m => ({ default: m.AppPreviewPanel })));
 const WebPreviewPanel = lazy(() => import('@/components/ide/WebPreviewPanel').then(m => ({ default: m.WebPreviewPanel })));
-import { useWorkspaceSync } from '@/hooks/useWorkspaceSync';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useCodeTranslation } from '@/hooks/useCodeTranslation';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserMenu } from '@/components/ide/UserMenu';
-import { useCloudFiles } from '@/hooks/useCloudFiles';
-import { useAuth } from '@/hooks/useAuth';
-import { useSearchParams } from 'react-router-dom';
-import sdevLogo from '@/assets/sdev-logo.png';
-import sdevStubAsset from '@/runtime/sdev-stub-win-x64.exe.asset.json';
-import sdevWebsiteSource from '../../lang/web/sdev-website.sdev?raw';
 
-const patchLegacyRuntimeStub = (stub: Uint8Array): boolean => {
-  // Existing uploaded Windows runtimes contain the web DSL helper named
-  // canvas(), which overwrites graphics canvas() inside the executable. Patch
-  // that single embedded string in-place so downloaded .exe files use the
-  // native canvas window without needing users to wait for a CDN replacement.
-  const pattern = new TextEncoder().encode('"object",\n  "canvas",\n  "svg"');
-  const replacement = new TextEncoder().encode('"object",\n  "xanvas",\n  "svg"');
-  outer: for (let i = 0; i <= stub.length - pattern.length; i++) {
-    for (let j = 0; j < pattern.length; j++) {
-      if (stub[i + j] !== pattern[j]) continue outer;
-    }
-    stub.set(replacement, i);
-    return true;
-  }
-  return false;
-};
-
-const STARTER_FILES: IdeFile[] = [
-  {
-    id: '1',
-    name: 'main.sdev',
-    content: `// ═══════════════════════════════════════
-// Welcome to the sdev IDE!
-// Press Ctrl+Enter to run your code
-// ═══════════════════════════════════════
-
-forge message be "Hello, World!"
-speak(message)
-
-// Functions:
-conjure greet(name) ::
-  yield "Hello, " + name + "!"
-;;
-
-speak(greet("sdev"))
-
-// Lists and higher-order functions:
-forge nums be [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-forge evens be sift(nums, x -> x % 2 equals 0)
-forge doubled be each(evens, x -> x * 2)
-speak("Doubled evens:", doubled)
-`,
-  },
-  {
-    id: '2',
-    name: 'graphics.sdev',
-    content: `// Psychedelic Turtle Spiral
-canvas(400, 400)
-clear("#0d0d15")
-turtle()
-
-forge i be 0
-cycle i < 200 ::
-  pencolor(hue(i * 1.8))
-  penwidth(1 + i * 0.02)
-  forward(i * 0.7)
-  right(29)
-  i be i + 1
-;;
-`,
-  },
-  {
-    id: '3',
-    name: 'oop.sdev',
-    content: `// Object-Oriented Programming in sdev
-
-essence Animal ::
-  conjure init(self, name, sound) ::
-    self.name be name
-    self.sound be sound
-    self.energy be 100
-  ;;
-
-  conjure speak(self) ::
-    speak(self.name + " says: " + self.sound + "!")
-  ;;
-
-  conjure eat(self, food) ::
-    self.energy be self.energy + 20
-    speak(self.name + " eats " + food + " (energy: " + morph(self.energy, "text") + ")")
-  ;;
-;;
-
-essence Dog extend Animal ::
-  conjure init(self, name, breed) ::
-    super.init(name, "Woof")
-    self.breed be breed
-  ;;
-
-  conjure fetch(self) ::
-    self.energy be self.energy - 15
-    speak(self.name + " the " + self.breed + " fetches the ball!")
-  ;;
-;;
-
-forge buddy be new Dog("Buddy", "Golden Retriever")
-buddy.speak()
-buddy.eat("kibble")
-buddy.fetch()
-speak("Energy left:", buddy.energy)
-`,
-  },
-  {
-    id: '4',
-    name: 'algorithms.sdev',
-    content: `// Classic Algorithms
-
-// Fibonacci (recursive)
-conjure fib(n) ::
-  ponder n <= 1 :: yield n ;;
-  yield fib(n - 1) + fib(n - 2)
-;;
-
-speak("Fibonacci:")
-forge i be 0
-cycle i < 10 ::
-  speak("  fib(" + morph(i, "text") + ") =", fib(i))
-  i be i + 1
-;;
-
-// Bubble sort
-conjure bubbleSort(arr) ::
-  forge n be measure(arr)
-  forge sorted be clone(arr)
-  forge i be 0
-  cycle i < n ::
-    forge j be 0
-    cycle j < n - i - 1 ::
-      ponder sorted[j] > sorted[j + 1] ::
-        forge temp be sorted[j]
-        sorted[j] be sorted[j + 1]
-        sorted[j + 1] be temp
-      ;;
-      j be j + 1
-    ;;
-    i be i + 1
-  ;;
-  yield sorted
-;;
-
-forge arr be [64, 34, 25, 12, 22, 11, 90]
-speak("\\nOriginal:", arr)
-speak("Sorted:", bubbleSort(arr))
-
-// Binary search
-conjure binarySearch(arr, target) ::
-  forge left be 0
-  forge right be measure(arr) - 1
-  cycle left <= right ::
-    forge mid be ground((left + right) / 2)
-    ponder arr[mid] equals target ::
-      yield mid
-    ;; otherwise ponder arr[mid] < target ::
-      left be mid + 1
-    ;; otherwise ::
-      right be mid - 1
-    ;;
-  ;;
-  yield -1
-;;
-
-forge sorted be [1, 3, 5, 7, 9, 11, 13, 15]
-speak("\\nBinary search for 7:", binarySearch(sorted, 7))
-speak("Binary search for 6:", binarySearch(sorted, 6))
-`,
-  },
-  {
-    id: '5',
-    name: 'data-structures.sdev',
-    content: `// Data Structures Demo
-
-speak("=== Stack ===")
-forge stack be Stack()
-stack.push(10)
-stack.push(20)
-stack.push(30)
-speak("Push 10, 20, 30")
-speak("Peek:", stack.peek())
-speak("Pop:", stack.pop())
-speak("Size:", stack.size())
-
-speak("")
-speak("=== Queue ===")
-forge queue be Queue()
-queue.enqueue("first")
-queue.enqueue("second")
-queue.enqueue("third")
-speak("Dequeue:", queue.dequeue())
-speak("Peek:", queue.peek())
-
-speak("")
-speak("=== Set ===")
-forge s be Set()
-s.add(1)
-s.add(2)
-s.add(2)
-s.add(3)
-speak("Set values (no dupes):", s.values())
-speak("Has 2:", s.has(2))
-s.remove(2)
-speak("After removing 2:", s.values())
-
-speak("")
-speak("=== Map ===")
-forge m be Map()
-m.set("name", "Alice")
-m.set("age", 30)
-m.set("city", "NYC")
-speak("Get name:", m.get("name"))
-speak("Keys:", m.keys())
-speak("Has age:", m.has("age"))
-`,
-  },
-  {
-    id: '6',
-    name: 'sdev-website.sdev',
-    content: sdevWebsiteSource,
-  },
-  {
-    id: '99',
-    name: 'blink.sdev',
-    content: `// Arduino Uno — classic blink, written in sdev.
-// Open the Hardware panel (Usb icon), pick your board, hit Detect Board,
-// then Compile + Upload. Requires Chrome / Edge / Opera on desktop.
-
-board "uno" {
-  conjure setup() {
-    pin 13 be output
-    serial begin 9600
-  }
-
-  conjure loop() {
-    pin 13 write high
-    serial println "ON"
-    wait 500
-    pin 13 write low
-    serial println "OFF"
-    wait 500
-  }
-}
-`,
-  },
-];
-
-const SNIPPETS: Record<string, string> = {
-  'hello': 'speak("Hello, World!")\n',
-  'forge': 'forge $1 be $2\n',
-  'conjure': 'conjure $1($2) ::\n  $3\n;;\n',
-  'ponder': 'ponder $1 ::\n  $2\n;;\n',
-  'cycle': 'cycle $1 ::\n  $2\n;;\n',
-  'within': 'within $1 be $2 ::\n  $3\n;;\n',
-  'class': 'essence $1 ::\n  conjure init(self) ::\n    $2\n  ;;\n;;\n',
-};
-
-/** Collision-proof file id: unique across reloads and restored workspaces. */
-let fileIdSeq = 0;
-const nextFileId = () => `n-${Date.now().toString(36)}-${(fileIdSeq++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-
-/** First "untitled<N>.sdev" that is not already taken. */
-function uniqueUntitled(existing: { name: string }[]): string {
-  const taken = new Set(existing.map(f => f.name));
-  let n = 1;
-  while (taken.has(`untitled${n}.sdev`)) n++;
-  return `untitled${n}.sdev`;
-}
-type BottomPanel = 'terminal' | 'debugger' | 'scratchpad' | 'canvas' | 'app' | 'web' | 'problems';
-
-const DEFAULT_SETTINGS: IdeSettings = {
-  fontSize: 14,
-  tabSize: 2,
-  wordWrap: false,
-  theme: 'dark',
-  minimap: false,
-  lineNumbers: true,
-  autoSave: true,
-  fontFamily: 'JetBrains Mono',
-  liquidGlass: false,
-};
-
-// IDE theme palettes — applied as CSS custom properties directly on the IDE root
-const IDE_THEME_VARS: Record<IdeSettings['theme'], Record<string, string>> = {
-  dark: {
-    '--background': '212 45% 6%',  '--foreground': '200 25% 96%',
-    '--card': '212 40% 9%',        '--card-foreground': '200 25% 96%',
-    '--popover': '212 40% 10%',    '--popover-foreground': '200 25% 96%',
-    '--muted': '212 30% 14%',      '--muted-foreground': '210 18% 65%',
-    '--border': '212 30% 18%',     '--input': '212 30% 12%',
-    '--primary': '205 90% 58%',    '--primary-foreground': '212 45% 6%',
-    '--secondary': '188 78% 60%',  '--secondary-foreground': '212 45% 6%',
-    '--accent': '25 92% 58%',      '--accent-foreground': '212 45% 6%',
-    '--ring': '205 90% 58%',
-  },
-  midnight: {
-    '--background': '230 45% 5%',  '--foreground': '220 25% 94%',
-    '--card': '230 42% 8%',        '--card-foreground': '220 25% 94%',
-    '--popover': '230 42% 9%',     '--popover-foreground': '220 25% 94%',
-    '--muted': '230 32% 13%',      '--muted-foreground': '220 18% 65%',
-    '--border': '230 32% 17%',     '--input': '230 32% 11%',
-    '--primary': '248 75% 66%',    '--primary-foreground': '230 45% 5%',
-    '--secondary': '195 80% 60%',  '--secondary-foreground': '230 45% 5%',
-    '--accent': '195 90% 62%',     '--accent-foreground': '230 45% 5%',
-    '--ring': '248 75% 66%',
-  },
-  sky: {
-    '--background': '205 80% 10%', '--foreground': '200 35% 97%',
-    '--card': '205 65% 14%',       '--card-foreground': '200 35% 97%',
-    '--popover': '205 65% 15%',    '--popover-foreground': '200 35% 97%',
-    '--muted': '205 50% 18%',      '--muted-foreground': '200 25% 75%',
-    '--border': '205 50% 24%',     '--input': '205 55% 16%',
-    '--primary': '195 95% 62%',    '--primary-foreground': '205 80% 10%',
-    '--secondary': '188 85% 65%',  '--secondary-foreground': '205 80% 10%',
-    '--accent': '25 95% 62%',      '--accent-foreground': '205 80% 10%',
-    '--ring': '195 95% 62%',
-  },
-  sunset: {
-    '--background': '18 35% 8%',   '--foreground': '35 35% 96%',
-    '--card': '18 32% 11%',        '--card-foreground': '35 35% 96%',
-    '--popover': '18 32% 12%',     '--popover-foreground': '35 35% 96%',
-    '--muted': '18 25% 16%',       '--muted-foreground': '30 18% 70%',
-    '--border': '18 28% 20%',      '--input': '18 28% 14%',
-    '--primary': '25 95% 62%',     '--primary-foreground': '18 35% 8%',
-    '--secondary': '350 80% 65%',  '--secondary-foreground': '18 35% 8%',
-    '--accent': '205 90% 62%',     '--accent-foreground': '18 35% 8%',
-    '--ring': '25 95% 62%',
-  },
-  light: {
-    '--background': '205 60% 97%', '--foreground': '215 35% 14%',
-    '--card': '0 0% 100%',         '--card-foreground': '215 35% 14%',
-    '--popover': '0 0% 100%',      '--popover-foreground': '215 35% 14%',
-    '--muted': '205 35% 92%',      '--muted-foreground': '215 20% 40%',
-    '--border': '205 30% 84%',     '--input': '205 40% 95%',
-    '--primary': '205 88% 48%',    '--primary-foreground': '0 0% 100%',
-    '--secondary': '188 75% 45%',  '--secondary-foreground': '0 0% 100%',
-    '--accent': '22 92% 52%',      '--accent-foreground': '0 0% 100%',
-    '--ring': '205 88% 48%',
-  },
-};
-
-// Load/save to localStorage (used for guests; logged-in users sync to cloud)
 const LS_FILES = 'sdev-ide-files';
 const LS_FOLDERS = 'sdev-ide-folders';
 const LS_ACTIVE = 'sdev-ide-active';
 const LS_OPEN = 'sdev-ide-open';
 const LS_SETTINGS = 'sdev-ide-settings';
 
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const s = localStorage.getItem(key);
-    return s ? JSON.parse(s) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-const SUPPORTED_LANGUAGES = [
-  { value: 'auto', label: '🌐 Auto-detect' },
-  { value: 'Spanish', label: '🇪🇸 Spanish' },
-  { value: 'French', label: '🇫🇷 French' },
-  { value: 'German', label: '🇩🇪 German' },
-  { value: 'Portuguese', label: '🇧🇷 Portuguese' },
-  { value: 'Italian', label: '🇮🇹 Italian' },
-  { value: 'Dutch', label: '🇳🇱 Dutch' },
-  { value: 'Russian', label: '🇷🇺 Russian' },
-  { value: 'Chinese', label: '🇨🇳 Chinese' },
-  { value: 'Japanese', label: '🇯🇵 Japanese' },
-  { value: 'Korean', label: '🇰🇷 Korean' },
-  { value: 'Arabic', label: '🇸🇦 Arabic' },
-  { value: 'Hindi', label: '🇮🇳 Hindi' },
-  { value: 'Turkish', label: '🇹🇷 Turkish' },
-  { value: 'Polish', label: '🇵🇱 Polish' },
-  { value: 'Swedish', label: '🇸🇪 Swedish' },
-  { value: 'Norwegian', label: '🇳🇴 Norwegian' },
-  { value: 'Danish', label: '🇩🇰 Danish' },
-  { value: 'Finnish', label: '🇫🇮 Finnish' },
-  { value: 'Greek', label: '🇬🇷 Greek' },
-  { value: 'Hebrew', label: '🇮🇱 Hebrew' },
-  { value: 'Ukrainian', label: '🇺🇦 Ukrainian' },
-  { value: 'Czech', label: '🇨🇿 Czech' },
-  { value: 'Romanian', label: '🇷🇴 Romanian' },
-  { value: 'Hungarian', label: '🇭🇺 Hungarian' },
-  { value: 'Bulgarian', label: '🇧🇬 Bulgarian' },
-  { value: 'English', label: '🇬🇧 English (no translate)' },
-];
-
 export default function IDEPage() {
   const navigate = useNavigate();
 
-  // Persistent state
-  const [files, setFiles] = useState<IdeFile[]>(() => loadFromStorage(LS_FILES, STARTER_FILES));
-  const [folders, setFolders] = useState<IdeFolder[]>(() => loadFromStorage(LS_FOLDERS, []));
-  const [activeId, setActiveId] = useState<string>(() => loadFromStorage(LS_ACTIVE, '1'));
-  const [openIds, setOpenIds] = useState<string[]>(() => loadFromStorage(LS_OPEN, ['1']));
-  const [settings, setSettings] = useState<IdeSettings>(() => loadFromStorage(LS_SETTINGS, DEFAULT_SETTINGS));
+  const [files, setFiles] = useState<IdeFile[]>(() => loadJson(LS_FILES, STARTER_FILES));
+  const [folders, setFolders] = useState<IdeFolder[]>(() => loadJson(LS_FOLDERS, []));
+  const [activeId, setActiveId] = useState<string>(() => loadJson(LS_ACTIVE, '1'));
+  const [openIds, setOpenIds] = useState<string[]>(() => loadJson(LS_OPEN, ['1']));
+  const [settings, setSettings] = useState<IdeSettings>(() => loadJson(LS_SETTINGS, DEFAULT_SETTINGS));
 
-  // UI state
   const [sidePanel, setSidePanel] = useState<SidePanel>('explorer');
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>('terminal');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -489,13 +87,11 @@ export default function IDEPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [runMode, setRunMode] = useState<'interpreter' | 'vm'>('interpreter');
 
-  // Translation state
   const [selectedLanguage, setSelectedLanguage] = useState('auto');
   const [translatedContent, setTranslatedContent] = useState<Map<string, string>>(new Map());
   const [showTranslated, setShowTranslated] = useState(false);
   const { isTranslating, lastResult, translate } = useCodeTranslation();
 
-  // Execution state
   const [output, setOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | undefined>();
   const [graphicsCommands, setGraphicsCommands] = useState<GraphicsCommand[]>([]);
@@ -503,16 +99,13 @@ export default function IDEPage() {
   const [statusMsg, setStatusMsg] = useState('Ready');
   const [execTime, setExecTime] = useState<number | null>(null);
 
-  // UI app preview state
   const [uiState, setUiState] = useState<UiState | null>(null);
   const uiStateRef = useRef<UiState | null>(null);
   const uiHandlersRef = useRef<Map<number, UiCallback>>(new Map());
   const uiHandlerIdRef = useRef(0);
 
-  // Web (HTML/CSS/JS) preview state
   const [webState, setWebState] = useState<WebState | null>(null);
 
-  // Cursor position
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [selection, setSelection] = useState(0);
 
@@ -520,18 +113,15 @@ export default function IDEPage() {
   const editorRef = useRef<IdeEditorHandle>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Pro IDE state
   const [showGoToLine, setShowGoToLine] = useState(false);
   const [showGitHubPush, setShowGitHubPush] = useState(false);
   const [showWasiDialog, setShowWasiDialog] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const [runtimeQuery, setRuntimeQuery] = useState('');
 
-  // Auth + cloud sync
   const { user } = useAuth();
   const { recordRun } = useCloudFiles();
   const [searchParams] = useSearchParams();
-  // Map of local file id → cloud file id (so "Save" updates instead of duplicates)
   const [cloudIds, setCloudIds] = useState<Record<string, string>>({});
 
   const activeFile = files.find(f => f.id === activeId);
@@ -542,7 +132,6 @@ export default function IDEPage() {
   const activePlainBody = activeFile ? stripSignature(activeFile.content) : '';
   const hasTranslation = Boolean(activeFile && translationHasDiff(activePlainBody, translatedSourceForActive));
 
-  // Import code from a Gist (sessionStorage) on mount
   useEffect(() => {
     const imported = sessionStorage.getItem('sdev:imported_code');
     const importedName = sessionStorage.getItem('sdev:imported_name');
@@ -559,7 +148,6 @@ export default function IDEPage() {
     }
   }, []);
 
-  // Load a cloud file when ?cloud=<id> is present
   useEffect(() => {
     const cloudParam = searchParams.get('cloud');
     if (!cloudParam || !user) return;
@@ -597,18 +185,14 @@ export default function IDEPage() {
     })();
   }, [searchParams, user]);
 
-  // Persist to localStorage (guests + as backup for logged-in users)
-  useEffect(() => { localStorage.setItem(LS_FILES, JSON.stringify(files)); }, [files]);
-  useEffect(() => { localStorage.setItem(LS_FOLDERS, JSON.stringify(folders)); }, [folders]);
+  useEffect(() => { saveJson(LS_FILES, files); }, [files]);
+  useEffect(() => { saveJson(LS_FOLDERS, folders); }, [folders]);
   useEffect(() => {
-    localStorage.setItem(LS_ACTIVE, JSON.stringify(activeId));
-    localStorage.setItem(LS_OPEN, JSON.stringify(openIds));
+    saveJson(LS_ACTIVE, activeId);
+    saveJson(LS_OPEN, openIds);
   }, [activeId, openIds]);
-  useEffect(() => {
-    localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
-  }, [settings]);
+  useEffect(() => { saveJson(LS_SETTINGS, settings); }, [settings]);
 
-  // ─────── Cloud workspace sync (logged-in users) ───────
   const workspaceSnapshot = user ? { files, folders, openIds, activeId } : null;
   const { hydrated, isSyncing, lastSavedAt } = useWorkspaceSync(workspaceSnapshot, !!user);
   const hydratedAppliedRef = useRef(false);
@@ -626,16 +210,14 @@ export default function IDEPage() {
     setOpenIds(hydrated.openIds);
     if (hydrated.files.length > 0) toast.success(`Restored ${hydrated.files.length} files from cloud`);
   }, [hydrated]);
-  // Reset hydration flag when user changes (logout/login)
   useEffect(() => { hydratedAppliedRef.current = false; }, [user?.id]);
 
-  // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && e.key === 'p') { e.preventDefault(); setShowCommandPalette(true); }
       if (ctrl && e.shiftKey && e.key === 'Enter') { e.preventDefault(); void runCode({ noUnderstand: true }); }
-      else if (ctrl && e.key === 'Enter') { e.preventDefault(); runCode(); }
+      else if (ctrl && e.key === 'Enter') { e.preventDefault(); void runCode(); }
       if (ctrl && e.key === 's') { e.preventDefault(); void downloadCurrentFile('written'); }
       if (ctrl && e.key === 'b') { e.preventDefault(); setSidePanel(p => p === 'explorer' ? null : 'explorer'); }
       if (ctrl && e.shiftKey && (e.key === 'F' || e.key === 'f')) { e.preventDefault(); setSidePanel(p => p === 'search' ? null : 'search'); }
@@ -669,7 +251,6 @@ export default function IDEPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFile]);
 
-  // Live linting (problems)
   const [problems, setProblems] = useState<Problem[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -723,16 +304,6 @@ export default function IDEPage() {
     const noUnderstand = typeof override === 'object' && override !== null && 'noUnderstand' in override && Boolean((override as { noUnderstand?: boolean }).noUnderstand);
     if (!activeFile) return;
 
-    // ─── v2 "Prism" runtime short-circuit ───
-    // v2 has exactly ONE execution path: the self-hosted sdev compiler
-    // (lang/compiler/*.sdev, compiled to bytecode by itself) running on the
-    // hand-written seed VM (lang/bootstrap/seed.wat). No JavaScript
-    // interpreter is involved — if a program uses a feature the self-hosted
-    // compiler cannot compile yet, we say so instead of silently switching
-    // to a different implementation.
-    // The file's hidden signature never reaches the compiler, and a dialect
-    // source is canonicalized to plain sdev v2 first — the toolchain itself
-    // is untouched by dialects.
     let activeDialect = getActiveDialect();
     const strippedSrc = stripSignature(activeFile.content);
     let dialectSrc = strippedSrc;
@@ -752,27 +323,21 @@ export default function IDEPage() {
       return;
     }
     const { applyExtensions } = await import('@/lang/dialect/extensions');
-    // the file as its author wrote it: directives out, sdev:ai made canonical, nothing else
     const hasDirectives = dialectSrc.includes('!#');
     const writtenSrc = hasDirectives
       ? (await import('@/lang/agent')).asWritten(dialectSrc)
       : dialectSrc;
     const runtimePref = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || null;
-    // Runtime is chosen from the user's own file, before the prelude is added.
     const wantsV2 = (src: string) => {
       const head10 = src.split('\n', 10).map(l => l.trim());
       const shebangV2 = head10.some(l => l.startsWith('#!sdev v2'));
       const shebangV1 = head10.some(l => l.startsWith('#!sdev v1'));
       return Boolean(activeDialect) || shebangV2 || (!shebangV1 && (runtimePref === 'v2' || runtimePref === 'v2-wasm'));
     };
-    // Compile + run with the self-hosted v2 toolchain. Returns null when the
-    // compiler cannot compile the source (so the caller can decide what next).
+
     const tryV2 = async (src: string): Promise<{ success: boolean; output: string[]; error: string | null } | { notCompiled: string }> => {
       const { runWasm, WasmSubsetError } = await import('@/lang-bridge/wasm-runtime');
       const body = applyExtensions(src);
-      // Milestone 5z: `use "path"` resolves against the workspace files.
-      // Personal SDEV: `use "@user/lib@1.2.0"` resolves through the
-      // library registry (cached locally, so it also works offline).
       const { resolveLibraries } = await import('@/lang/dialect/registry');
       const moduleMap: Record<string, string> = await resolveLibraries(body);
       const canonicalizeFn = activeDialect ? (await import('@/lang/dialect/canonicalize')).canonicalize : null;
@@ -796,9 +361,7 @@ export default function IDEPage() {
       if (!r.success) setBottomPanel('terminal');
     };
 
-    // ─── v2: working code is compiled exactly as written ───
-    // The understander only reads a v2 file when the self-hosted compiler
-    // cannot compile it as written, so it can never break a working program.
+    // v2: working code is compiled exactly as written before the understander reads it
     let v2AsWrittenError: string | null = null;
     if (overrideSrc === undefined && wantsV2(writtenSrc) && (activeDialect || noUnderstand || !(await import('@/lang/agent')).wordsNeedReading(writtenSrc))) {
       setIsRunning(true);
@@ -829,10 +392,6 @@ export default function IDEPage() {
       }
     }
 
-    // The understanding agent reads the whole file and turns however the user
-    // writes into canonical sdev — before any runtime or codegen sees it.
-    // `!#agent:off` in the file switches it off; `!#agent: local|online`
-    // chooses where its smart core runs.
     const bodySum = checksum(strippedSrc);
     const savedBySum =
       !reunderstand &&
@@ -849,7 +408,6 @@ export default function IDEPage() {
     if (overrideSrc === undefined && !noUnderstand && saved === null) {
       const { senseFile, definedNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
       const { withoutBoardBlocks } = await import('@/lang/agent/boards');
-      // Fast check: valid canonical sdev reaches the compiler directly with zero AI / engine overhead.
       const quickSense = !reunderstand ? senseFile(withoutBoardBlocks(writtenSrc)) : null;
       if (quickSense && !quickSense.suspicious && quickSense.parses) {
         skipUnderstandForValid = true;
@@ -881,7 +439,6 @@ export default function IDEPage() {
                 for (const n of definedNames(stripSignature(f.content))) projectNamesSet.add(n);
               }
               const projectNames = [...projectNamesSet];
-              // show the built-in AI's first-time preparation in the status bar
               const { onBrowserBrain } = await import('@/lang/agent/browser-brain');
               const off = onBrowserBrain((b) => {
                 if (b.state === 'loading') setStatusMsg(`Preparing the built-in AI (first time only) — ${Math.round(b.progress * 100)}%`);
@@ -933,8 +490,6 @@ export default function IDEPage() {
             : '(already canonical sdev)';
       toast.success(`Re-understood ${via}`);
     }
-    // Enabled extensions are wired into the prelude: their operators are
-    // desugared to calls and their function bodies run ahead of the program.
     const rawSrc = applyExtensions(canonicalSrc);
 
     if (wantsV2(canonicalSrc)) {
@@ -942,17 +497,14 @@ export default function IDEPage() {
       setStatusMsg('Running (v2 · self-hosted)…');
       setUiState(null); setWebState(null);
       try {
-        // Already tried the file as written and the understander changed nothing: same answer.
         let r = v2AsWrittenError !== null && canonicalSrc.trim() === writtenSrc.trim()
           ? { notCompiled: v2AsWrittenError }
           : await tryV2(canonicalSrc);
-        // The agent's reading does not compile but the file as written does: the author's file wins.
         if ('notCompiled' in r && v2AsWrittenError === null && overrideSrc === undefined && canonicalSrc.trim() !== writtenSrc.trim()) {
           const asIs = await tryV2(writtenSrc);
           if (!('notCompiled' in asIs)) r = asIs;
         }
         if ('notCompiled' in r) {
-          // Report what the compiler said about the author's own file — not about a guess.
           const reason = v2AsWrittenError ?? r.notCompiled;
           setOutput([
             `✗ the self-hosted sdev compiler cannot compile this yet: ${reason}`,
@@ -962,7 +514,6 @@ export default function IDEPage() {
           setError(reason);
           setStatusMsg('✗ not yet self-hosted');
           setBottomPanel('terminal');
-          // a reading that does not compile is never kept
           const failedId = activeFile.id;
           setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f)));
         } else {
@@ -976,8 +527,6 @@ export default function IDEPage() {
       return;
     }
 
-
-
     const { stripBoardBlocks } = await import('@/lang/hardware/strip');
     let code = stripBoardBlocks(rawSrc);
     const outputLines: string[] = [];
@@ -989,35 +538,12 @@ export default function IDEPage() {
     setIsRunning(true);
     setStatusMsg(noUnderstand ? 'Running (without understanding)…' : 'Running…');
 
-    // ─── Hybrid translation pre-pass ───
-    // Stage 1: dictionary + fuzzy (sync, in Lexer). Stage 2: smart fallback
-    // only fires when foreign-script words remain after stage 1.
     if (selectedLanguage !== 'English') {
-      try {
-        const { translateSource } = await import('@/lang/tools/translator');
-        const stage1 = translateSource(code, selectedLanguage, { target: 'v1', dialect: activeDialect });
-        const humanLangDetected = stage1.detectedLanguage && stage1.detectedLanguage !== 'English' ? stage1.detectedLanguage : null;
-        const stripped = stage1.translated
-          .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '')
-          .replace(/(\/\/|#)[^\n]*/g, '');
-        if (/[\u00A0-\uFFFF]{3,}/.test(stripped)) {
-          setStatusMsg('Translating with Smart Translator…');
-          try {
-            const { data } = await supabase.functions.invoke('translate-fuzzy', {
-              body: { code: stage1.translated, original: code, sourceLanguage: stage1.detectedLanguage ?? selectedLanguage },
-            });
-            if (data?.translated) {
-              code = data.translated;
-              if (data.usedAI) toast.info('Translated using fallback engine');
-            } else {
-              code = stage1.translated;
-            }
-          } catch {
-            code = stage1.translated;
-          }
-        } else {
-          code = stage1.translated;
-        }
+      const tr = await translate(code, selectedLanguage);
+      if (tr) {
+        code = tr.translated;
+        if (tr.usedAI) toast.info('Translated using fallback engine');
+        const humanLangDetected = tr.detectedLanguage && tr.detectedLanguage !== 'English' ? tr.detectedLanguage : null;
         if (humanLangDetected || code.trim() !== stripBoardBlocks(rawSrc).trim()) {
           const translatedCode = code;
           const fileId = activeFile.id;
@@ -1035,11 +561,9 @@ export default function IDEPage() {
             },
           } : f)));
         }
-      } catch {/* fallback to raw lexer */}
+      }
     }
 
-    // ─── Module linking ───
-    // Resolve `link "file.sdev"` directives by inlining other workspace files.
     if (/\blink\s+["']/.test(code)) {
       try {
         const { resolveLinks } = await import('@/lang/tools/linker');
@@ -1048,103 +572,127 @@ export default function IDEPage() {
           files.map(f => ({ name: f.name, content: f.content })),
           { entryName: activeFile.name }
         );
-      } catch {/* linker is best-effort */}
+      } catch (linkErr) {
+        toast.error(`Module link warning: ${linkErr instanceof Error ? linkErr.message : String(linkErr)}`);
+      }
     }
 
-    // Translation already applied above — disable Lexer's built-in pass.
     const lexerOpts = { sourceLanguage: 'English' as const, translate: false };
-
     const t0 = performance.now();
 
     try {
-      const [{ Lexer }, { Parser }, { Interpreter }, { createGraphicsBuiltins }, { createUiBuiltins }, { createWebBuiltins, bindWebBuiltinsToEnv }] = await Promise.all([
-        import('@/lang/core/lexer'), import('@/lang/core/parser'), import('@/lang/runtime/interpreter'),
-        import('@/lang/stdlib/graphics'), import('@/lang/stdlib/ui'), import('@/lang/stdlib/web'),
+      const [{ Lexer }, { Parser }] = await Promise.all([
+        import('@/lang/core/lexer'),
+        import('@/lang/core/parser'),
       ]);
       const lexer = new Lexer(code, lexerOpts);
       const tokens = lexer.tokenize();
       const parser = new Parser(tokens);
       const ast = parser.parse();
-      const interpreter = new Interpreter((msg) => outputLines.push(msg), { bindWeb: false });
-      const env = interpreter.getGlobalEnv();
-      const gfx = createGraphicsBuiltins(
-        (cmd) => commands.push(cmd),
-        () => turtleState,
-        (state) => { turtleState = { ...turtleState, ...state }; }
-      );
-      gfx.forEach((fn, name) => env.define(name, fn));
-      const runtimeInput = env.get('input', 0) as { type: 'builtin' | 'user' | 'lambda'; call: (args: unknown[], line: number) => unknown };
-      // ── UI toolkit builtins ──
-      uiHandlersRef.current.clear();
-      uiHandlerIdRef.current = 0;
-      let interpreting = true;
-      let producedUi = false;
-      let pendingUi: UiState | null = null;
-      const ui = createUiBuiltins(
-        (s) => {
-          producedUi = true;
-          uiStateRef.current = s;
-          if (interpreting) {
-            pendingUi = s;
-          } else {
-            setUiState({ nodes: new Map(s.nodes), rootId: s.rootId, values: new Map(s.values) });
-          }
-        },
-        (cb) => { const id = ++uiHandlerIdRef.current; uiHandlersRef.current.set(id, cb); return id; }
-      );
-      const uiInput = ui.get('input');
-      ui.forEach((fn, name) => {
-        if (name !== 'input') env.define(name, fn);
-      });
-      if (uiInput) {
-        env.define('input', {
-          type: 'builtin',
-          call: (args: unknown[], line: number) => {
-            const hasUiRoot = uiStateRef.current?.rootId != null;
-            if (hasUiRoot && args.length <= 2) return uiInput.call(args, line);
-            return runtimeInput.call(args, line);
+
+      let usedVm = false;
+      if (runMode === 'vm') {
+        const [{ Compiler }, { VM }, { createGraphicsBuiltins }] = await Promise.all([
+          import('@/lang/runtime/compiler'),
+          import('@/lang/runtime/vm'),
+          import('@/lang/stdlib/graphics'),
+        ]);
+        const compiler = new Compiler();
+        const chunk = compiler.compile(ast);
+        const gfx = createGraphicsBuiltins(
+          (cmd) => commands.push(cmd),
+          () => turtleState,
+          (state) => { turtleState = { ...turtleState, ...state }; }
+        );
+        const vm = new VM((msg) => outputLines.push(msg), gfx);
+        vm.run(chunk);
+        usedVm = true;
+      } else {
+        const [{ Interpreter }, { createGraphicsBuiltins }, { createUiBuiltins }, { createWebBuiltins, bindWebBuiltinsToEnv }] = await Promise.all([
+          import('@/lang/runtime/interpreter'),
+          import('@/lang/stdlib/graphics'),
+          import('@/lang/stdlib/ui'),
+          import('@/lang/stdlib/web'),
+        ]);
+        const interpreter = new Interpreter((msg) => outputLines.push(msg), { bindWeb: false });
+        const env = interpreter.getGlobalEnv();
+        const gfx = createGraphicsBuiltins(
+          (cmd) => commands.push(cmd),
+          () => turtleState,
+          (state) => { turtleState = { ...turtleState, ...state }; }
+        );
+        gfx.forEach((fn, name) => env.define(name, fn));
+        const runtimeInput = env.get('input', 0) as { type: 'builtin' | 'user' | 'lambda'; call: (args: unknown[], line: number) => unknown };
+        uiHandlersRef.current.clear();
+        uiHandlerIdRef.current = 0;
+        let interpreting = true;
+        let producedUi = false;
+        let pendingUi: UiState | null = null;
+        const ui = createUiBuiltins(
+          (s) => {
+            producedUi = true;
+            uiStateRef.current = s;
+            if (interpreting) {
+              pendingUi = s;
+            } else {
+              setUiState({ nodes: new Map(s.nodes), rootId: s.rootId, values: new Map(s.values) });
+            }
           },
+          (cb) => { const id = ++uiHandlerIdRef.current; uiHandlersRef.current.set(id, cb); return id; }
+        );
+        const uiInput = ui.get('input');
+        ui.forEach((fn, name) => {
+          if (name !== 'input') env.define(name, fn);
         });
-      }
-      // ── Web (HTML/CSS/JS) builtins ──
-      let producedWeb = false;
-      let pendingWeb: WebState | null = null;
-      const web = createWebBuiltins((s) => {
-        producedWeb = true;
-        if (interpreting) {
-          pendingWeb = s;
-        } else {
-          setWebState({
-            ...s,
-            head: [...s.head],
-            stack: s.stack.map(b => [...b]),
-            css: [...s.css],
-            js: [...s.js],
-            moduleJs: [...(s.moduleJs ?? [])],
+        if (uiInput) {
+          env.define('input', {
+            type: 'builtin',
+            call: (args: unknown[], line: number) => {
+              const hasUiRoot = uiStateRef.current?.rootId != null;
+              if (hasUiRoot && args.length <= 2) return uiInput.call(args, line);
+              return runtimeInput.call(args, line);
+            },
           });
         }
-      });
-      bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
-      try {
-        interpreter.interpret(ast);
-      } finally {
-        interpreting = false;
-      }
-      if (pendingUi) {
-        setUiState({ nodes: new Map(pendingUi.nodes), rootId: pendingUi.rootId, values: new Map(pendingUi.values) });
-      }
-      if (pendingWeb) {
-        setWebState({
-          ...pendingWeb,
-          head: [...pendingWeb.head],
-          stack: pendingWeb.stack.map(b => [...b]),
-          css: [...pendingWeb.css],
-          js: [...pendingWeb.js],
-          moduleJs: [...(pendingWeb.moduleJs ?? [])],
+        let producedWeb = false;
+        let pendingWeb: WebState | null = null;
+        const web = createWebBuiltins((s) => {
+          producedWeb = true;
+          if (interpreting) {
+            pendingWeb = s;
+          } else {
+            setWebState({
+              ...s,
+              head: [...s.head],
+              stack: s.stack.map(b => [...b]),
+              css: [...s.css],
+              js: [...s.js],
+              moduleJs: [...(s.moduleJs ?? [])],
+            });
+          }
         });
+        bindWebBuiltinsToEnv(env, web, { hasUiRoot: () => uiStateRef.current?.rootId != null });
+        try {
+          interpreter.interpret(ast);
+        } finally {
+          interpreting = false;
+        }
+        if (pendingUi) {
+          setUiState({ nodes: new Map(pendingUi.nodes), rootId: pendingUi.rootId, values: new Map(pendingUi.values) });
+        }
+        if (pendingWeb) {
+          setWebState({
+            ...pendingWeb,
+            head: [...pendingWeb.head],
+            stack: pendingWeb.stack.map(b => [...b]),
+            css: [...pendingWeb.css],
+            js: [...pendingWeb.js],
+            moduleJs: [...(pendingWeb.moduleJs ?? [])],
+          });
+        }
+        if (producedWeb) setBottomPanel('web');
+        else if (producedUi) setBottomPanel('app');
       }
-      if (producedWeb) setBottomPanel('web');
-      else if (producedUi) { setBottomPanel('app'); }
 
       const elapsed = Math.round((performance.now() - t0) * 10) / 10;
       setOutput(outputLines);
@@ -1155,7 +703,11 @@ export default function IDEPage() {
         setShowCanvas(true);
         setBottomPanel('canvas');
       }
-      setStatusMsg(noUnderstand ? `✓ Done in ${elapsed}ms (without understanding)` : `✓ Done in ${elapsed}ms`);
+      setStatusMsg(
+        noUnderstand
+          ? `✓ Done in ${elapsed}ms (${usedVm ? 'VM · ' : ''}without understanding)`
+          : `✓ Done in ${elapsed}ms${usedVm ? ' (VM)' : ''}`
+      );
       recordRun(activeFile.name, activeFile.content, outputLines.join('\n'), 'success', elapsed);
     } catch (e) {
       const msg = e instanceof Error
@@ -1165,10 +717,8 @@ export default function IDEPage() {
       if (!retried && !noUnderstand) {
         const { parses, unknownNames, reconsider } = await import('@/lang/agent');
         if (rewritten) {
-          // The agent's reading broke, but the author's file holds together: the file as written wins.
           if (parses(writtenSrc)) { setIsRunning(false); return runCode(writtenSrc, true); }
         }
-        // Let the AI rethink once when the file needed reading (even if local rules/WebLLM failed to rewrite it).
         const neededReading = rewritten || !parses(writtenSrc) || unknownNames(writtenSrc).length > 0;
         if (neededReading && !/!#agent\s*:\s*off/i.test(dialectSrc)) {
           setStatusMsg('Agent is rethinking…');
@@ -1176,7 +726,6 @@ export default function IDEPage() {
           if (again?.source) { setIsRunning(false); return runCode(again.source, true); }
         }
       }
-      // A reading that fails is never kept — the next run thinks again.
       if (!noUnderstand) { const failedId = activeFile.id; setFiles((prev) => prev.map((f) => (f.id === failedId ? { ...f, understood: undefined } : f))); }
       setOutput(outputLines);
       setError(msg);
@@ -1187,7 +736,7 @@ export default function IDEPage() {
     } finally {
       setIsRunning(false);
     }
-  }, [activeFile, runMode, selectedLanguage, recordRun, files]);
+  }, [activeFile, runMode, selectedLanguage, translate, recordRun, files]);
 
   const reunderstandCurrentFile = useCallback(async () => {
     if (!activeFile) return;
@@ -1212,8 +761,6 @@ export default function IDEPage() {
     setActiveId(id);
   }, []);
 
-  // Open the active file in the other form: plain sdev -> sdev:ai (the
-  // dialect written for AI models), or an sdev:ai file -> plain sdev.
   const convertAiView = useCallback(async () => {
     if (!activeFile) return;
     const { sdevToAi, aiToSdev, isAiDialect } = await import('@/lang/agent');
@@ -1233,7 +780,6 @@ export default function IDEPage() {
     toast.success(toAi ? 'Opened as sdev:ai' : 'Opened as plain sdev');
   }, [activeFile]);
 
-  // Open one of the bundled example programs as a new file (runs as-is, sdev:ai included).
   const openSample = useCallback(async (file: string) => {
     const res = await fetch(`/samples/${file}`);
     if (!res.ok) { toast.error(`Could not open ${file}`); return; }
@@ -1255,7 +801,6 @@ export default function IDEPage() {
 
   const deleteFolder = useCallback((id: string) => {
     if (!confirm('Delete this folder and everything inside it?')) return;
-    // Recursively gather all descendant folder ids
     const toDelete = new Set<string>([id]);
     let changed = true;
     while (changed) {
@@ -1292,9 +837,12 @@ export default function IDEPage() {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, name: safe } : f));
   }, []);
 
-  const selectFile = useCallback((id: string) => {
+  const selectFile = useCallback((id: string, line?: number) => {
     setActiveId(id);
     setOpenIds(prev => prev.includes(id) ? prev : [...prev, id]);
+    if (line !== undefined) {
+      setTimeout(() => editorRef.current?.jumpToLine(line), 20);
+    }
   }, []);
 
   const closeTab = useCallback((id: string) => {
@@ -1305,172 +853,69 @@ export default function IDEPage() {
 
   const downloadCurrentFile = async (variant: 'written' | 'translated' = 'written') => {
     if (!activeFile) return;
-    // Exported files carry (or keep) their hidden signature so any IDE can
-    // tell which runtime, dialect, libraries and translated version they have.
     const dialect = getActiveDialect();
     const existing = readSignature(activeFile.content);
     const runtime = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1';
 
-    let bodyToDownload = activeFile.content;
-    let fileNameToDownload = activeFile.name;
     let embeddedTranslated: string | null =
       activeFile.understood?.source ?? translatedContent.get(activeFile.id) ?? existing?.translated ?? null;
 
-    if (variant === 'translated') {
-      if (!embeddedTranslated) {
-        const { canonicalize } = await import('@/lang/dialect/canonicalize');
-        const stripped = stripSignature(activeFile.content);
-        const dialectSrc = dialect ? canonicalize(stripped, dialect).source : stripped;
-        const { understandAsync, definedNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
-        const projectNamesSet = new Set<string>();
-        for (const f of files) {
-          if (f.id === activeFile.id) continue;
-          for (const n of definedNames(stripSignature(f.content))) projectNamesSet.add(n);
-        }
-        const projectNames = [...projectNamesSet];
-        const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, dialect ?? null, projectNames]));
-        const res = await understandAsync(dialectSrc, { dialect, projectNames });
-        embeddedTranslated = res.source;
-        const fileId = activeFile.id;
-        setFiles((prev) => prev.map((f) => (f.id === fileId ? {
-          ...f,
-          understood: {
-            key: fileKey,
-            bodySum: checksum(stripped),
-            source: res.source,
-            notesCount: res.notes.length,
-            brainUsed: res.brainUsed,
-            fromCache: !!res.cached,
-            recipeOps: translationHasDiff(stripped, res.source) ? buildTranslationRecipe(stripped, res.source).length : undefined,
-          },
-        } : f)));
+    if (variant === 'translated' && !embeddedTranslated) {
+      const { canonicalize } = await import('@/lang/dialect/canonicalize');
+      const stripped = stripSignature(activeFile.content);
+      const dialectSrc = dialect ? canonicalize(stripped, dialect).source : stripped;
+      const { understandAsync, definedNames, understandKey, AGENT_VERSION } = await import('@/lang/agent');
+      const projectNamesSet = new Set<string>();
+      for (const f of files) {
+        if (f.id === activeFile.id) continue;
+        for (const n of definedNames(stripSignature(f.content))) projectNamesSet.add(n);
       }
-      bodyToDownload = embeddedTranslated;
-      fileNameToDownload = translationDownloadName(activeFile.name, variant, true);
+      const projectNames = [...projectNamesSet];
+      const fileKey = understandKey(dialectSrc, JSON.stringify([AGENT_VERSION, dialect ?? null, projectNames]));
+      const res = await understandAsync(dialectSrc, { dialect, projectNames });
+      embeddedTranslated = res.source;
+      const fileId = activeFile.id;
+      setFiles((prev) => prev.map((f) => (f.id === fileId ? {
+        ...f,
+        understood: {
+          key: fileKey,
+          bodySum: checksum(stripped),
+          source: res.source,
+          notesCount: res.notes.length,
+          brainUsed: res.brainUsed,
+          fromCache: !!res.cached,
+          recipeOps: translationHasDiff(stripped, res.source) ? buildTranslationRecipe(stripped, res.source).length : undefined,
+        },
+      } : f)));
     }
 
-    const strippedForDiff = stripSignature(activeFile.content);
-    const hasDiff = translationHasDiff(strippedForDiff, embeddedTranslated);
-    const signed = writeSignature(bodyToDownload, {
-      rt: runtime,
-      dialect: variant === 'translated' ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
-      dialectVersion: variant === 'translated' ? null : (dialect ? dialect.meta.version : existing?.dialectVersion ?? null),
-      libs: existing?.libs ?? [],
-      origin: variant === 'translated' ? (dialect ? dialect.meta.slug : existing?.origin ?? null) : (existing?.origin ?? null),
-      translated: variant === 'written' && hasDiff ? embeddedTranslated : undefined,
-      brain: variant === 'written' && hasDiff ? (activeFile.understood?.brainUsed ?? existing?.brain ?? null) : undefined,
-      lang: variant === 'written' && hasDiff ? (activeFile.understood?.detectedLanguage ?? existing?.lang ?? null) : undefined,
-    });
-    const blob = new Blob([signed], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fileNameToDownload; a.click();
-    URL.revokeObjectURL(url);
-    toast.success(variant === 'translated' ? `Downloaded ${fileNameToDownload}` : `Saved ${fileNameToDownload}`);
+    const { signed, outName } = signFileForExport(activeFile, variant, dialect, embeddedTranslated, runtime);
+    downloadText(signed, outName);
+    toast.success(variant === 'translated' ? `Downloaded ${outName}` : `Saved ${outName}`);
   };
 
   const downloadAllFiles = (variant: 'written' | 'translated' = 'written') => {
     const dialect = getActiveDialect();
     const runtime = (typeof localStorage !== 'undefined' && localStorage.getItem('sdev_runtime')) || 'v1';
-    files.forEach(file => {
-      // Same signature the single-file export writes, so a whole workspace
-      // round-trips with its runtime, dialect, library pins and translation intact.
+    for (const file of files) {
       const existing = readSignature(file.content);
-      const strippedFileBody = stripSignature(file.content);
       const cachedTranslated = file.understood?.source ?? translatedContent.get(file.id) ?? existing?.translated ?? null;
-      const hasDiff = translationHasDiff(strippedFileBody, cachedTranslated);
-      const body = variant === 'translated' && hasDiff && cachedTranslated ? cachedTranslated : file.content;
-      const outName = translationDownloadName(file.name, variant, hasDiff);
-      const signed = writeSignature(body, {
-        rt: runtime,
-        dialect: variant === 'translated' && hasDiff ? null : (dialect ? dialect.meta.slug : existing?.dialect ?? null),
-        dialectVersion: variant === 'translated' && hasDiff ? null : (dialect ? dialect.meta.version : existing?.dialectVersion ?? null),
-        libs: existing?.libs ?? [],
-        origin: variant === 'translated' && hasDiff ? (dialect ? dialect.meta.slug : existing?.origin ?? null) : (existing?.origin ?? null),
-        translated: variant === 'written' && hasDiff ? cachedTranslated : undefined,
-        brain: variant === 'written' && hasDiff ? (file.understood?.brainUsed ?? existing?.brain ?? null) : undefined,
-        lang: variant === 'written' && hasDiff ? (file.understood?.detectedLanguage ?? existing?.lang ?? null) : undefined,
-      });
-      const blob = new Blob([signed], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = outName; a.click();
-      URL.revokeObjectURL(url);
-    });
+      const { signed, outName } = signFileForExport(file, variant, dialect, cachedTranslated, runtime);
+      downloadText(signed, outName);
+    }
     toast.success(`Downloaded ${files.length} files (${variant === 'translated' ? 'translated' : 'user-written'})`);
   };
 
-
   const downloadElectron = () => {
-    const pkg = JSON.stringify({
-      name: "sdev-ide", version: "1.0.0",
-      description: "sdev IDE – desktop edition",
-      main: "main.js",
-      scripts: { start: "electron .", build: "electron-builder" },
-      dependencies: { electron: "^28.0.0" },
-      devDependencies: { "electron-builder": "^24.0.0" },
-      build: { appId: "dev.sdev.ide", productName: "sdev IDE", directories: { output: "dist-electron" } }
-    }, null, 2);
-    const mainJs = `const { app, BrowserWindow, shell } = require('electron');
-const path = require('path');
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 1400, height: 900, minWidth: 900, minHeight: 600,
-    titleBarStyle: 'hiddenInset', backgroundColor: '#0d0e1a',
-    webPreferences: { nodeIntegration: false, contextIsolation: true },
-  });
-  win.loadURL('https://web.sdev.codes/ide');
-  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
-}
-app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
-});
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });`;
-    const readme = `# sdev IDE – Desktop Edition\n\n## Quick Start\n\n1. Install Node.js (https://nodejs.org)\n2. Open terminal here\n3. Run:\n\n\`\`\`bash\nnpm install\nnpm start\n\`\`\`\n\n## Build installer\n\`\`\`bash\nnpm run build\n\`\`\`\n`;
-    [{ name: 'package.json', content: pkg }, { name: 'main.js', content: mainJs }, { name: 'README.md', content: readme }]
-      .forEach(({ name, content }) => {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = name; a.click();
-        URL.revokeObjectURL(url);
-      });
+    downloadElectronWrapper();
     toast.success('Downloaded Electron wrapper! See README for setup.');
   };
 
-  // Package the active file as a true standalone Windows .exe.
-  // Mechanism (same as PyInstaller / Node SEA / pkg / Deno compile):
-  //   [ prebuilt runtime stub (node SEA with embedded sdev interpreter) ]
-  //   [ SDEV source bytes ]
-  //   [ MAGIC "SDEVPACK" (8 bytes) ][ payload length (u64 LE) ]
-  // On launch the stub reads its own file, finds the magic trailer at EOF,
-  // extracts the payload, and runs the SDEV interpreter on it.
   const packageAsExe = async () => {
     if (!activeFile) { toast.error('No file open'); return; }
     const t = toast.loading('Packaging .exe — downloading runtime (~82 MB)…');
     try {
-      const res = await fetch(sdevStubAsset.url);
-      if (!res.ok) throw new Error(`stub fetch failed: ${res.status}`);
-      const stub = new Uint8Array(await res.arrayBuffer());
-      patchLegacyRuntimeStub(stub);
-      const payload = new TextEncoder().encode(activeFile.content);
-      const magic = new TextEncoder().encode('SDEVPACK'); // 8 bytes
-      const lenBuf = new ArrayBuffer(8);
-      new DataView(lenBuf).setBigUint64(0, BigInt(payload.length), true); // little-endian
-      const out = new Uint8Array(stub.length + payload.length + 8 + 8);
-      out.set(stub, 0);
-      out.set(payload, stub.length);
-      out.set(magic, stub.length + payload.length);
-      out.set(new Uint8Array(lenBuf), stub.length + payload.length + 8);
-
-      const blob = new Blob([out], { type: 'application/vnd.microsoft.portable-executable' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = activeFile.name.replace(/\.sdev$/i, '') + '.exe';
-      a.click();
-      URL.revokeObjectURL(url);
+      await packageSourceAsExe(activeFile.name, activeFile.content);
       toast.success('Compiled to .exe — double-click to run on Windows', {
         id: t,
         description: 'Graphical apps open as native Windows windows. Unsigned builds may still show SmartScreen until SDEV is code-signed.',
@@ -1491,11 +936,8 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
         const reader = new FileReader();
         reader.onload = async (ev) => {
           const raw = (ev.target?.result as string) ?? '';
-          // Signature-aware open: a file remembers the dialect it was written
-          // in, so we can show it in the words this IDE is currently using.
           const sig = readSignature(raw);
           const active = getActiveDialect();
-          // The signature line is metadata, never editor content.
           let content = stripSignature(raw);
           let note = '';
           if (sig?.dialect && sig.dialect !== (active?.meta.slug ?? null)) {
@@ -1513,7 +955,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           const id = nextFileId();
           const uploadedSum = checksum(content);
           const sigValid = Boolean(sig?.translated && (!sig.sum || sig.sum === uploadedSum));
-          const newFile: IdeFile = {
+          const newFileObj: IdeFile = {
             id,
             name: file.name,
             content,
@@ -1529,7 +971,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                 }
               : undefined,
           };
-          setFiles(prev => [...prev, newFile]);
+          setFiles(prev => [...prev, newFileObj]);
           setOpenIds(prev => [...prev, id]);
           setActiveId(id);
           toast.success(`Opened ${file.name}${note}`);
@@ -1553,19 +995,6 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
   const currentLines = currentContent.split('\n').length;
   const currentChars = currentContent.length;
 
-  const sidebarIcons = [
-    { id: 'explorer' as SidePanel, icon: FolderOpen, label: 'Explorer (Ctrl+B)' },
-    { id: 'search'   as SidePanel, icon: Search,    label: 'Search (Ctrl+Shift+F)' },
-    { id: 'outline'  as SidePanel, icon: ListTree,  label: 'Outline (Ctrl+Shift+O)' },
-    { id: 'problems' as SidePanel, icon: AlertCircle, label: `Problems (${problems.length})` },
-    { id: 'assistant' as SidePanel, icon: Sparkles,  label: 'AI Doctor — fix & explain' },
-    { id: 'hardware' as SidePanel, icon: Usb,       label: 'Hardware — boards & uploader' },
-    { id: 'runtime'  as SidePanel, icon: BookOpen,  label: 'Runtime & API Explorer' },
-    { id: 'classroom' as SidePanel, icon: Users,    label: 'Live Classroom & Pair Rooms' },
-    { id: 'personal' as SidePanel, icon: Languages, label: 'Personal sdev — dialects, libraries, extensions' },
-    { id: 'settings' as SidePanel, icon: Settings,  label: 'Settings' },
-  ];
-
   return (
     <TooltipProvider delayDuration={400}>
       <SEO title="IDE — sdev" description="Full-featured sdev IDE in your browser. File tree, terminal, debugger, and live preview for the sdev programming language." path="/ide" />
@@ -1573,617 +1002,181 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
         className={`ide-shell ide-theme-${settings.theme} relative flex flex-col h-screen text-foreground overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}
         style={{ fontFamily: settings.fontFamily, ...(IDE_THEME_VARS[settings.theme] as React.CSSProperties) }}
       >
-
-
-        {/* ── Title / Menu Bar ── */}
-        {!zenMode && <div className="ide-titlebar relative z-10 flex items-center justify-between px-3 py-1.5 flex-shrink-0 select-none">
-          {/* Left */}
-          <div className="flex items-center gap-2">
-            <h1 className="flex items-center gap-2 m-0 text-sm font-display font-bold pl-1">
-              <span className="relative flex items-center justify-center w-7 h-7">
-                <img src={sdevLogo} alt="" aria-hidden="true" className="w-7 h-7 object-contain" />
-              </span>
-              <span className="gradient-text hidden sm:block tracking-tight">SDEV IDE</span>
-              <span className="sr-only">sdev IDE</span>
-            </h1>
-            <div className="w-px h-4 bg-border/50 mx-1" />
-            {/* Menu items */}
-            <div className="hidden md:flex items-center">
-              {/* File Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="ide-menu-btn font-mono">File</button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-52 bg-card border-border/50">
-                  <DropdownMenuItem onClick={() => newFile()} className="text-xs gap-2 cursor-pointer">
-                    <Code className="w-3.5 h-3.5" /> New File <span className="ml-auto text-muted-foreground">⌃N</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={uploadFile} className="text-xs gap-2 cursor-pointer">
-                    <FolderOpen className="w-3.5 h-3.5" /> Open File…
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => void downloadCurrentFile('written')} className="text-xs gap-2 cursor-pointer">
-                    <Save className="w-3.5 h-3.5" /> Save (user-written) <span className="ml-auto text-muted-foreground">⌃S</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void downloadCurrentFile('translated')} className="text-xs gap-2 cursor-pointer">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" /> Download translated (.sdev)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => downloadAllFiles('written')} className="text-xs gap-2 cursor-pointer">
-                    <Download className="w-3.5 h-3.5" /> Save All Files
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShowGitHubPush(true)} className="text-xs gap-2 cursor-pointer">
-                    <Github className="w-3.5 h-3.5" /> Push to GitHub…
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={downloadElectron} className="text-xs gap-2 cursor-pointer">
-                    <Download className="w-3.5 h-3.5" /> Download Desktop App
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={resetToDefaults} className="text-xs gap-2 cursor-pointer text-destructive">
-                    <RotateCcw className="w-3.5 h-3.5" /> Reset to Defaults
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Edit Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="ide-menu-btn font-mono">Edit</button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-card border-border/50">
-                  <DropdownMenuItem onClick={formatCurrent} className="text-xs gap-2 cursor-pointer">
-                    <Wand2 className="w-3.5 h-3.5" /> Format Document <span className="ml-auto text-muted-foreground">⇧⌃I</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => editorRef.current?.openFind()} className="text-xs gap-2 cursor-pointer">
-                    <Search className="w-3.5 h-3.5" /> Find / Replace <span className="ml-auto text-muted-foreground">⌃F</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowGoToLine(true)} className="text-xs gap-2 cursor-pointer">
-                    <ArrowRight className="w-3.5 h-3.5" /> Go to Line… <span className="ml-auto text-muted-foreground">⌃G</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
-                    <RefreshCw className="w-3.5 h-3.5" /> Re-understand File
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={convertAiView} className="text-xs gap-2 cursor-pointer">
-                    <Wand2 className="w-3.5 h-3.5" /> {activeFile && /^\s*(\/\/[^\n]*\n\s*)*!#ai\b/.test(activeFile.content) ? 'Open as plain sdev' : 'Open as sdev:ai'}
-                  </DropdownMenuItem>
-                  {([['quiz.ai.sdev', 'sdev:ai example: quiz game'], ['todo.ai.sdev', 'sdev:ai example: to-do list']] as const).map(([file, label]) => (
-                    <DropdownMenuItem key={file} onClick={() => openSample(file)} className="text-xs gap-2 cursor-pointer">
-                      <Wand2 className="w-3.5 h-3.5" /> {label}
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Snippets</DropdownMenuLabel>
-                  {Object.entries(SNIPPETS).map(([name, snippet]) => (
-                    <DropdownMenuItem key={name} onClick={() => {
-                      if (!activeFile) return;
-                      editorRef.current?.insertAtCursor(snippet.replace(/\$[0-9]/g, ''));
-                      toast.success(`Inserted ${name} snippet`);
-                    }} className="text-xs gap-2 cursor-pointer font-mono">
-                      {name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* View Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="ide-menu-btn font-mono">View</button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-52 bg-card border-border/50">
-                  <DropdownMenuItem onClick={() => setSidePanel(p => p === 'explorer' ? null : 'explorer')} className="text-xs gap-2 cursor-pointer">
-                    <FolderOpen className="w-3.5 h-3.5" /> Explorer <span className="ml-auto text-muted-foreground">⌃B</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSidePanel(p => p === 'search' ? null : 'search')} className="text-xs gap-2 cursor-pointer">
-                    <Search className="w-3.5 h-3.5" /> Search <span className="ml-auto text-muted-foreground">⌃F</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setBottomPanel('terminal')} className="text-xs gap-2 cursor-pointer">
-                    <Terminal className="w-3.5 h-3.5" /> Terminal
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setBottomPanel('canvas'); setShowCanvas(true); }} className="text-xs gap-2 cursor-pointer">
-                    <Palette className="w-3.5 h-3.5" /> Canvas
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setIsFullscreen(f => !f)} className="text-xs gap-2 cursor-pointer">
-                    {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                    {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Run Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="ide-menu-btn font-mono">Run</button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-card border-border/50">
-                  <DropdownMenuItem onClick={runCode} className="text-xs gap-2 cursor-pointer">
-                    <Play className="w-3.5 h-3.5 text-neon-green" /> Run Program <span className="ml-auto text-muted-foreground">⌃↵</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void runCode({ noUnderstand: true })} className="text-xs gap-2 cursor-pointer">
-                    <Zap className="w-3.5 h-3.5 text-neon-cyan" /> Run without Understanding <span className="ml-auto text-muted-foreground">⇧⌃↵</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
-                    <RefreshCw className="w-3.5 h-3.5 text-primary" /> Re-understand & Run
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setRunMode('interpreter')} className="text-xs gap-2 cursor-pointer">
-                    <Zap className="w-3.5 h-3.5 text-neon-cyan" /> Tree-walk Interpreter {runMode === 'interpreter' && '✓'}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setRunMode('vm')} className="text-xs gap-2 cursor-pointer">
-                    <Cpu className="w-3.5 h-3.5 text-neon-violet" /> Compiler (full features) {runMode === 'vm' && '✓'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Help Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="ide-menu-btn font-mono">Help</button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-52 bg-card border-border/50">
-                  <DropdownMenuItem onClick={() => window.open('/documentation/02-language/v1-reference.md', '_blank')} className="text-xs gap-2 cursor-pointer">
-                    <BookOpen className="w-3.5 h-3.5" /> Documentation
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowCommandPalette(true)} className="text-xs gap-2 cursor-pointer">
-                    <Command className="w-3.5 h-3.5" /> Command Palette <span className="ml-auto text-muted-foreground">⌃P</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Keyboard Shortcuts</DropdownMenuLabel>
-                  <div className="px-2 py-1 text-xs text-muted-foreground space-y-1">
-                    <div className="flex justify-between"><span>Run code</span><kbd className="font-mono">⌃↵</kbd></div>
-                    <div className="flex justify-between"><span>Save file</span><kbd className="font-mono">⌃S</kbd></div>
-                    <div className="flex justify-between"><span>Command palette</span><kbd className="font-mono">⌃P</kbd></div>
-                    <div className="flex justify-between"><span>Toggle explorer</span><kbd className="font-mono">⌃B</kbd></div>
-                    <div className="flex justify-between"><span>Toggle search</span><kbd className="font-mono">⌃F</kbd></div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          {/* Right: quick actions */}
-          <div className="flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-                  onClick={() => navigate('/')}
-                  aria-label="Visit website"
-                >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Website</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Visit sdev website</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setShowCommandPalette(true)} aria-label="Open command palette">
-                  <Command className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Command Palette (Ctrl+P)</TooltipContent>
-            </Tooltip>
-
-            {/* Language selector */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 border border-border/40 rounded-md px-1.5 h-7 bg-background/20">
-                  <Languages className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                    <SelectTrigger className="h-5 w-[90px] border-0 bg-transparent text-xs p-0 focus:ring-0 font-mono text-muted-foreground">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border/50 max-h-64">
-                      {SUPPORTED_LANGUAGES.map(lang => (
-                        <SelectItem key={lang.value} value={lang.value} className="text-xs font-mono cursor-pointer">
-                          {lang.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  <div className="font-semibold mb-1">Code Language</div>
-                  <div>Write sdev in your language.</div>
-                  <div>The system translates to English on first run,</div>
-                  <div>then caches for instant future runs.</div>
-                  {(lastResult?.detectedLanguage || activeFile?.understood?.detectedLanguage) && (
-                    <div className="mt-1 text-primary">
-                      Last: {lastResult?.detectedLanguage ?? activeFile?.understood?.detectedLanguage}{' '}
-                      {(lastResult?.fromCache ?? activeFile?.understood?.fromCache) ? '(cached ⚡)' : '(translated ✨)'}
-                    </div>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-            {/* Show translated source toggle */}
-            {hasTranslation && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={showTranslated ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-                    onClick={() => setShowTranslated(v => !v)}
-                    aria-label={showTranslated ? 'Show original code' : 'Preview translated sdev'}
-                  >
-                    {showTranslated ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{showTranslated ? 'Show original code' : 'Preview translated sdev'}</TooltipContent>
-              </Tooltip>
-            )}
-
-            {activeFile && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs font-mono text-muted-foreground hover:text-primary"
-                    onClick={() => void reunderstandCurrentFile()}
-                    disabled={isRunning || isTranslating}
-                    aria-label="Re-understand code"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
-                    <span className="hidden lg:inline">Re-understand</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Clear cached reading and re-understand this file</TooltipContent>
-              </Tooltip>
-            )}
-
-            <div className="flex items-center gap-1 border border-border/40 rounded-md overflow-hidden">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setRunMode('interpreter')}
-                    className={`px-2 py-1 text-xs font-mono transition-all ${runMode === 'interpreter' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}`}
-                  >
-                    <Zap className="w-3 h-3 inline mr-1" />Interp
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Tree-walk Interpreter</TooltipContent>
-              </Tooltip>
-              <div className="w-px h-4 bg-border/40" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setRunMode('vm')}
-                    className={`px-2 py-1 text-xs font-mono transition-all ${runMode === 'vm' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}`}
-                  >
-                    <Cpu className="w-3 h-3 inline mr-1" />Compiler
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Compiler (full features)</TooltipContent>
-              </Tooltip>
-            </div>
-
-            {hasTranslation ? (
-              <DropdownMenu>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs border-border/50 h-7">
-                        <Save className="w-3 h-3" />
-                        <span className="hidden sm:inline">Save</span>
-                        <ChevronDown className="w-2.5 h-2.5 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>Download user-written or translated version</TooltipContent>
-                </Tooltip>
-                <DropdownMenuContent align="end" className="w-56 bg-card border-border/50">
-                  <DropdownMenuItem onClick={() => void downloadCurrentFile('written')} className="gap-2 text-xs cursor-pointer">
-                    <Save className="w-3.5 h-3.5 text-neon-cyan" /> User-written version (.sdev)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void downloadCurrentFile('translated')} className="gap-2 text-xs cursor-pointer">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" /> Translated version (.sdev)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={() => void downloadCurrentFile('written')} className="gap-1.5 text-xs border-border/50 h-7">
-                    <Save className="w-3 h-3" />
-                    <span className="hidden sm:inline">Save</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save file (Ctrl+S)</TooltipContent>
-              </Tooltip>
-            )}
-
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1 text-xs border-border/50 h-7 px-2" aria-label="Downloads">
-                      <Download className="w-3 h-3" />
-                      <ChevronDown className="w-2.5 h-2.5 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Downloads</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end" className="w-60 bg-card border-border/50">
-                <DropdownMenuLabel className="text-xs text-muted-foreground">Downloads</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void downloadCurrentFile('written')} className="gap-2 text-xs cursor-pointer">
-                  <Save className="w-3.5 h-3.5 text-neon-cyan" /> Current file — user-written (.sdev)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void downloadCurrentFile('translated')} className="gap-2 text-xs cursor-pointer">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Current file — translated (.sdev)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadAllFiles('written')} className="gap-2 text-xs cursor-pointer">
-                  <Download className="w-3.5 h-3.5 text-neon-green" /> All files (user-written)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => downloadAllFiles('translated')} className="gap-2 text-xs cursor-pointer">
-                  <Download className="w-3.5 h-3.5 text-primary" /> All files (translated)
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setShowWasiDialog(true)} className="gap-2 text-xs cursor-pointer">
-                  <Boxes className="w-3.5 h-3.5 text-emerald-400" />
-                  <div>
-                    <div className="font-medium">WASI 0.2 Component (.wasm)</div>
-                    <div className="text-muted-foreground text-[10px]">Polyglot .wit + Rust/Python/Node/Go</div>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={packageAsExe} className="gap-2 text-xs cursor-pointer">
-                  <Cpu className="w-3.5 h-3.5 text-neon-cyan" />
-                  <div>
-                    <div className="font-medium">Compile to .exe</div>
-                    <div className="text-muted-foreground text-[10px]">Standalone Windows binary (~82 MB)</div>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={downloadElectron} className="gap-2 text-xs cursor-pointer">
-                  <Bug className="w-3.5 h-3.5 text-neon-violet" />
-                  <div>
-                    <div className="font-medium">Electron Desktop App</div>
-                    <div className="text-muted-foreground text-[10px]">Windows / Mac / Linux</div>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div className="flex items-center">
-              <Button
-                size="sm"
-                onClick={runCode}
-                disabled={isRunning || isTranslating}
-                className="ide-run-btn gap-1.5 font-semibold h-7 text-xs min-w-[68px] rounded-l-md rounded-r-none border-0"
-              >
-                {isTranslating ? (
-                  <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Translating</span>
-                ) : isRunning ? (
-                  <span className="flex items-center gap-1"><span className="animate-spin">⟳</span> Running</span>
-                ) : (
-                  <><Play className="w-3 h-3 fill-current" /> Run</>
-                )}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    disabled={isRunning || isTranslating}
-                    aria-label="Run options"
-                    className="ide-run-btn h-7 px-1.5 rounded-r-md rounded-l-none border-0 border-l border-background/20"
-                  >
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-card border-border/50">
-                  <DropdownMenuItem onClick={runCode} className="text-xs gap-2 cursor-pointer">
-                    <Play className="w-3.5 h-3.5 text-neon-green" /> Run Program <span className="ml-auto text-muted-foreground">⌃↵</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void runCode({ noUnderstand: true })} className="text-xs gap-2 cursor-pointer">
-                    <Zap className="w-3.5 h-3.5 text-neon-cyan" /> Run without Understanding <span className="ml-auto text-muted-foreground">⇧⌃↵</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void reunderstandCurrentFile()} className="text-xs gap-2 cursor-pointer">
-                    <RefreshCw className="w-3.5 h-3.5 text-primary" /> Re-understand & Run
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {activeFile && (
-              <UserMenu
-                currentName={activeFile.name}
-                currentContent={activeFile.content}
-                currentCloudId={cloudIds[activeFile.id] ?? activeFile.cloudId ?? null}
-                onCloudIdChange={(cid) => {
-                  setCloudIds(prev => ({ ...prev, [activeFile.id]: cid }));
-                  // Tag the file itself so the workspace sync recognises it
-                  // and won't insert a duplicate or delete it on next flush.
-                  setFiles(prev => prev.map(f => f.id === activeFile.id ? { ...f, cloudId: cid } : f));
-                }}
-                onLoadFile={(name, content, cid) => {
-                  const existing = files.find(f => (cloudIds[f.id] ?? f.cloudId ?? null) === cid);
-                  if (existing) {
-                    setFiles(prev => prev.map(f => f.id === existing.id ? { ...f, name, content, cloudId: cid } : f));
-                    setOpenIds(prev => prev.includes(existing.id) ? prev : [...prev, existing.id]);
-                    setActiveId(existing.id);
-                    setCloudIds(prev => ({ ...prev, [existing.id]: cid }));
-                    return;
-                  }
-                  const id = nextFileId();
-                  // Tag the loaded file with its cloudId so workspace sync
-                  // updates this row instead of inserting a duplicate.
-                  const file: IdeFile = { id, name, content, cloudId: cid };
-                  setFiles(prev => [...prev, file]);
-                  setOpenIds(prev => [...prev, id]);
-                  setActiveId(id);
-                  setCloudIds(prev => ({ ...prev, [id]: cid }));
-                }}
-              />
-            )}
-          </div>
-        </div>}
+        {!zenMode && (
+          <IdeTitleBar
+            activeFile={activeFile}
+            currentCloudId={activeFile ? (cloudIds[activeFile.id] ?? activeFile.cloudId ?? null) : null}
+            runMode={runMode}
+            onSetRunMode={setRunMode}
+            isRunning={isRunning}
+            isTranslating={isTranslating}
+            selectedLanguage={selectedLanguage}
+            onSelectLanguage={setSelectedLanguage}
+            lastResult={lastResult}
+            hasTranslation={hasTranslation}
+            showTranslated={showTranslated}
+            onToggleShowTranslated={() => setShowTranslated(v => !v)}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => setIsFullscreen(f => !f)}
+            onNewFile={() => newFile()}
+            onUploadFile={uploadFile}
+            onDownloadCurrentFile={(variant) => void downloadCurrentFile(variant)}
+            onDownloadAllFiles={downloadAllFiles}
+            onOpenGitHubPush={() => setShowGitHubPush(true)}
+            onOpenWasiDialog={() => setShowWasiDialog(true)}
+            onDownloadElectron={downloadElectron}
+            onPackageAsExe={() => void packageAsExe()}
+            onResetToDefaults={resetToDefaults}
+            onFormatCurrent={formatCurrent}
+            onOpenFind={() => editorRef.current?.openFind()}
+            onOpenGoToLine={() => setShowGoToLine(true)}
+            onReunderstand={() => void reunderstandCurrentFile()}
+            onConvertAiView={() => void convertAiView()}
+            onOpenSample={(file) => void openSample(file)}
+            onInsertSnippet={(name, snippet) => {
+              if (!activeFile) return;
+              editorRef.current?.insertAtCursor(snippet.replace(/\$[0-9]/g, ''));
+              toast.success(`Inserted ${name} snippet`);
+            }}
+            onToggleSidePanel={(panel) => setSidePanel(p => p === panel ? null : panel)}
+            onSetBottomPanel={setBottomPanel}
+            onOpenCanvas={() => { setBottomPanel('canvas'); setShowCanvas(true); }}
+            onRunCode={() => void runCode()}
+            onRunWithoutUnderstanding={() => void runCode({ noUnderstand: true })}
+            onOpenCommandPalette={() => setShowCommandPalette(true)}
+            onNavigateHome={() => navigate('/')}
+            onCloudIdChange={(cid) => {
+              if (!activeFile) return;
+              setCloudIds(prev => ({ ...prev, [activeFile.id]: cid }));
+              setFiles(prev => prev.map(f => f.id === activeFile.id ? { ...f, cloudId: cid } : f));
+            }}
+            onLoadCloudFile={(name, content, cid) => {
+              const existing = files.find(f => (cloudIds[f.id] ?? f.cloudId ?? null) === cid);
+              if (existing) {
+                setFiles(prev => prev.map(f => f.id === existing.id ? { ...f, name, content, cloudId: cid } : f));
+                setOpenIds(prev => prev.includes(existing.id) ? prev : [...prev, existing.id]);
+                setActiveId(existing.id);
+                setCloudIds(prev => ({ ...prev, [existing.id]: cid }));
+                return;
+              }
+              const id = nextFileId();
+              const file: IdeFile = { id, name, content, cloudId: cid };
+              setFiles(prev => [...prev, file]);
+              setOpenIds(prev => [...prev, id]);
+              setActiveId(id);
+              setCloudIds(prev => ({ ...prev, [id]: cid }));
+            }}
+          />
+        )}
 
         {/* ── Activity Bar + Main Body ── */}
         <div className="relative z-10 flex flex-1 min-h-0 overflow-hidden">
           {!zenMode && (
-          <div className="ide-activitybar w-12 flex-shrink-0 flex flex-col items-center py-2 gap-1">
-            {sidebarIcons.map(({ id, icon: Icon, label }) => {
-              const active = sidePanel === id;
-              return (
-                <Tooltip key={id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => setSidePanel(p => p === id ? null : id)}
-                      data-active={active}
-                      className="ide-activity-btn"
-                      aria-label={label}
-                    >
-                      <Icon className="w-[18px] h-[18px]" />
-                      {id === 'problems' && problems.length > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center shadow-md">
-                          {problems.length > 9 ? '9+' : problems.length}
-                        </span>
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              );
-            })}
-            <div className="flex-1" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setZenMode(z => !z)}
-                  data-active={zenMode}
-                  className="ide-activity-btn"
-                  aria-label="Zen Mode"
-                >
-                  <Eye className="w-[18px] h-[18px]" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{zenMode ? 'Exit Zen Mode' : 'Zen Mode'}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setIsFullscreen(f => !f)}
-                  className="ide-activity-btn"
-                  aria-label="Fullscreen"
-                >
-                  {isFullscreen ? <Minimize2 className="w-[18px] h-[18px]" /> : <Maximize2 className="w-[18px] h-[18px]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</TooltipContent>
-            </Tooltip>
-          </div>
+            <IdeActivityBar
+              sidePanel={sidePanel}
+              onToggleSidePanel={setSidePanel}
+              problemsCount={problems.length}
+              zenMode={zenMode}
+              onToggleZenMode={() => setZenMode(z => !z)}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen(f => !f)}
+            />
           )}
 
           <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
-            {/* Sidebar panel */}
             {sidePanel && (
               <>
                 <ResizablePanel defaultSize={18} minSize={12} maxSize={35} className="ide-sidepanel flex min-h-0 flex-col">
                   <Suspense fallback={<div role="status" className="p-3 text-xs text-muted-foreground">Loading…</div>}>
-                  <h2 className="sr-only">Workspace files and tools</h2>
-                  {sidePanel === 'explorer' && (
-                    <IdeFileTree
-                      files={files}
-                      folders={folders}
-                      activeId={activeId}
-                      onSelect={selectFile}
-                      onNewFile={(fid) => newFile(fid)}
-                      onNewFolder={(pid) => newFolder(pid)}
-                      onDelete={deleteFile}
-                      onDeleteFolder={deleteFolder}
-                      onRename={renameFile}
-                      onRenameFolder={renameFolder}
-                      onToggleFolder={toggleFolder}
-                      onUpload={uploadFile}
-                      syncStatus={!user ? 'local' : (isSyncing ? 'syncing' : (lastSavedAt ? 'synced' : 'local'))}
-                    />
-                  )}
-                  {sidePanel === 'search' && (
-                    <IdeSearchPanel files={files} onSelectFile={selectFile} />
-                  )}
-                  {sidePanel === 'outline' && activeFile && (
-                    <IdeOutline code={activeFile.content} onJump={(line) => editorRef.current?.jumpToLine(line)} />
-                  )}
-                  {sidePanel === 'problems' && (
-                    <IdeProblems problems={problems} onJump={(line) => editorRef.current?.jumpToLine(line)} />
-                  )}
-                  {sidePanel === 'assistant' && (
-                    <IdeAssistantPanel
-                      code={activeFile?.content ?? ''}
-                      fileName={activeFile?.name}
-                      error={error}
-                      problemSummary={problems.slice(0, 5).map(p => `Line ${p.line}: ${p.message}`).join('\n')}
-                      onApply={(fixed) => {
-                        if (!activeFile) return;
-                        setFiles(prev => prev.map(f => f.id === activeId ? { ...f, content: fixed, modified: true } : f));
-                      }}
-                    />
-                  )}
-                  {sidePanel === 'hardware' && (
-                    <HardwarePanel
-                      source={activeFile?.content ?? ''}
-                      onAppendLog={(line) => setOutput(prev => [...prev, line])}
-                      onInsertCode={(snippet) => {
-                        if (!activeFile) return;
-                        updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);
-                      }}
-                    />
-                  )}
-                  {sidePanel === 'runtime' && (
-                    <RuntimeExplorerPanel
-                      initialQuery={runtimeQuery}
-                      onInsertCode={(snippet) => {
-                        if (!activeFile) return;
-                        updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);
-                      }}
-                    />
-                  )}
-                  {sidePanel === 'classroom' && (
-                    <LiveClassroomPanel
-                      fileName={activeFile?.name ?? 'main.sdev'}
-                      content={activeFile?.content ?? ''}
-                      cursor={cursor}
-                      lastOutput={output}
-                      lastError={error}
-                      onApplyRemoteCode={(newCode) => updateActiveContent(newCode)}
-                      onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
-                    />
-                  )}
-                  {sidePanel === 'personal' && (
-                    <PersonalPanel
-                      content={activeFile?.content}
-                      onReplaceContent={updateActiveContent}
-                    />
-                  )}
-                  {sidePanel === 'settings' && (
-                    <IdeSettingsPanel settings={settings} onChange={setSettings} />
-                  )}
+                    <h2 className="sr-only">Workspace files and tools</h2>
+                    {sidePanel === 'explorer' && (
+                      <IdeFileTree
+                        files={files}
+                        folders={folders}
+                        activeId={activeId}
+                        onSelect={selectFile}
+                        onNewFile={(fid) => newFile(fid)}
+                        onNewFolder={(pid) => newFolder(pid)}
+                        onDelete={deleteFile}
+                        onDeleteFolder={deleteFolder}
+                        onRename={renameFile}
+                        onRenameFolder={renameFolder}
+                        onToggleFolder={toggleFolder}
+                        onUpload={uploadFile}
+                        syncStatus={!user ? 'local' : (isSyncing ? 'syncing' : (lastSavedAt ? 'synced' : 'local'))}
+                      />
+                    )}
+                    {sidePanel === 'search' && (
+                      <IdeSearchPanel files={files} onSelectFile={selectFile} />
+                    )}
+                    {sidePanel === 'outline' && activeFile && (
+                      <IdeOutline code={activeFile.content} onJump={(line) => editorRef.current?.jumpToLine(line)} />
+                    )}
+                    {sidePanel === 'problems' && (
+                      <IdeProblems problems={problems} onJump={(line) => editorRef.current?.jumpToLine(line)} />
+                    )}
+                    {sidePanel === 'assistant' && (
+                      <IdeAssistantPanel
+                        code={activeFile?.content ?? ''}
+                        fileName={activeFile?.name}
+                        error={error}
+                        problemSummary={problems.slice(0, 5).map(p => `Line ${p.line}: ${p.message}`).join('\n')}
+                        onApply={(fixed) => {
+                          if (!activeFile) return;
+                          setFiles(prev => prev.map(f => f.id === activeId ? { ...f, content: fixed, modified: true } : f));
+                        }}
+                      />
+                    )}
+                    {sidePanel === 'hardware' && (
+                      <HardwarePanel
+                        source={activeFile?.content ?? ''}
+                        onAppendLog={(line) => setOutput(prev => [...prev, line])}
+                        onInsertCode={(snippet) => {
+                          if (!activeFile) return;
+                          updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);
+                        }}
+                      />
+                    )}
+                    {sidePanel === 'runtime' && (
+                      <RuntimeExplorerPanel
+                        initialQuery={runtimeQuery}
+                        onInsertCode={(snippet) => {
+                          if (!activeFile) return;
+                          updateActiveContent(activeFile.content + (activeFile.content.endsWith('\n') ? '' : '\n') + snippet);
+                        }}
+                      />
+                    )}
+                    {sidePanel === 'classroom' && (
+                      <LiveClassroomPanel
+                        fileName={activeFile?.name ?? 'main.sdev'}
+                        content={activeFile?.content ?? ''}
+                        cursor={cursor}
+                        lastOutput={output}
+                        lastError={error}
+                        onApplyRemoteCode={(newCode) => updateActiveContent(newCode)}
+                        onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
+                      />
+                    )}
+                    {sidePanel === 'personal' && (
+                      <PersonalPanel
+                        content={activeFile?.content}
+                        onReplaceContent={updateActiveContent}
+                      />
+                    )}
+                    {sidePanel === 'settings' && (
+                      <IdeSettingsPanel settings={settings} onChange={setSettings} />
+                    )}
                   </Suspense>
                 </ResizablePanel>
                 <ResizableHandle withHandle />
               </>
             )}
 
-            {/* Editor + Terminal */}
             <ResizablePanel defaultSize={sidePanel ? 82 : 100} className="flex min-h-0 flex-col">
               <ResizablePanelGroup direction="vertical" className="min-h-0">
-                {/* Editor */}
                 <ResizablePanel defaultSize={65} minSize={25} className="min-h-0">
                   <div className="flex h-full min-h-0 flex-col">
                     <IdeTabs files={openFiles} activeId={activeId} onSelect={selectFile} onClose={closeTab} />
-                    {/* Translation / Understander banner */}
                     {hasTranslation && (
                       <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border-b border-primary/20 text-xs font-mono">
                         <CheckCircle2 className="w-3 h-3 text-primary flex-shrink-0" />
@@ -2262,7 +1255,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                               key={activeFile.id}
                               value={activeFile.content}
                               onChange={updateActiveContent}
-                              onRun={runCode}
+                              onRun={() => void runCode()}
                               onFormat={formatCurrent}
                               fileName={activeFile.name}
                               problems={problems}
@@ -2290,9 +1283,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 
                 <ResizableHandle withHandle />
 
-                {/* Bottom panel */}
                 <ResizablePanel defaultSize={35} minSize={15} maxSize={65} className="min-h-0 overflow-hidden">
-                  {/* Panel tabs */}
                   <div className="ide-tabsbar flex items-center flex-shrink-0">
                     <button
                       onClick={() => setBottomPanel('terminal')}
@@ -2353,71 +1344,71 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
                   </div>
 
                   <Suspense fallback={<div role="status" className="p-3 text-xs text-muted-foreground">Loading…</div>}>
-                  {bottomPanel === 'terminal' && (
-                    <>
-                    <h2 className="sr-only">Terminal output</h2>
-                    <IdeTerminal
-                      lines={output}
-                      error={error}
-                      execTime={execTime}
-                      onClear={() => { setOutput([]); setError(undefined); setExecTime(null); }}
-                    />
-                    </>
-                  )}
-                  {bottomPanel === 'debugger' && (
-                    <TimeTravelDebugger
-                      source={activeFile?.content ?? ''}
-                      runtime={runMode === 'vm' ? 'v2' : 'v1'}
-                      onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
-                      onSyncCanvas={(cmds) => {
-                        setGraphicsCommands(cmds);
-                        setShowCanvas(true);
-                      }}
-                    />
-                  )}
-                  {bottomPanel === 'scratchpad' && (
-                    <LiveScratchpadPanel
-                      source={activeFile?.content ?? ''}
-                      onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
-                    />
-                  )}
-                  {bottomPanel === 'canvas' && showCanvas && (
-                    <div className="h-full overflow-auto p-2 bg-background/30">
-                      <CanvasPanel ref={canvasRef} commands={graphicsCommands} onClose={() => setShowCanvas(false)} />
-                    </div>
-                  )}
-                  {bottomPanel === 'app' && (
-                    <AppPreviewPanel
-                      state={uiState}
-                      invokeHandler={(id, args) => {
-                        const cb = uiHandlersRef.current.get(id);
-                        if (cb) {
-                          try {
-                            cb.fn(args ?? []);
-                            if (uiStateRef.current) {
-                              setUiState({
-                                nodes: new Map(uiStateRef.current.nodes),
-                                rootId: uiStateRef.current.rootId,
-                                values: new Map(uiStateRef.current.values),
-                              });
+                    {bottomPanel === 'terminal' && (
+                      <>
+                        <h2 className="sr-only">Terminal output</h2>
+                        <IdeTerminal
+                          lines={output}
+                          error={error}
+                          execTime={execTime}
+                          onClear={() => { setOutput([]); setError(undefined); setExecTime(null); }}
+                        />
+                      </>
+                    )}
+                    {bottomPanel === 'debugger' && (
+                      <TimeTravelDebugger
+                        source={activeFile?.content ?? ''}
+                        runtime={runMode === 'vm' ? 'v2' : 'v1'}
+                        onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
+                        onSyncCanvas={(cmds) => {
+                          setGraphicsCommands(cmds);
+                          setShowCanvas(true);
+                        }}
+                      />
+                    )}
+                    {bottomPanel === 'scratchpad' && (
+                      <LiveScratchpadPanel
+                        source={activeFile?.content ?? ''}
+                        onJumpToLine={(line) => editorRef.current?.jumpToLine(line)}
+                      />
+                    )}
+                    {bottomPanel === 'canvas' && showCanvas && (
+                      <div className="h-full overflow-auto p-2 bg-background/30">
+                        <CanvasPanel ref={canvasRef} commands={graphicsCommands} onClose={() => setShowCanvas(false)} />
+                      </div>
+                    )}
+                    {bottomPanel === 'app' && (
+                      <AppPreviewPanel
+                        state={uiState}
+                        invokeHandler={(id, args) => {
+                          const cb = uiHandlersRef.current.get(id);
+                          if (cb) {
+                            try {
+                              cb.fn(args ?? []);
+                              if (uiStateRef.current) {
+                                setUiState({
+                                  nodes: new Map(uiStateRef.current.nodes),
+                                  rootId: uiStateRef.current.rootId,
+                                  values: new Map(uiStateRef.current.values),
+                                });
+                              }
+                            } catch (e) {
+                              toast.error(String(e));
                             }
-                          } catch (e) {
-                            toast.error(String(e));
                           }
-                        }
-                      }}
-                      setValue={(k, v) => {
-                        if (uiStateRef.current) uiStateRef.current.values.set(k, v);
-                        setUiState(prev => prev ? { ...prev, values: new Map(prev.values).set(k, v) } : prev);
-                      }}
-                    />
-                  )}
-                  {bottomPanel === 'web' && (
-                    <WebPreviewPanel state={webState} />
-                  )}
-                  {bottomPanel === 'problems' && (
-                    <IdeProblems problems={problems} onJump={(line) => editorRef.current?.jumpToLine(line)} />
-                  )}
+                        }}
+                        setValue={(k, v) => {
+                          if (uiStateRef.current) uiStateRef.current.values.set(k, v);
+                          setUiState(prev => prev ? { ...prev, values: new Map(prev.values).set(k, v) } : prev);
+                        }}
+                      />
+                    )}
+                    {bottomPanel === 'web' && (
+                      <WebPreviewPanel state={webState} />
+                    )}
+                    {bottomPanel === 'problems' && (
+                      <IdeProblems problems={problems} onJump={(line) => editorRef.current?.jumpToLine(line)} />
+                    )}
                   </Suspense>
                 </ResizablePanel>
               </ResizablePanelGroup>
@@ -2425,7 +1416,6 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
           </ResizablePanelGroup>
         </div>
 
-        {/* ── Status Bar ── */}
         <IdeStatusBar
           statusMsg={statusMsg}
           runMode={runMode}
@@ -2454,38 +1444,41 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
         />
 
         <Suspense fallback={null}>
-        {/* Command Palette */}
-        {showCommandPalette && (
-          <IdeCommandPalette
-            files={files}
-            onClose={() => setShowCommandPalette(false)}
-            onSelectFile={(id) => { selectFile(id); setShowCommandPalette(false); }}
-            onNewFile={() => { newFile(); setShowCommandPalette(false); }}
-            onRun={() => { runCode(); setShowCommandPalette(false); }}
-            onRunWithoutUnderstanding={() => { void runCode({ noUnderstand: true }); setShowCommandPalette(false); }}
-            onTogglePanel={(panel) => { setSidePanel(p => p === panel ? null : panel); setShowCommandPalette(false); }}
+          {showCommandPalette && (
+            <IdeCommandPalette
+              files={files}
+              onClose={() => setShowCommandPalette(false)}
+              onSelectFile={(id) => { selectFile(id); setShowCommandPalette(false); }}
+              onNewFile={() => { newFile(); setShowCommandPalette(false); }}
+              onRun={() => { void runCode(); setShowCommandPalette(false); }}
+              onRunWithoutUnderstanding={() => { void runCode({ noUnderstand: true }); setShowCommandPalette(false); }}
+              onTogglePanel={(panel) => { setSidePanel(p => p === panel ? null : panel); setShowCommandPalette(false); }}
+            />
+          )}
+
+          <IdeGoToLine
+            open={showGoToLine}
+            totalLines={currentLines}
+            onClose={() => setShowGoToLine(false)}
+            onGo={(line) => editorRef.current?.jumpToLine(line)}
           />
-        )}
 
-        <IdeGoToLine
-          open={showGoToLine}
-          totalLines={currentLines}
-          onClose={() => setShowGoToLine(false)}
-          onGo={(line) => editorRef.current?.jumpToLine(line)}
-        />
+          {showGitHubPush && (
+            <GitHubPushDialog
+              open={showGitHubPush}
+              onOpenChange={setShowGitHubPush}
+              files={files}
+            />
+          )}
 
-        {showGitHubPush && <GitHubPushDialog
-          open={showGitHubPush}
-          onOpenChange={setShowGitHubPush}
-          files={files}
-        />}
-
-        {showWasiDialog && <WasiComponentDialog
-          open={showWasiDialog}
-          onOpenChange={setShowWasiDialog}
-          source={activeFile?.content ?? ''}
-          fileName={activeFile?.name ?? 'module.sdev'}
-        />}
+          {showWasiDialog && (
+            <WasiComponentDialog
+              open={showWasiDialog}
+              onOpenChange={setShowWasiDialog}
+              source={activeFile?.content ?? ''}
+              fileName={activeFile?.name ?? 'module.sdev'}
+            />
+          )}
         </Suspense>
 
         <DesktopNativeButton getSource={() => activeFile?.content ?? ''} />

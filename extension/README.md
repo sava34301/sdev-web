@@ -95,3 +95,32 @@ code --install-extension SDEV-language-5.1.0.vsix
 ## License
 
 MIT
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`interpreter/`](./interpreter/) | Bundled runtime artifacts shipped inside the VS Code extension: the unified Node CLI (`sdev-cli.mjs`), Python interpreter (`sdev-interpreter.py`), WebAssembly Seed VM (`sdev-seed.wasm`), and x86-64 assembly runtime (`runtime.s`). |
+| [`snippets/`](./snippets/) | VS Code code snippets (`sdev.json`) covering SDEV v1, SDEV v2, UI widgets, and hardware `board` blocks. |
+| [`syntaxes/`](./syntaxes/) | TextMate grammar (`sdev.tmLanguage.json`) for `.sdev` and `.sdv` syntax highlighting in VS Code. |
+| [`vsix-meta/`](./vsix-meta/) | OpenVSIX packaging manifests (`extension.vsixmanifest` and `[Content_Types].xml`) used by `scripts/release.mjs` to build `sdev-language.vsix`. |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `.vscodeignore` | Project file (`.vscodeignore`). |
+| `CHANGELOG.md` | Changelog |
+| `extension.js` | sdev VS Code extension — main entry point. |
+| `icon.png` | Project file (`icon.png`). |
+| `language-configuration.json` | JSON configuration or data artifact (`language-configuration.json`). |
+| `LICENSE.txt` | Project file (`LICENSE.txt`). |
+| `package.json` | Node.js package manifest, dependencies, and npm scripts. |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+
+<!-- FOLDER_INVENTORY_END -->

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, FileCode, ChevronRight, RefreshCw } from 'lucide-react';
-import type { IdeFile } from './types';
+import { Search, FileCode, ChevronRight } from 'lucide-react';
+import type { IdeFile } from '@/ide/types';
 
 interface Match {
   fileId: string;
@@ -12,14 +12,12 @@ interface Match {
 
 interface Props {
   files: IdeFile[];
-  onSelectFile: (id: string) => void;
+  onSelectFile: (id: string, line?: number) => void;
 }
 
 export function IdeSearchPanel({ files, onSelectFile }: Props) {
   const [query, setQuery] = useState('');
-  const [replaceQuery, setReplaceQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
-  const [showReplace, setShowReplace] = useState(false);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
   const matches: Match[] = [];
@@ -68,13 +66,6 @@ export function IdeSearchPanel({ files, onSelectFile }: Props) {
           <Search className="w-3.5 h-3.5 text-neon-cyan" />
           <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Search</span>
         </div>
-        <button
-          onClick={() => setShowReplace(!showReplace)}
-          className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-neon-cyan transition-colors"
-          title="Toggle replace"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {/* Search inputs */}
@@ -95,14 +86,6 @@ export function IdeSearchPanel({ files, onSelectFile }: Props) {
             Aa
           </button>
         </div>
-        {showReplace && (
-          <input
-            value={replaceQuery}
-            onChange={e => setReplaceQuery(e.target.value)}
-            placeholder="Replace…"
-            className="w-full bg-background/60 border border-border/40 rounded px-2 py-1.5 text-xs font-mono text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/50"
-          />
-        )}
         {query && (
           <div className="text-[10px] text-muted-foreground/60 font-mono px-1">
             {matches.length} result{matches.length !== 1 ? 's' : ''} in {Object.keys(byFile).length} file{Object.keys(byFile).length !== 1 ? 's' : ''}
@@ -134,7 +117,7 @@ export function IdeSearchPanel({ files, onSelectFile }: Props) {
               {isExpanded && fileMatches.map((match, i) => (
                 <div
                   key={i}
-                  onClick={() => onSelectFile(fileId)}
+                  onClick={() => onSelectFile(fileId, match.line)}
                   className="flex items-start gap-2 px-4 py-1 cursor-pointer hover:bg-primary/5 group"
                 >
                   <span className="text-[10px] text-muted-foreground/40 font-mono w-6 flex-shrink-0 text-right pt-0.5">{match.line}</span>

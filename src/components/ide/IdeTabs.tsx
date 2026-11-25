@@ -1,5 +1,5 @@
 import { X, FileCode2, FileText, FileJson, Braces, Circle } from 'lucide-react';
-import type { IdeFile } from './types';
+import type { IdeFile } from '@/ide/types';
 
 interface Props {
   files: IdeFile[];

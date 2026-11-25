@@ -43,3 +43,17 @@ POST /  { fqbn, ino, libraries[] }
    ->   { ok: true, hex, format: "ihex" | "base64-bin" }
    ->   { ok: false, error, log }
 ```
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+| `server.mjs` | Local HTTP bridge around `arduino-cli` for the SDEV IDE Hardware panel. |
+
+<!-- FOLDER_INVENTORY_END -->

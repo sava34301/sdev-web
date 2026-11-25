@@ -22,12 +22,13 @@
 //                                           oracle (differential testing only)
 //   read_file("sdev:driver:baked")        → checked-in compiler build, hex
 //   write_file("sdev:append:<path>", t)   → append t to a real file
+//   write_file("sdev:rm:<path>", "")      → delete a real file
 //   write_file("sdev:exit:<code>", "")    → set the process exit code
 //   write_file("sdev:err", text)          → write to stderr
 //   any other path                        → the real filesystem
 // ─────────────────────────────────────────────────────────────────────────
 
-import { readFileSync, writeFileSync, appendFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { compile as selfCompile, compileWith, bakedDriver } from '../src/lang-bridge/compile-self.mjs';
 import { applyFmath, writeBlobToMemory, readSliceFromMemory } from '../src/lang-bridge/seed-vm.mjs';
@@ -255,6 +256,9 @@ async function main() {
         if (path === 'sdev:err') { process.stderr.write(data); return 0; }
         if (path.startsWith('sdev:append:')) {
           try { appendFileSync(path.slice(12), data); return 0; } catch { return -1; }
+        }
+        if (path.startsWith('sdev:rm:')) {
+          try { unlinkSync(path.slice(8)); return 0; } catch { return -1; }
         }
         try { writeFileSync(path, data); return 0; } catch { return -1; }
       },

@@ -2,7 +2,8 @@
  * The understanding agent: rules, memory, directives and dialect promotion.
  * Run with: npm run test:agent
  */
-import { understand, repair, scanDirectives, promoteToDialect, setMemoryStore, emptyMemory, type AgentMemory } from '../src/lang/agent';
+import { understand, repair, scanDirectives, promoteToDialect, setMemoryStore, emptyMemory, parses, type AgentMemory } from '../src/lang/agent';
+import { parseError } from '../src/lang/agent/sense';
 import { execute } from '../src/lang';
 
 let memory: AgentMemory = emptyMemory();
@@ -126,5 +127,8 @@ check('hardware: the documented script-style example gets setup() and loop()',
   const r = understand('board "uno" ::\n  conjure setup() ::\n  ;;\n  conjure loop() ::\n    do the macarena with the servo\n  ;;\n;;\n');
   check('hardware: a line no rule can read is reported, not guessed', JSON.stringify(r.unresolved), '[5]');
 }
+check('parses returns true for valid code', String(parses('set x to 5') && parses('to foo() \n 1 \n end')), 'true');
+check('parses returns false for invalid code', String(!parses('set x to') && !parses('function () {')), 'true');
+check('parseError returns null for valid code and string for invalid', String(parseError('set x to 5') === null && typeof parseError('set x to') === 'string'), 'true');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

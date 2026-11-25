@@ -17,9 +17,6 @@ import { useDialects } from '@/hooks/useDialects';
 import { useCloudFiles } from '@/hooks/useCloudFiles';
 import { presetList } from '@/lang/dialect/presets';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 interface MyExtension {
   id: string;
   name: string;
@@ -48,11 +45,11 @@ export default function MySdev() {
     if (!user) { setExtensions([]); setGists([]); return; }
     try {
       const [e, g] = await Promise.all([
-        db.from('sdev_extensions').select('id, name, kind, about, source, visibility').eq('user_id', user.id).order('created_at', { ascending: false }),
-        db.from('gists').select('id, slug, title, view_count').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('sdev_extensions').select('id, name, kind, about, source, visibility').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('gists').select('id, slug, title, view_count').eq('user_id', user.id).order('created_at', { ascending: false }),
       ]);
-      setExtensions(Array.isArray(e.data) ? e.data : []);
-      setGists(Array.isArray(g.data) ? g.data : []);
+      setExtensions(Array.isArray(e.data) ? (e.data as MyExtension[]) : []);
+      setGists(Array.isArray(g.data) ? (g.data as MyGist[]) : []);
     } catch { /* offline */ }
   }, [user]);
 
@@ -80,7 +77,13 @@ export default function MySdev() {
   };
 
   const removeExtension = async (id: string) => {
-    try { await db.from('sdev_extensions').delete().eq('id', id); load(); } catch { /* noop */ }
+    try {
+      const { error } = await supabase.from('sdev_extensions').delete().eq('id', id);
+      if (error) throw error;
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not delete extension');
+    }
   };
 
   return (

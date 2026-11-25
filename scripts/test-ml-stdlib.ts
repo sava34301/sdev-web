@@ -10,7 +10,7 @@
  *
  *   node scripts/run-ts.mjs scripts/test-ml-stdlib.ts
  */
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, unlinkSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -395,6 +395,13 @@ speak(magic + "|" + str(meta.ok) + "|" + str(meta.version) + "|" + str(meta.step
     return null;
   }
 );
+
+for (const tmp of ['/tmp/sdev-ckpt.txt', '/tmp/sdev-ckpt.bin']) {
+  const p = resolveHostPath(tmp);
+  if (existsSync(p)) {
+    try { unlinkSync(p); } catch { /* ignore */ }
+  }
+}
 
 console.log(failures === 0 ? '\nAll ML stdlib checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

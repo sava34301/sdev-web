@@ -21,6 +21,7 @@ import { serializeDialectToSdev } from '@/lang/dialect/sdev-format';
 import { dialectize } from '@/lang/dialect/canonicalize';
 import { SAMPLE } from '@/lang/dialect/sample';
 import { getOrGenerateDocs } from '@/lang/dialect/docs';
+import { downloadText } from '@/lib/download';
 
 const GROUP_ORDER: CatalogGroup[] = ['core', 'control', 'functions', 'errors', 'objects', 'modules', 'literals', 'operators', 'builtins'];
 
@@ -121,13 +122,7 @@ export default function Dialects() {
 
   const handleExport = () => {
     if (!draft) return;
-    const blob = new Blob([serializeDialectToSdev(draft)], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${draft.meta.slug}.dialect.sdev`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(serializeDialectToSdev(draft), `${draft.meta.slug}.dialect.sdev`);
   };
 
   /** Living documentation: the core reference, rendered in this dialect's words. */
@@ -145,13 +140,7 @@ export default function Dialects() {
       }
     } catch { /* offline: render locally */ }
     const docs = await getOrGenerateDocs(db, draft, dialectId);
-    const blob = new Blob([docs.content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${draft.meta.slug}.documentation.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(docs.content, `${draft.meta.slug}.documentation.md`, 'text/markdown');
     toast.success(docs.regenerated ? `Documentation regenerated from core template v${docs.templateVersion}` : 'Documentation ready');
   };
 
@@ -225,15 +214,7 @@ export default function Dialects() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      const blob = new Blob([serializeDialectToSdev(d)], { type: 'text/plain' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${d.meta.slug}.dialect.sdev`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
+                    onClick={() => downloadText(serializeDialectToSdev(d), `${d.meta.slug}.dialect.sdev`)}
                     aria-label={`Download ${d.meta.name} as .sdev`}
                     title="Download .dialect.sdev"
                   >

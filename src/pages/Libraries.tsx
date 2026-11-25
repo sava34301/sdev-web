@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cachedLibraries, exportOfflineBundle, fetchLibrary, forgetBundle, importOfflineBundle, type LibraryBundle } from '@/lang/dialect/registry';
 import { parseAddress } from '@/lang/dialect/address';
+import { downloadText } from '@/lib/download';
 
 const db = supabase;
 
@@ -94,11 +95,7 @@ export default function Libraries() {
   };
 
   const downloadOffline = () => {
-    const blob = new Blob([exportOfflineBundle()], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'sdev-libraries.bundle.json'; a.click();
-    URL.revokeObjectURL(url);
+    downloadText(exportOfflineBundle(), 'sdev-libraries.bundle.json', 'application/json');
   };
 
   const uploadOffline = async (file: File) => {

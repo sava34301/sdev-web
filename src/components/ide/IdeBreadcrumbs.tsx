@@ -1,5 +1,5 @@
 import { ChevronRight, FileCode, Folder } from 'lucide-react';
-import type { IdeFile, IdeFolder } from './types';
+import type { IdeFile, IdeFolder } from '@/ide/types';
 
 interface Props {
   file?: IdeFile;

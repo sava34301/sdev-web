@@ -169,3 +169,45 @@ The entire language toolchain is tested using the SDEV host environment (`node b
 | **Self-Hosted Subsystems** | `node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev` | VM, Kernel, Translator, Frontend, Paradigms, Linter |
 | **OCE Parity** | `npm run test:oce-parity` | Dual-runtime parity across Seed VM, JS builtins & Python interpreter |
 | **Parity Gate** | `npm run test:parity` | 209 features across 3 tracks (`lang/parity/features.json`) |
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`agent/`](./agent/) | Pure-SDEV rule-first Code Understander (`understander.sdev`), `!#ai` dialect translator (`ai-dialect.sdev`), block closer (`blocks.sdev`), self-hosted parser/evaluator (`parser_eval.sdev`), natural-language math/task solvers, memory, and AI brain helpers. |
+| [`bootstrap/`](./bootstrap/) | Stage-0 bootstrap bytecode compiler (`bootstrap.sdev`) and WebAssembly Seed VM opcode/LEB128 specification (`seed_vm.sdev`). |
+| [`bridge/`](./bridge/) | Pure-SDEV WebAssembly `.wasm`/`.wat` binary seed emitter (`wasm_seed_emitter.sdev`) and self-compiler host bridge (`self_bridge.sdev`). |
+| [`builtins/`](./builtins/) | Pure-SDEV implementations of higher-order list & functional builtins (`functional_list.sdev`), JSON/tome helpers (`json_dict.sdev`), and time/I/O/host primitives (`time_io_host.sdev`). |
+| [`compiler/`](./compiler/) | Self-hosted SDEV v2 compiler (`lexer.sdev`, `parser.sdev`, `codegen.sdev`, `driver.sdev`) and self-hosted SDEV v1 compiler toolchain (`v1_lexer.sdev`, `v1_parser.sdev`, `v1_codegen.sdev`, `v1_driver.sdev`, `v1_ir.sdev`, and the 100% pure-v1 fixed-point compiler `v1_self.sdev`). |
+| [`core/`](./core/) | Pure-SDEV core language primitives: v1/v2 keywords & AST structures (`keywords_ast.sdev`), live scratchpad evaluator (`interpreter_live.sdev`), module linker & micro-benchmarker (`linker_bench.sdev`), and CRDT collaborative room engine (`collab_room.sdev`). |
+| [`dialect/`](./dialect/) | Pure-SDEV Personal Dialect engine (`dialect.sdev`), 46-word catalog (`spec_catalog.sdev`), built-in presets (`presets.sdev`), `#⟨sdev⟩` file signatures (`signature.sdev`), living docs generator (`docs.sdev`), and library/extension registry (`extensions_registry.sdev`). |
+| [`formatter/`](./formatter/) | Pure-SDEV canonical code formatter (`formatter.sdev`) normalizing block indentation, comments, strings, and whitespace. |
+| [`hardware/`](./hardware/) | Pure-SDEV microcontroller support: 30-board database (`board_db.sdev`), Arduino API catalogue (`arduino_api.sdev`), `board` block stripper (`strip.sdev`), natural-language hardware reader (`understand.sdev`), `.ino` C++ transpiler (`transpile.sdev`), virtual breadboard simulator (`simulator.sdev`), and STK500/UF2/Intel HEX protocol engine (`serial_cloud.sdev`). |
+| [`ide/`](./ide/) | Pure-SDEV IDE intelligence helpers (`intelligence.sdev`) and 3D scene/router logic (`scene_router.sdev`). |
+| [`legacy/`](./legacy/) | Pure-SDEV v1-to-v2 source transpiler (`v1_frontend.sdev`) converting classic `forge`/`conjure`/`::`/`;;` syntax into canonical SDEV v2. |
+| [`linter/`](./linter/) | Pure-SDEV static diagnostic linter (`linter.sdev`) with Levenshtein distance suggestions and diagnostic rules. |
+| [`mcp/`](./mcp/) | Pure-SDEV Model Context Protocol (MCP) JSON-RPC 2.0 server and tool definitions (`mcp_server.sdev`). |
+| [`native/`](./native/) | Pure-SDEV native x86-64 backend: System V AMD64 GAS assembly codegen (`codegen_x64.sdev`), assembly runtime generator (`runtime_x64.sdev`), ELF linker driver (`link.sdev`), standalone build driver (`build.sdev`), and Windows PE32+ `.exe` emitter (`pe_x64.sdev`). |
+| [`paradigms/`](./paradigms/) | Pure-SDEV multi-paradigm modules: functional ADTs (`Option`/`Result` in `functional.sdev`), Feature-Oriented Programming & SPL feature models (`feature.sdev`), low-level memory arenas (`systems.sdev`), relational tables & CSV/Markdown export (`data.sdev`), and embedded Arduino C++ transpilation (`hardware.sdev`). |
+| [`parity/`](./parity/) | Cross-track feature parity registry (`features.json`), pure-SDEV parity audit agent (`agent.sdev`), and machine-verified report (`report.json`) tracking 209 features across v1, v2 WASM, and native x86-64. |
+| [`registry/`](./registry/) | Pure-SDEV mirror of the Canonical API Registry and `SDEV001`–`SDEV015` diagnostic catalogue (`registry.sdev`). |
+| [`runtime/`](./runtime/) | Pure-SDEV stack bytecode virtual machine (`vm.sdev`), virtual OS kernel with VFS/processes/syscalls (`kernel.sdev`), literate notebook engine (`notebook.sdev`), and WASI 0.2 component generator (`wasi.sdev`). |
+| [`server/`](./server/) | Pure-SDEV cloud edge function handlers and OpenAI-compatible AI provider router (`edge_functions.sdev`). |
+| [`stdlib/`](./stdlib/) | Top-level SDEV standard library directory containing `v2/` core modules, `ml/` machine learning modules, C ABI Foreign Function Interface (`ffi.sdev`), WebGPU compute (`webgpu.sdev`), and the self-hosted test assertion kit (`testkit.sdev`). |
+| [`studio/`](./studio/) | Pure-SDEV Time-Travel Chrono step debugger and Live Lens variable/loop state tracer (`time_travel.sdev`). |
+| [`tools/`](./tools/) | Pure-SDEV release manifest & documentation generator (`release_docs.sdev`) and 1:1 repository mirror engine (`mirror_1to1.sdev`). |
+| [`translator/`](./translator/) | Pure-SDEV 26-language natural keyword translator and Unicode script detector (`translator.sdev`). |
+| [`web/`](./web/) | Pure-SDEV Website Building Toolkit (`html.sdev`, `css.sdev`, `themes.sdev`, `icons.sdev`, `components.sdev`, `transpiler.sdev`) and the self-hosted sdev website (`sdev-website.sdev`). |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+
+<!-- FOLDER_INVENTORY_END -->

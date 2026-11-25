@@ -9,9 +9,9 @@ function check(name: string, fn: () => void) {
     fn();
     console.log(`✓ ${name}`);
     passed++;
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.log(`✗ ${name}`);
-    console.error(e.message || e);
+    console.error(e instanceof Error ? e.message : e);
     failed++;
   }
 }
@@ -21,18 +21,19 @@ function expectThrow(name: string, errorSubstr: string, fn: () => void) {
     fn();
     console.log(`✗ ${name} (expected to throw)`);
     failed++;
-  } catch (e: any) {
-    if (e.message && e.message.includes(errorSubstr)) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes(errorSubstr)) {
       console.log(`✓ ${name} (threw expected error)`);
       passed++;
     } else {
-      console.log(`✗ ${name} (threw unexpected error: ${e.message || e})`);
+      console.log(`✗ ${name} (threw unexpected error: ${msg})`);
       failed++;
     }
   }
 }
 
-function assertDeepEqual(actual: any, expected: any) {
+function assertDeepEqual(actual: unknown, expected: unknown) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
   }

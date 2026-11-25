@@ -29,21 +29,27 @@ const singleExpected = `let x = 1;
 say x;`;
 check('one block', stripBoardBlocks(singleBlock), singleExpected);
 
-const unclosedBlock = `board "uno" {
+const unclosedBlock = `let x = 1;
+board "uno" {
   pin 13 be output`;
-check('invalid block (unclosed)', stripBoardBlocks(unclosedBlock), unclosedBlock);
+check('unclosed block stripped so unfinished firmware is never parsed as sdev', stripBoardBlocks(unclosedBlock), 'let x = 1;\n\n');
 
-const multipleBlocks = `board "uno" { }
+const multipleBlocks = `board "uno" {
+  pin 13 be output
+}
 let y = 2;
 board "mega" {
   wait 100
 }`;
-const multipleExpected = `
-let y = 2;
-
-
-`;
+const multipleExpected = `\n\n\nlet y = 2;\n\n\n`;
 check('multiple blocks', stripBoardBlocks(multipleBlocks), multipleExpected);
+
+const colonBlock = `forge a be 1
+board "uno" ::
+  pin 13 be output
+;;
+speak(a)`;
+check(':: ... ;; board block', stripBoardBlocks(colonBlock), `forge a be 1\n\n\n\nspeak(a)`);
 
 const blockWithQuotes = `board "uno" {
   use "Servo"

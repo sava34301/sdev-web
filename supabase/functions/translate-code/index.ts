@@ -1,11 +1,6 @@
 import { requireUser } from '../_shared/auth.ts';
-import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { aiKey, aiUrl, aiHeaders, aiModel, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
+import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/http.ts';
 
 const SDEV_SYNTAX_GUIDE = `
 SDEV Language COMPLETE Reference - Follow these rules EXACTLY. Any deviation = broken code.
@@ -298,10 +293,9 @@ CRITICAL: sdev has NO DOM, NO HTML, NO CSS. Everything visual = canvas commands.
 The output should recreate the LOOK of the website as a canvas drawing.
 `;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (req) => {
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
   const denied = await requireUser(req, corsHeaders);
   if (denied) return denied;
@@ -311,28 +305,16 @@ serve(async (req) => {
 
     const VALID_LANGS = ['html-css-js','python','javascript','typescript','java','csharp','cpp','c','go','rust','ruby','php','swift','kotlin','lua','html','css','sdev-fix','auto'];
     if (!code || typeof code !== 'string' || !sourceLanguage || typeof sourceLanguage !== 'string') {
-      return new Response(
-        JSON.stringify({ error: "Missing or invalid code/sourceLanguage" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Missing or invalid code/sourceLanguage", 400);
     }
     if (code.length > 50000) {
-      return new Response(
-        JSON.stringify({ error: "Code too long (max 50000 chars)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Code too long (max 50000 chars)", 400);
     }
     if (!VALID_LANGS.includes(sourceLanguage)) {
-      return new Response(
-        JSON.stringify({ error: "Unsupported sourceLanguage" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Unsupported sourceLanguage", 400);
     }
 
-    const AI_KEY = aiKey();
-    if (!AI_KEY) {
-      throw new Error(AI_NOT_CONFIGURED);
-    }
+    if (!aiKey()) return errorResponse(AI_NOT_CONFIGURED, 500);
 
     const isWebCode = sourceLanguage === 'html' || sourceLanguage === 'html-css-js';
     const isFix = sourceLanguage === 'sdev-fix';
@@ -366,16 +348,16 @@ ABSOLUTE RULES - VIOLATION = BROKEN CODE:
 11. String length/list length: measure() — NEVER use .length/.len()/.size()
 12. Floor: ground() — NEVER use floor/Math.floor
 13. Ceiling: elevate() — NEVER use ceil/Math.ceil
-14. Abs: absolute() — NEVER use abs/Math.abs
+14. Abs: magnitude() — NEVER use abs/Math.abs
 15. Sqrt: root() — NEVER use sqrt/Math.sqrt
 16. Push/append: gather() — NEVER use .push/.append
-17. Pop: yoink() — NEVER use .pop
+17. Pop: pluck() — NEVER use .pop
 18. Join: weave() — NEVER use .join
 19. Filter: sift() — NEVER use .filter
-20. Map: warp() — NEVER use .map
+20. Map: each() — NEVER use .map
 21. Reduce: fold() — NEVER use .reduce
-22. Contains/includes: seek() — NEVER use .includes/.contains
-23. Substring: carve() — NEVER use .slice/.substring
+22. Contains/includes: contains() — NEVER use .includes
+23. Substring: portion() — NEVER use .slice/.substring
 24. PI is a bare constant — NEVER use PI() or Math.PI
 ${isWebCode ? `
 25. HTML/CSS/JS → Canvas: Convert ALL visual elements to canvas drawing commands
@@ -411,10 +393,7 @@ ${code}
 
     const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${AI_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: aiHeaders(),
       body: JSON.stringify({
         model: aiModel("google/gemini-3.8-flash", 'strong'),
         messages: [
@@ -427,16 +406,10 @@ ${code}
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse("Rate limit exceeded. Please try again later.", 429);
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI usage limit reached. Please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse("AI usage limit reached. Please add credits.", 402);
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
@@ -446,21 +419,14 @@ ${code}
     const data = await response.json();
     let translatedCode = data.choices?.[0]?.message?.content || "";
     
-    // Clean up any markdown formatting the model might add
     translatedCode = translatedCode
       .replace(/^```(?:sdev|SDEV)?\n?/gm, '')
       .replace(/\n?```$/gm, '')
       .trim();
 
-    return new Response(
-      JSON.stringify({ translatedCode }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ translatedCode });
   } catch (error) {
     console.error("Translation error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Translation failed" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(error instanceof Error ? error.message : "Translation failed", 500);
   }
 });

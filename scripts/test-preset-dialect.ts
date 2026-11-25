@@ -33,9 +33,10 @@ for (const preset of presetList()) {
   check(`${slug}: has a prelude`, prelude.trim().length > 0, true);
   check(`${slug}: no dialect words left`, /кажи|нека|край/.test(source.replace(/^#.*$/gm, '')), false);
 
-  const output = run(source).join('\n');
+  const output = run(source);
+  check(`${slug}: sample program runs and produces output`, output.length > 0, true);
   if (slug === 'sdev-bg') {
-    check('sdev-bg: program output', output.split('\n'), ['здравей, свят', '0', 'едно', '2', '10']);
+    check('sdev-bg: program output', output, ['здравей, свят', '0', 'едно', '2', '10']);
   }
 }
 

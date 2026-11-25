@@ -10,7 +10,8 @@
 import { linkPe, buildPeExecutable } from '../src/lang-bridge/native/pe.mjs';
 import { spawnSync } from 'node:child_process';
 import { unlinkSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 let passed = 0;
 let failed = 0;
@@ -43,7 +44,7 @@ check('Optional header magic is PE32+ (0x020B)', buf.readUInt16LE(peOff + 24) ==
 check('Subsystem is Windows CUI (Console)', buf.readUInt16LE(peOff + 24 + 68) === 3);
 
 // 2. Build and run native .exe on Windows
-const targetExe = resolve(process.cwd(), 'test-sdev-native.exe');
+const targetExe = join(tmpdir(), `test-sdev-native-${process.pid}.exe`);
 try {
   linkPe(['Hello from SDEV native Windows!\n', 'Zero dependencies!\n'], targetExe, 0);
   check('Generated target executable on disk', existsSync(targetExe));
@@ -56,7 +57,7 @@ try {
       out.includes('Hello from SDEV native Windows!') && out.includes('Zero dependencies!'),
       `got output: ${out}`);
   } else {
-    check('Native PE executable tested on Windows platform', true);
+    console.log('  [skip] Native PE execution skipped on non-Windows host');
   }
 } finally {
   if (existsSync(targetExe)) {

@@ -1,12 +1,12 @@
 // OCE parity gate: the causal engine must give the same answers everywhere.
-//   bun scripts/test-oce-parity.ts
+//   node scripts/run-ts.mjs scripts/test-oce-parity.ts
 // - SDEV v2 on the self-hosted compiler + seed VM (scripts/test-oce.sdev)
 // - SDEV v2 compiled to a native Linux executable (when `as`/`ld` exist)
 // - classic sdev on the browser runtime and on the Python runtime
 //   (scripts/test-oce-classic.sdev, same checks)
 // - the gravity demo in v2, classic, and `!#ai` syntax
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execute, executeAsync } from '../src/lang/index';
@@ -25,10 +25,20 @@ const classic = (path: string) => {
   return (r.success ? '' : `ERROR ${r.error}\n`) + (r.output ?? []).join('\n');
 };
 
+const pythonBin = (() => {
+  for (const bin of ['python', 'python3']) {
+    try {
+      const v = execFileSync(bin, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+      if (/^Python\s+\d/i.test(v)) return bin;
+    } catch { /* try next */ }
+  }
+  return 'python';
+})();
+
 const v2 = lines(run('node', ['bin/sdevhost.mjs', 'scripts/test-oce.sdev']));
 check('v2 suite passes', v2.endsWith('oce: 35 passed, 0 failed'), v2.slice(-300));
 check('classic (browser runtime) = v2', lines(classic('scripts/test-oce-classic.sdev')) === v2);
-check('classic (Python runtime) = v2', lines(run('python3', ['public/sdev-interpreter.py', 'scripts/test-oce-classic.sdev'])) === v2);
+check('classic (Python runtime) = v2', lines(run(pythonBin, ['public/sdev-interpreter.py', 'scripts/test-oce-classic.sdev'])) === v2);
 
 const g = lines(run('node', ['bin/sdevhost.mjs', 'examples/oce/gravity.sdev']));
 for (const name of ['lamp', 'gravity']) {
@@ -37,16 +47,20 @@ for (const name of ['lamp', 'gravity']) {
 }
 check('gravity demo learns gravity', g.includes('if supported == 0 then vel_z += -10'), g);
 check('gravity classic (browser) = v2', lines(classic('examples/oce/gravity-classic.sdev')) === g);
-check('gravity classic (Python) = v2', lines(run('python3', ['public/sdev-interpreter.py', 'examples/oce/gravity-classic.sdev'])) === g);
+check('gravity classic (Python) = v2', lines(run(pythonBin, ['public/sdev-interpreter.py', 'examples/oce/gravity-classic.sdev'])) === g);
 const ai = await executeAsync(readFileSync('examples/oce/gravity-ai.sdev', 'utf8'), {} as never);
 check('gravity !#ai (browser) = v2', lines((ai.output ?? []).join('\n')) === g, ai.error ?? '');
 
 const hasBinutils = (() => { try { execFileSync('as', ['--version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
 if (hasBinutils) {
   const dir = mkdtempSync(join(tmpdir(), 'oce-native-'));
-  const exe = join(dir, 'oce');
-  run('node', ['scripts/sdev-native.mjs', 'scripts/test-oce.sdev', '-o', exe]);
-  check('native Linux build = v2', existsSync(exe) && lines(run(exe, [])) === v2);
+  try {
+    const exe = join(dir, 'oce');
+    run('node', ['scripts/sdev-native.mjs', 'scripts/test-oce.sdev', '-o', exe]);
+    check('native Linux build = v2', existsSync(exe) && lines(run(exe, [])) === v2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 } else {
   console.log('skip native Linux build (no assembler on this machine)');
 }

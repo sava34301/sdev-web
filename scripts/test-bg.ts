@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { translateSource } from '../src/lang/tools/translator';
 import { execute } from '../src/lang/index';
 
@@ -5,10 +6,10 @@ const src = `направи съобщение да_бъде "Здравей С�
 кажи(съобщение)`;
 
 const t = translateSource(src, 'auto');
-console.log('TRANSLATED:', JSON.stringify(t.translated));
-console.log('LANG:', t.detectedLanguage);
+assert.equal(t.detectedLanguage, 'Bulgarian', 'Detects Bulgarian source language');
+assert.equal(t.translated, 'forge съобщение be "Здравей Свят"\nspeak(съобщение)');
 
 const r = execute(src);
-console.log('SUCCESS:', r.success);
-console.log('OUTPUT:', r.output);
-if (r.error) console.log('ERROR:', r.error);
+assert.equal(r.success, true, r.error ?? 'Execution failed');
+assert.deepEqual(r.output, ['Здравей Свят']);
+console.log('✓ Bulgarian translation & execution verified');

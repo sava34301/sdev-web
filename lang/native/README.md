@@ -31,3 +31,21 @@ The compiler will:
 1. Parse `prog.sdev`,
 2. Emit `prog.s` next to `prog`,
 3. Assemble + link into `prog` (static ELF, no libc, ~1 KB).
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `build.sdev` | SDEV native build driver — 100% SDEV, runs on the zero-host VM. |
+| `codegen_x64.sdev` | SDEV x86-64 Native Assembly Codegen — authored in SDEV. |
+| `link.sdev` | SDEV Native ELF Linker Driver — authored in SDEV. |
+| `pe_x64.sdev` | SDEV Native Backend: Windows x86-64 PE/COFF (.exe) Emitter |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+| `runtime_x64.sdev` | SDEV Linux x86-64 Runtime Generator — authored in SDEV. |
+
+<!-- FOLDER_INVENTORY_END -->

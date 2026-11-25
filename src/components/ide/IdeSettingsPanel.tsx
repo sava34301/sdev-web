@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import type { IdeSettings } from './types';
+import type { IdeSettings } from '@/ide/types';
 import { AgentBrainSettings } from './AgentBrainSettings';
 
 interface Props {
@@ -150,7 +150,7 @@ export function IdeSettingsPanel({ settings, onChange }: Props) {
 
         {/* Reset */}
         <button
-          onClick={() => onChange({ fontSize: 14, tabSize: 2, wordWrap: false, theme: 'dark', minimap: false, lineNumbers: true, autoSave: true, fontFamily: 'JetBrains Mono', liquidGlass: false })}
+          onClick={() => onChange({ fontSize: 14, tabSize: 2, wordWrap: false, theme: 'dark', lineNumbers: true, autoSave: true, fontFamily: 'JetBrains Mono' })}
           className="w-full py-1.5 text-xs font-mono text-muted-foreground border border-border/40 rounded hover:border-destructive/50 hover:text-destructive transition-colors"
         >
           Reset to Defaults

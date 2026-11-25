@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Upload, Wand2, Copy, Check, Zap, FlaskConical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useClipboard } from '@/hooks/useClipboard';
 import { execute, executeAsync } from '@/lang';
 
@@ -40,7 +40,6 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
   const { copied, copy } = useClipboard({ timeoutMs: 2000 });
   const [inputMethod, setInputMethod] = useState<'paste' | 'upload'>('paste');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'passed' | 'failed'>('idle');
-  const { toast } = useToast();
 
   const MAX_FIX_ATTEMPTS = 3;
 
@@ -86,10 +85,8 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
 
   const handleTranslate = useCallback(async () => {
     if (!inputCode.trim()) {
-      toast({
-        title: "No code provided",
+      toast.error("No code provided", {
         description: "Please paste or upload some code to translate.",
-        variant: "destructive",
       });
       return;
     }
@@ -109,8 +106,7 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
         
         if (result.success) {
           setTestStatus('passed');
-          toast({
-            title: "✅ Translation complete & verified!",
+          toast.success("Translation complete & verified!", {
             description: "Code was tested and runs without errors.",
           });
           onTranslated?.(translated);
@@ -119,8 +115,7 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
 
         // Error found — try to fix
         if (attempt < MAX_FIX_ATTEMPTS - 1) {
-          toast({
-            title: `🧪 Test failed (attempt ${attempt + 1}/${MAX_FIX_ATTEMPTS})`,
+          toast.info(`Test failed (attempt ${attempt + 1}/${MAX_FIX_ATTEMPTS})`, {
             description: `Fixing: ${result.error}`,
           });
           translated = await fixCode(translated, result.error || 'Unknown error');
@@ -132,28 +127,24 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
       const finalResult = await executeAsync(translated);
       if (finalResult.success) {
         setTestStatus('passed');
-        toast({ title: "✅ Translation complete & verified!" });
+        toast.success("Translation complete & verified!");
       } else {
         setTestStatus('failed');
-        toast({
-          title: "⚠️ Translation complete with warnings",
+        toast.error("Translation complete with warnings", {
           description: "Code may still have issues. Please review manually.",
-          variant: "destructive",
         });
       }
       onTranslated?.(translated);
     } catch (error) {
       console.error('Translation error:', error);
       setTestStatus('idle');
-      toast({
-        title: "Translation failed",
+      toast.error("Translation failed", {
         description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
       });
     } finally {
       setIsTranslating(false);
     }
-  }, [inputCode, sourceLanguage, onTranslated, toast, translateOnce, fixCode]);
+  }, [inputCode, sourceLanguage, onTranslated, translateOnce, fixCode]);
 
   const handleCopy = useCallback(() => {
     if (outputCode) {
@@ -164,12 +155,11 @@ export function CodeTranslator({ onTranslated }: CodeTranslatorProps) {
   const handleUseInEditor = useCallback(() => {
     if (outputCode && onTranslated) {
       onTranslated(outputCode);
-      toast({
-        title: "Code loaded",
+      toast.success("Code loaded", {
         description: "The translated code has been loaded into the editor.",
       });
     }
-  }, [outputCode, onTranslated, toast]);
+  }, [outputCode, onTranslated]);
 
   return (
     <div className="rounded-lg border border-border/50 glass overflow-hidden">

@@ -169,3 +169,45 @@ The entire language toolchain is tested using the SDEV host environment (`node b
 | **Self-Hosted Subsystems** | `node bin/sdevhost.mjs scripts/test-selfhosted-subsystems.sdev` | VM, Kernel, Translator, Frontend, Paradigms, Linter |
 | **OCE Parity** | `npm run test:oce-parity` | Dual-runtime parity across Seed VM, JS builtins & Python interpreter |
 | **Parity Gate** | `npm run test:parity` | 209 features across 3 tracks (`lang/parity/features.json`) |
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`agent/`](./agent/) | Subdirectory `agent/` containing related project modules. |
+| [`bootstrap/`](./bootstrap/) | Subdirectory `bootstrap/` containing related project modules. |
+| [`bridge/`](./bridge/) | Subdirectory `bridge/` containing related project modules. |
+| [`builtins/`](./builtins/) | Subdirectory `builtins/` containing related project modules. |
+| [`compiler/`](./compiler/) | Subdirectory `compiler/` containing related project modules. |
+| [`core/`](./core/) | Subdirectory `core/` containing related project modules. |
+| [`dialect/`](./dialect/) | Subdirectory `dialect/` containing related project modules. |
+| [`formatter/`](./formatter/) | Subdirectory `formatter/` containing related project modules. |
+| [`hardware/`](./hardware/) | Subdirectory `hardware/` containing related project modules. |
+| [`ide/`](./ide/) | Subdirectory `ide/` containing related project modules. |
+| [`legacy/`](./legacy/) | Subdirectory `legacy/` containing related project modules. |
+| [`linter/`](./linter/) | Subdirectory `linter/` containing related project modules. |
+| [`mcp/`](./mcp/) | Subdirectory `mcp/` containing related project modules. |
+| [`native/`](./native/) | Subdirectory `native/` containing related project modules. |
+| [`paradigms/`](./paradigms/) | Subdirectory `paradigms/` containing related project modules. |
+| [`parity/`](./parity/) | Subdirectory `parity/` containing related project modules. |
+| [`registry/`](./registry/) | Subdirectory `registry/` containing related project modules. |
+| [`runtime/`](./runtime/) | Subdirectory `runtime/` containing related project modules. |
+| [`server/`](./server/) | Subdirectory `server/` containing related project modules. |
+| [`stdlib/`](./stdlib/) | Subdirectory `stdlib/` containing related project modules. |
+| [`studio/`](./studio/) | Subdirectory `studio/` containing related project modules. |
+| [`tools/`](./tools/) | Subdirectory `tools/` containing related project modules. |
+| [`translator/`](./translator/) | Subdirectory `translator/` containing related project modules. |
+| [`web/`](./web/) | Subdirectory `web/` containing related project modules. |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+
+<!-- FOLDER_INVENTORY_END -->

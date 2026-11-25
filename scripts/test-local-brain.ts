@@ -94,17 +94,25 @@ check('Parse raw text code', p4?.canonical === 'say 99');
 
 // 5. Server probing diagnostics & hints
 console.log('\n--- 5. Server Probing Diagnostics ---');
-const probe1234 = await probeLocalServer('http://127.0.0.1:1234');
-check('LM Studio hint provided when connection is refused/CORS',
-  !probe1234.ok && (probe1234.hint?.includes('LM Studio') || probe1234.error !== undefined),
-  JSON.stringify(probe1234)
-);
+const origFetch = globalThis.fetch;
+globalThis.fetch = (async () => {
+  throw new TypeError('fetch failed');
+}) as typeof fetch;
+try {
+  const probe1234 = await probeLocalServer('http://127.0.0.1:1234');
+  check('LM Studio hint provided when connection is refused/CORS',
+    !probe1234.ok && Boolean(probe1234.hint?.includes('LM Studio')),
+    JSON.stringify(probe1234)
+  );
 
-const probe11434 = await probeLocalServer('http://127.0.0.1:11434');
-check('Ollama hint provided when connection is refused/CORS',
-  !probe11434.ok && (probe11434.hint?.includes('Ollama') || probe11434.error !== undefined),
-  JSON.stringify(probe11434)
-);
+  const probe11434 = await probeLocalServer('http://127.0.0.1:11434');
+  check('Ollama hint provided when connection is refused/CORS',
+    !probe11434.ok && Boolean(probe11434.hint?.includes('Ollama')),
+    JSON.stringify(probe11434)
+  );
+} finally {
+  globalThis.fetch = origFetch;
+}
 
 console.log(`\n================================================================`);
 console.log(`Local Model Suite: ${passed} passed, ${failed} failed`);

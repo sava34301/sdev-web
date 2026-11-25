@@ -1,8 +1,5 @@
 import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { handleCors, jsonResponse, errorResponse } from '../_shared/http.ts';
 
 /**
  * The online brain of the sdev understanding agent.
@@ -144,27 +141,21 @@ Example:
   endwindow()`;
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
-  const key = aiKey();
-  if (!key) {
-    return new Response(JSON.stringify({ error: 'The understanding agent is not configured for this project.' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  if (!aiKey()) {
+    return errorResponse(AI_NOT_CONFIGURED, 500);
   }
 
   let body: Body;
   try { body = await req.json(); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body.' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse('Invalid JSON body.', 400);
   }
 
   const source = (body.source ?? '').slice(0, 40000);
   if (!source.trim()) {
-    return new Response(JSON.stringify({ error: 'No source to understand.' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse('No source to understand.', 400);
   }
 
   const user = [
@@ -221,13 +212,8 @@ Deno.serve(async (req) => {
       : status === 429
         ? 'The agent is rate limited right now — try again in a moment.'
         : `The agent could not reach the model (${status}): ${text.slice(0, 300)}`;
-    return new Response(JSON.stringify({ error: message }), {
-      status: status || 500,
-      headers: {
-        ...corsHeaders, 'Content-Type': 'application/json',
-        ...(res.headers.get('Retry-After') ? { 'Retry-After': res.headers.get('Retry-After')! } : {}),
-      },
-    });
+    const retryAfter = res.headers.get('Retry-After');
+    return errorResponse(message, status || 500, retryAfter ? { 'Retry-After': retryAfter } : {});
   }
 
   // Reasoning models must stream; accumulate the answer server-side.
@@ -262,12 +248,8 @@ Deno.serve(async (req) => {
   try { reply = JSON.parse(answer); } catch { reply = { canonical: '' }; }
 
   if (!reply.canonical) {
-    return new Response(JSON.stringify({ error: 'The agent could not make sense of this file.' }), {
-      status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse('The agent could not make sense of this file.', 422);
   }
 
-  return new Response(JSON.stringify({ canonical: reply.canonical, notes: reply.notes ?? undefined }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return jsonResponse({ canonical: reply.canonical, notes: reply.notes ?? undefined });
 });

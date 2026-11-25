@@ -1,5 +1,5 @@
-import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { aiKey, aiUrl, aiHeaders, aiModel, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
+import { handleCors, jsonResponse, errorResponse } from '../_shared/http.ts';
 
 /**
  * AI-assisted dialect drafting.
@@ -16,28 +16,22 @@ interface Body {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
-  const key = aiKey();
-  if (!key) {
-    return new Response(JSON.stringify({ error: 'AI is not configured for this project.' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  if (!aiKey()) {
+    return errorResponse(AI_NOT_CONFIGURED, 500);
   }
 
   let body: Body;
   try { body = await req.json(); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body.' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse('Invalid JSON body.', 400);
   }
 
   const request = (body.request ?? '').trim();
   const words = Array.isArray(body.words) ? body.words.filter((w) => typeof w === 'string').slice(0, 400) : [];
   if (!request || words.length === 0) {
-    return new Response(JSON.stringify({ error: 'Describe the dialect you want, and send the word list.' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return errorResponse('Describe the dialect you want, and send the word list.', 400);
   }
 
   const system = [
@@ -84,9 +78,8 @@ Deno.serve(async (req) => {
       : status === 429
         ? 'Too many requests right now — try again in a moment.'
         : `AI request failed (${status}): ${text.slice(0, 400)}`;
-    return new Response(JSON.stringify({ error: message }), {
-      status, headers: { ...corsHeaders, 'Content-Type': 'application/json', ...(res.headers.get('Retry-After') ? { 'Retry-After': res.headers.get('Retry-After')! } : {}) },
-    });
+    const retryAfter = res.headers.get('Retry-After');
+    return errorResponse(message, status, retryAfter ? { 'Retry-After': retryAfter } : {});
   }
 
   const json = await res.json();
@@ -94,7 +87,5 @@ Deno.serve(async (req) => {
   let proposal: unknown;
   try { proposal = JSON.parse(content); } catch { proposal = { names: {}, notes: content.slice(0, 500) }; }
 
-  return new Response(JSON.stringify(proposal), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return jsonResponse(proposal);
 });

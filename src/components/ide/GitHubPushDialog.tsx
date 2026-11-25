@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Github, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import type { IdeFile } from './types';
+import type { IdeFile } from '@/ide/types';
 
 const TOKEN_KEY = 'sdev:gh:token';
 const REPO_KEY = 'sdev:gh:repo';
@@ -76,8 +76,8 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
       const owner = maybeOwner.trim();
       const name = maybeName.trim();
 
-      // Ensure repo exists
       let repoData: { default_branch: string; html_url: string } | null = null;
+      let freshlyCreated = false;
       try {
         repoData = await gh(token, `/repos/${owner}/${name}`) as typeof repoData;
       } catch (e) {
@@ -86,22 +86,23 @@ export function GitHubPushDialog({ open, onOpenChange, files }: Props) {
           method: 'POST',
           body: JSON.stringify({ name, private: makePrivate, auto_init: true, description: 'sdev project' }),
         }) as typeof repoData;
-        // small delay for GitHub to initialize
-        await new Promise(r => setTimeout(r, 800));
+        freshlyCreated = true;
       }
 
       const targetBranch = branch.trim() || repoData?.default_branch || 'main';
 
-      // Get branch ref
       let baseSha: string | null = null;
       let baseTreeSha: string | null = null;
-      try {
-        const ref = await gh(token, `/repos/${owner}/${name}/git/ref/heads/${targetBranch}`) as { object: { sha: string } };
-        baseSha = ref.object.sha;
-        const commit = await gh(token, `/repos/${owner}/${name}/git/commits/${baseSha}`) as { tree: { sha: string } };
-        baseTreeSha = commit.tree.sha;
-      } catch {
-        // empty branch — will create root commit
+      for (let attempt = 0; attempt < (freshlyCreated ? 3 : 1); attempt++) {
+        try {
+          const ref = await gh(token, `/repos/${owner}/${name}/git/ref/heads/${targetBranch}`) as { object: { sha: string } };
+          baseSha = ref.object.sha;
+          const commit = await gh(token, `/repos/${owner}/${name}/git/commits/${baseSha}`) as { tree: { sha: string } };
+          baseTreeSha = commit.tree.sha;
+          break;
+        } catch {
+          // empty or still-initializing branch
+        }
       }
 
       // Create blobs

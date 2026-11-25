@@ -43,7 +43,7 @@ export function DesktopNativeButton({ getSource }: Props) {
       const source = getSource();
       const r = await bridge.compileNative({ source });
       if (!r.ok) {
-        if (!('cancelled' in r && r.cancelled)) toast.error(`Native build failed: ${(r as any).error}`);
+        if (!('cancelled' in r && r.cancelled)) toast.error(`Native build failed: ${r.error}`);
         return;
       }
       toast.success(`Built ${r.outPath}`);

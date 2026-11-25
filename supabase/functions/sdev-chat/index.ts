@@ -1,12 +1,7 @@
 import { requireUser } from '../_shared/auth.ts';
-import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SDEV_INTERNALS } from "../_shared/sdev-internals.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { aiKey, aiUrl, aiHeaders, aiModel, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
+import { corsHeaders, handleCors, errorResponse } from '../_shared/http.ts';
+import { SDEV_INTERNALS } from '../_shared/sdev-internals.ts';
 
 const SDEV_SYSTEM_PROMPT = `You are SDev Assistant, an expert AI that knows everything about the SDEV programming language. You help users learn sdev, write code, debug issues, and build complete projects.
 
@@ -262,10 +257,9 @@ linker, web/UI/graphics runtimes). When a user asks deep questions like
 authoritatively using the internals reference above, naming the exact
 file(s) in \`src/lang/\` and the algorithm involved.`;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (req) => {
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
   const denied = await requireUser(req, corsHeaders);
   if (denied) return denied;
@@ -273,12 +267,8 @@ serve(async (req) => {
   try {
     const { messages } = await req.json();
 
-    // Input validation — guard against credit-draining abuse
     if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
-      return new Response(
-        JSON.stringify({ error: "messages must be a non-empty array (max 50)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("messages must be a non-empty array (max 50)", 400);
     }
     for (const m of messages) {
       if (
@@ -288,24 +278,15 @@ serve(async (req) => {
         m.content.length === 0 ||
         m.content.length > 8000
       ) {
-        return new Response(
-          JSON.stringify({ error: "Invalid message: each must have role user/assistant and content string ≤ 8000 chars" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse("Invalid message: each must have role user/assistant and content string ≤ 8000 chars", 400);
       }
     }
 
-    const AI_KEY = aiKey();
-    if (!AI_KEY) {
-      throw new Error(AI_NOT_CONFIGURED);
-    }
+    if (!aiKey()) return errorResponse(AI_NOT_CONFIGURED, 500);
 
     const response = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${AI_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: aiHeaders(),
       body: JSON.stringify({
         model: aiModel("google/gemini-3-flash-preview"),
         messages: [
@@ -318,16 +299,10 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse("Rate limit exceeded. Please try again in a moment.", 429);
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI usage limit reached. Please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return errorResponse("AI usage limit reached. Please add credits.", 402);
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
@@ -339,9 +314,6 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Chat error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Chat failed" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(error instanceof Error ? error.message : "Chat failed", 500);
   }
 });

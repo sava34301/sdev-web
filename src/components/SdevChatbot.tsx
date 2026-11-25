@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Send, X, Bot, User, Loader2, Copy, Check, Sparkles, FlaskConical } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { execute, executeAsync } from '@/lang';
 
 interface Message {
@@ -25,7 +25,6 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -177,16 +176,14 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
 
     } catch (error) {
       console.error('Chat error:', error);
-      toast({
-        title: 'Chat Error',
+      toast.error('Chat Error', {
         description: error instanceof Error ? error.message : 'Failed to get response',
-        variant: 'destructive',
       });
       setMessages(prev => prev.filter((_, i) => i !== prev.length - 1 || prev[i].content !== ''));
     } finally {
       setIsLoading(false);
     }
-  }, [messages, toast, fetchStream, testCodeBlocks]);
+  }, [messages, fetchStream, testCodeBlocks]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() || isLoading) return;
@@ -248,7 +245,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
                   <button
                     onClick={() => {
                       onInsertCode(code);
-                      toast({ title: 'Code inserted into editor' });
+                      toast.success('Code inserted into editor');
                     }}
                     className="px-2 py-0.5 rounded text-xs bg-primary/20 hover:bg-primary/30 text-primary transition-colors"
                   >

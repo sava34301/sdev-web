@@ -1,20 +1,6 @@
 import { requireUser } from '../_shared/auth.ts';
-import { aiKey, aiUrl, aiHeaders, aiModel, usingOwnProvider, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
-// supabase/functions/translate-fuzzy/index.ts
-// ────────────────────────────────────────────────────────────────────
-// AI fallback for the sdev built-in translator.
-// The synchronous dictionary + fuzzy translator handles 95%+ of cases.
-// When user code STILL contains foreign-script words after that pass,
-// we ask the configured AI provider to rewrite the snippet as canonical English sdev.
-// ────────────────────────────────────────────────────────────────────
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { aiKey, aiUrl, aiHeaders, aiModel, AI_NOT_CONFIGURED } from '../_shared/ai.ts';
+import { corsHeaders, handleCors, jsonResponse } from '../_shared/http.ts';
 
 const SYSTEM_PROMPT = `You are a translator for the sdev programming language.
 
@@ -71,10 +57,9 @@ RULES:
 7. If a foreign word doesn't map to any canonical keyword, leave it as-is.
 8. Do NOT add new lines or restructure code.`;
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (req: Request) => {
+  const preflight = handleCors(req);
+  if (preflight) return preflight;
 
   const denied = await requireUser(req, corsHeaders);
   if (denied) return denied;
@@ -86,37 +71,22 @@ serve(async (req: Request) => {
     const original: string = typeof body.original === "string" ? body.original : partial;
 
     if (partial.length > 50000 || original.length > 50000 || sourceLanguage.length > 40) {
-      return new Response(
-        JSON.stringify({ error: "Payload too large" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Payload too large" }, 400);
     }
 
     if (!partial.trim()) {
-      return new Response(
-        JSON.stringify({ translated: partial, usedAI: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ translated: partial, usedAI: false });
     }
 
-    // Heuristic guard — only invoke AI if the dictionary pass left
-    // foreign-script characters behind in code (not strings/comments).
     const stripped = partial
       .replace(/(["'`])(?:\\.|(?!\1).)*\1/g, "")
       .replace(/(\/\/|#)[^\n]*/g, "");
     if (!/[^\x00-\x7F]/.test(stripped)) {
-      return new Response(
-        JSON.stringify({ translated: partial, usedAI: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ translated: partial, usedAI: false });
     }
 
-    const AI_KEY = aiKey();
-    if (!AI_KEY) {
-      return new Response(
-        JSON.stringify({ translated: partial, usedAI: false, error: AI_NOT_CONFIGURED }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!aiKey()) {
+      return jsonResponse({ translated: partial, usedAI: false, error: AI_NOT_CONFIGURED }, 200);
     }
 
     const userMessage = [
@@ -128,10 +98,7 @@ serve(async (req: Request) => {
 
     const aiResp = await fetch(aiUrl('/chat/completions'), {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${AI_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: aiHeaders(),
       body: JSON.stringify({
         model: aiModel("google/gemini-3-flash-preview"),
         messages: [
@@ -143,41 +110,25 @@ serve(async (req: Request) => {
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
-        return new Response(
-          JSON.stringify({ translated: partial, usedAI: false, error: "Rate limit reached. Try again shortly." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResponse({ translated: partial, usedAI: false, error: "Rate limit reached. Try again shortly." }, 429);
       }
       if (aiResp.status === 402) {
-        return new Response(
-          JSON.stringify({ translated: partial, usedAI: false, error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResponse({ translated: partial, usedAI: false, error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }, 402);
       }
       const t = await aiResp.text();
       console.error("AI gateway error:", aiResp.status, t);
-      return new Response(
-        JSON.stringify({ translated: partial, usedAI: false, error: "AI gateway error" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ translated: partial, usedAI: false, error: "AI gateway error" }, 200);
     }
 
     const data = await aiResp.json();
     let translated: string = data?.choices?.[0]?.message?.content ?? partial;
 
-    // Strip accidental markdown code fences.
     translated = translated.replace(/^```(?:sdev|sd|js|javascript)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
     if (!translated) translated = partial;
 
-    return new Response(
-      JSON.stringify({ translated, usedAI: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ translated, usedAI: true });
   } catch (e) {
     console.error("translate-fuzzy error:", e);
-    return new Response(
-      JSON.stringify({ translated: "", usedAI: false, error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ translated: "", usedAI: false, error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });

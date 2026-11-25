@@ -7,6 +7,7 @@ import { Compiler } from '@/lang/runtime/compiler';
 import { VM } from '@/lang/runtime/vm';
 import { disassemble, Chunk, serializeChunk } from '@/lang/runtime/bytecode';
 import { SdevError } from '@/lang/core/errors';
+import { downloadBlob, downloadText } from '@/lib/download';
 
 interface CompilerPanelProps {
   code: string;
@@ -64,24 +65,12 @@ export function CompilerPanel({ code, onOutput }: CompilerPanelProps) {
   const handleDownloadBytecode = useCallback(() => {
     if (!chunk) return;
     const binary = serializeChunk(chunk);
-    const blob = new Blob([binary], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'output.sdevc';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([binary], { type: 'application/octet-stream' }), 'output.sdevc');
   }, [chunk]);
 
   const handleDownloadDisasm = useCallback(() => {
     if (!disasm) return;
-    const blob = new Blob([disasm], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'output.sdevir';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(disasm, 'output.sdevir');
   }, [disasm]);
 
   // Count total instructions

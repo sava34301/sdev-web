@@ -13,6 +13,7 @@ import { parseAddress } from '@/lang/dialect/address';
 import { canonicalize, translateDialect } from '@/lang/dialect/canonicalize';
 import { generateDialectDocs } from '@/lang/dialect/docs';
 import type { DialectSpec } from '@/lang/dialect/spec';
+import { downloadText } from '@/lib/download';
 
 
 interface Props {
@@ -82,11 +83,7 @@ export function PersonalPanel({ content, onReplaceContent }: Props) {
 
   const downloadDocs = () => {
     if (!active) return;
-    const blob = new Blob([generateDialectDocs(active)], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${active.meta.slug}.documentation.md`; a.click();
-    URL.revokeObjectURL(url);
+    downloadText(generateDialectDocs(active), `${active.meta.slug}.documentation.md`, 'text/markdown');
   };
 
   return (

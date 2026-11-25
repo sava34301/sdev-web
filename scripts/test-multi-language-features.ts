@@ -77,19 +77,15 @@ speak(MAX_USERS)
 `);
 check('fixed constant declaration and reading', fixedRead.success && fixedRead.output[0] === '100', String(fixedRead.error));
 
-let fixedReassignBlocked = false;
-try {
-  const res = execute(`
+const fixedRes = execute(`
 fixed PI be 3.14
 PI be 3.14159
 `);
-  if (!res.success && res.error?.includes('Cannot reassign fixed variable')) {
-    fixedReassignBlocked = true;
-  }
-} catch {
-  fixedReassignBlocked = true;
-}
-check('Reassignment of fixed binding throws error in interpreter', fixedReassignBlocked);
+check(
+  'Reassignment of fixed binding fails with Cannot reassign fixed variable',
+  !fixedRes.success && Boolean(fixedRes.error?.includes('Cannot reassign fixed variable')),
+  String(fixedRes.error)
+);
 
 // ── 3. Scalar `match` Statement on v2 (Phase 2, Item 11) ─────────────────────
 console.log('\n--- 3. Scalar `match` on v2 Compiler ---');

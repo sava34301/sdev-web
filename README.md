@@ -123,3 +123,57 @@ All project documentation is organized under [`docs/`](./docs/README.md) (and br
 - [Electron Desktop App (`electron/README.md`)](./electron/README.md)
 - [VS Code Extension (`extension/README.md`)](./extension/README.md)
 - [Local Arduino Build Server (`tools/arduino-build-server/README.md`)](./tools/arduino-build-server/README.md)
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`AI/`](./AI/) | Evidence and traceability artifacts for the Bulgarian National Olympiad in Information Technologies (NOIT) AI declaration (Appendix 5 / Приложение 5). |
+| [`bin/`](./bin/) | Compiled command-line executables, the SDEV WebAssembly host runner (`sdevhost.mjs`), the bundled unified CLI (`sdev.mjs`), the 32-bit WebAssembly Seed VM (`sdev-seed.wasm`), and the x86-64 System V assembly runtime (`runtime.s`). |
+| [`cli/`](./cli/) | TypeScript source for the unified `sdev` command-line interface (`bin/sdev.mjs`), sharing the exact language core, dialect engine, understander, and cloud sync pipeline as the web IDE. |
+| [`docs/`](./docs/) | Structured documentation hub for the SDEV programming language, organized into numbered topic folders (`01-overview` through `09-project`) plus the `noit/` Olympiad declaration folder. |
+| [`drizzle/`](./drizzle/) | Database schema definitions and SQL migrations for user handles, Personal SDEV dialects, libraries, extensions, cloud workspace files, and gists. |
+| [`electron/`](./electron/) | Electron desktop application shell (`main.cjs` and `preload.cjs`) wrapping the SDEV IDE with native file dialogs and out-of-browser x86-64 native binary compilation. |
+| [`examples/`](./examples/) | Runnable example SDEV programs demonstrating language subsystems across runtimes. |
+| [`extension/`](./extension/) | Official Visual Studio Code extension (`sdev-language`) providing syntax highlighting, snippets, and integrated execution/compilation commands powered by the bundled `sdev` CLI and Python interpreter. |
+| [`lang/`](./lang/) | 100% pure-SDEV self-hosted language core: compilers (v2 & v1), virtual machines, native x86-64 & Windows PE code generators, v2 standard library, ML stack, website builder, understander agent, dialect engine, linter, formatter, translator, and parity auditor. |
+| [`public/`](./public/) | Static web assets served at the root URL, including standalone JS/Python/compiler bundles, downloadable books (PDF), Arduino library index, ESP32 bootloader firmware, sample programs, and the WebAssembly Seed VM. |
+| [`remotion-pitch/`](./remotion-pitch/) | Remotion programmatic video project used to render the sdev launch and architecture pitch video. |
+| [`scripts/`](./scripts/) | Build, release, documentation-generation, and verification test scripts for the entire SDEV toolchain. |
+| [`sdev-zero/`](./sdev-zero/) | 100% pure-SDEV zero-host standalone distribution containing native Linux ELF & Windows PE32+ binaries and 1:1 `.sdev` mirrors of the entire repository. |
+| [`src/`](./src/) | Frontend React + TypeScript application source, layered language runtime (`src/lang/`), self-hosted compiler bridge (`src/lang-bridge/`), IDE state modules (`src/ide/`), and visual debugging studio (`src/studio/`). |
+| [`supabase/`](./supabase/) | Supabase backend configuration (`config.toml`), Deno Edge Functions (`functions/`), and PostgreSQL schema migrations (`migrations/`). |
+| [`tools/`](./tools/) | Standalone local companion tools and development servers. |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `.env.example` | Template showing public Vite configuration environment variables. |
+| `.gitignore` | Git ignore rules for build outputs, caches, and temporary artifacts. |
+| `AGENTS.md` | Project-wide architecture rules and behavioral invariants. |
+| `bun.lock` | Bun package lockfile. |
+| `components.json` | shadcn/ui component configuration. |
+| `drizzle.config.ts` | Drizzle ORM kit configuration pointing to `drizzle/schema.ts`. |
+| `eslint.config.js` | ESLint flat configuration for TypeScript and React hooks. |
+| `index.html` | Root HTML entry point for the Vite React web application. |
+| `package-lock.json` | Locked npm dependency tree. |
+| `package.json` | Node.js package manifest, dependencies, and npm scripts. |
+| `postcss.config.js` | PostCSS configuration enabling Tailwind CSS and Autoprefixer. |
+| `Prilozhenie_5_Deklaracia_II_sdev.pdf` | Official NOIT Appendix 5 declaration (PDF). |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+| `release.json` | Single source of truth for the project version (`IDE`, `CLI`, `VS Code extension`, and `desktop app`). |
+| `sdev.docx` | Project documentation document (Word `.docx`). |
+| `skills-lock.json` | Locked agent skill metadata. |
+| `tailwind.config.ts` | Tailwind CSS theme, custom color tokens, fonts, and animation configuration. |
+| `tsconfig.app.json` | TypeScript compiler configuration (`tsconfig.app.json`). |
+| `tsconfig.json` | TypeScript compiler configuration (`tsconfig.json`). |
+| `tsconfig.node.json` | TypeScript compiler configuration (`tsconfig.node.json`). |
+| `vite.config.ts` | Vite bundler configuration (aliases, `/documentation/` static serving, code-splitting). |
+
+<!-- FOLDER_INVENTORY_END -->

@@ -106,3 +106,38 @@ Run from inside `sdev-zero/`:
 # Build the complete SDEV website in pure SDEV
 ./bin/sdev web
 ```
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`AI/`](./AI/) | Subdirectory `AI/` containing related project modules. |
+| [`bin/`](./bin/) | Subdirectory `bin/` containing related project modules. |
+| [`cli/`](./cli/) | Subdirectory `cli/` containing related project modules. |
+| [`drizzle/`](./drizzle/) | Subdirectory `drizzle/` containing related project modules. |
+| [`extension/`](./extension/) | Subdirectory `extension/` containing related project modules. |
+| [`lang/`](./lang/) | Pure-SDEV language core inside `sdev-zero/` mirroring `lang/` with zero foreign language files. |
+| [`public/`](./public/) | Subdirectory `public/` containing related project modules. |
+| [`remotion-pitch/`](./remotion-pitch/) | Subdirectory `remotion-pitch/` containing related project modules. |
+| [`scripts/`](./scripts/) | Subdirectory `scripts/` containing related project modules. |
+| [`src/`](./src/) | Subdirectory `src/` containing related project modules. |
+| [`supabase/`](./supabase/) | Subdirectory `supabase/` containing related project modules. |
+| [`tools/`](./tools/) | Subdirectory `tools/` containing related project modules. |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `drizzle.config.sdev` | Drizzle ORM kit configuration pointing to `drizzle/schema.ts`. |
+| `eslint.config.sdev` | ESLint flat configuration for TypeScript and React hooks. |
+| `postcss.config.sdev` | PostCSS configuration enabling Tailwind CSS and Autoprefixer. |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+| `tailwind.config.sdev` | Tailwind CSS theme, custom color tokens, fonts, and animation configuration. |
+| `vite.config.sdev` | Vite bundler configuration (aliases, `/documentation/` static serving, code-splitting). |
+
+<!-- FOLDER_INVENTORY_END -->

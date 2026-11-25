@@ -89,3 +89,33 @@ format, `Ctrl+Q` quit (asks once when there are unsaved changes).
 ## Updating
 
 `sdev update` installs the newest version in place. The CLI checks once a day and tells you when one is out (`SDEV_NO_UPDATE_CHECK=1` turns the check off).
+
+---
+
+<!-- FOLDER_INVENTORY_START -->
+## Folder Contents
+
+### Subfolders
+
+| Subfolder | Purpose |
+| :--- | :--- |
+| [`commands/`](./commands/) | Modular command handlers for the `sdev` CLI: running/compiling/native builds (`run.ts`), Personal SDEV dialects & libraries (`dialect.ts`), code understander & local AI configuration (`agent.ts`), cloud authentication & workspace sync (`cloud.ts`), and diagnostics/projects/WASI export (`tools.ts`). |
+
+### Files
+
+| File | Purpose |
+| :--- | :--- |
+| `args.ts` | TypeScript module (`args.ts`). |
+| `auth.ts` | Sign-in for the command line. |
+| `cloud.ts` | Cloud access helpers for the CLI, backed by `~/.sdev/session.json`. |
+| `editor.ts` | `sdev edit <file>` — a small full-screen editor for sdev source, in the. |
+| `env.ts` | Node environment shims for the sdev CLI. |
+| `index.ts` | sdev — the official command line for the sdev language. |
+| `pipeline.ts` | The CLI execution pipeline — mirrors the web IDE pipeline:. |
+| `prompt.ts` | Terminal prompts. Password entry is genuinely masked: readline's own. |
+| `README.md` | Folder documentation and complete inventory of files and subfolders in this directory. |
+| `store.ts` | CLI-side view of the same local state the IDE keeps in localStorage:. |
+| `update.ts` | Keeping the CLI current. |
+| `version.ts` | TypeScript module (`version.ts`). |
+
+<!-- FOLDER_INVENTORY_END -->

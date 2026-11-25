@@ -2,7 +2,7 @@
 // Regression suite for the native x86-64 backend.
 // Runs each program under both backends and diffs stdout.
 
-import { writeFileSync, mkdtempSync, chmodSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, chmodSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -149,6 +149,8 @@ async function main() {
     } catch (e) {
       console.log(`  FAIL ${c.name}: ${e.message}`);
       fail++;
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   }
   console.log(`\n${pass} passed, ${fail} failed`);

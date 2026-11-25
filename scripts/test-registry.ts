@@ -1,9 +1,8 @@
 /**
  * Verification Suite for Workstream 4:
  *   - Canonical API Registry (`src/lang/registry/api-registry.ts`)
- *   - SDEV Static Linter & Quick Fixes (`src/lang/linter.ts`)
+ *   - SDEV Static Linter & Quick Fixes (`src/lang/tools/linter.ts`)
  *   - Studio Runner: Chrono, Live Lens, Prism (`src/studio/runner.ts`)
- *   - Studio Store & Supabase Cloud Sync (`src/studio/store.ts`)
  *
  * Run via:
  *   node scripts/run-ts.mjs scripts/test-registry.ts
@@ -25,18 +24,6 @@ import {
 } from '@/lang/registry/api-registry';
 import { lintSdevSource, applyQuickFix } from '@/lang/tools/linter';
 import { runStudioCode, runStudioCodeAsync } from '@/studio/runner';
-import {
-  getStudioState,
-  createStudioFile,
-  updateStudioFile,
-  runActiveStudioFile,
-  setChronoStep,
-  getActiveChronoStep,
-  setStudioSupabaseClient,
-  syncStudioWithCloud,
-  loadStudioFilesFromCloud,
-  type StudioSupabaseLike,
-} from '@/studio/store';
 
 let passed = 0;
 let failed = 0;
@@ -329,103 +316,6 @@ speak("Total=" + morph(sum, "text"))
   assert(
     asyncRes.success && asyncRes.output[0] === 'Total=12',
     'runStudioCodeAsync executes cleanly'
-  );
-
-  console.log('\n=== 6. Studio Store & Cloud Persistence Sync ===');
-  const newFile = createStudioFile(
-    'experiment.sdev',
-    'forge x be 21\nforge y be x * 2\nspeak(y)\n'
-  );
-  updateStudioFile(newFile.id, 'forge x be 25\nforge y be x * 4\nspeak(y)\n');
-  const storeRun = runActiveStudioFile();
-  assert(
-    storeRun.success && storeRun.output[0] === '100',
-    `runActiveStudioFile ran updated file and produced '100'`
-  );
-
-  setChronoStep(0);
-  const step0 = getActiveChronoStep();
-  assert(
-    Boolean(step0 && step0.variables.x === '25' && step0.variables.y === undefined),
-    `Chrono time-travel scrubber at step 0 shows x=25 before y is defined`
-  );
-
-  // Test guest / signed-out fallback
-  setStudioSupabaseClient(null);
-  await loadStudioFilesFromCloud();
-  assert(
-    getStudioState().cloudStatus === 'local-only',
-    `Store falls back cleanly to 'local-only' when no Supabase session is active`
-  );
-
-  // Test authenticated Supabase cloud sync with mock client
-  const cloudDbRows: Array<{
-    id: string;
-    name: string;
-    content: string;
-    language: string;
-    created_at: string;
-    updated_at: string;
-  }> = [];
-
-  const mockSupabase: StudioSupabaseLike = {
-    auth: {
-      getSession: async () => ({
-        data: { session: { user: { id: 'user-test-123' } } },
-      }),
-    },
-    from: () => ({
-      select: () => ({
-        order: async () => ({
-          data: [...cloudDbRows],
-          error: null,
-        }),
-      }),
-      insert: (row) => ({
-        select: () => ({
-          single: async () => {
-            const created = {
-              id: `db-${cloudDbRows.length + 1}`,
-              name: row.name,
-              content: row.content,
-              language: row.language,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-            cloudDbRows.push(created);
-            return { data: created, error: null };
-          },
-        }),
-      }),
-      update: (patch) => ({
-        eq: async (_col, val) => {
-          const found = cloudDbRows.find((r) => r.id === val);
-          if (found) {
-            if (patch.name) found.name = patch.name;
-            if (patch.content) found.content = patch.content;
-            if (patch.language) found.language = patch.language;
-            found.updated_at = new Date().toISOString();
-          }
-          return { error: null };
-        },
-      }),
-      delete: () => ({
-        eq: async (_col, val) => {
-          const idx = cloudDbRows.findIndex((r) => r.id === val);
-          if (idx >= 0) cloudDbRows.splice(idx, 1);
-          return { error: null };
-        },
-      }),
-    }),
-  };
-
-  setStudioSupabaseClient(mockSupabase);
-  const syncedState = await syncStudioWithCloud();
-  assert(
-    syncedState.cloudStatus === 'synced' &&
-      syncedState.userId === 'user-test-123' &&
-      cloudDbRows.length >= 2,
-    `syncStudioWithCloud synced ${cloudDbRows.length} files to Supabase code_files with status '${syncedState.cloudStatus}'`
   );
 
   console.log(`\n========================================`);

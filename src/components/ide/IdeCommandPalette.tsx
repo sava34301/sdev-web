@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileCode, Play, Plus, FolderOpen, Search, Settings, BookOpen, Zap, Cpu, Command, Languages, Package, Blocks } from 'lucide-react';
-import type { IdeFile, SidePanel } from './types';
+import type { IdeFile, SidePanel } from '@/ide/types';
 
 interface Props {
   files: IdeFile[];
