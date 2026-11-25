@@ -28,19 +28,12 @@ jobs:
 
       - name: Push staged files to target repo
         env:
-          TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
+          GH_TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
         run: |
-          CLEAN_TOKEN=$(printf '%s' "$TOKEN" | tr -d '[:space:]')
-          if [ -z "$CLEAN_TOKEN" ]; then
-            echo "ERROR: API_TOKEN_GITHUB secret is empty!"
-            exit 1
-          fi
+          export GH_TOKEN=$(printf '%s' "$GH_TOKEN" | tr -d '[:space:]')
+          gh auth setup-git
 
-          AUTH_HEADER=$(printf 'x-access-token:%s' "$CLEAN_TOKEN" | base64 -w 0)
-
-          git -c http.https://github.com"AUTHORIZATION: basic ${AUTH_HEADER}" \
-            clone https://github.com _target
-
+          gh repo clone sdev-org/sdev _target
           cp -r _staging/. _target/
 
           cd _target
@@ -52,12 +45,5 @@ jobs:
             echo "No changes to push."
           else
             git commit -m "Sync selected files from Udibite"
-            git -c http.https://github.com"AUTHORIZATION: basic ${AUTH_HEADER}" \
-              push origin main
+            git push origin main
           fi
-          with:
-          source-directory: '_staging'
-          destination-github-username: 'sdev-org'
-          destination-repository-name: 'sdev'
-          user-email: 'milanov.sava22@gmail.com'
-          target-branch: 'main'
