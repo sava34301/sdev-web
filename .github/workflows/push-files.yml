@@ -25,6 +25,10 @@ jobs:
             fi
           done
 
+      - name: Test git access
+        run: git ls-remote https://x-access-token:${{ secrets.API_TOKEN_GITHUB }}@://github.com
+
+
       - name: Push staged files to target repo
         uses: cpina/github-action-push-to-another-repository@main
         env:
