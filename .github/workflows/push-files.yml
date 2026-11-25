@@ -1,7 +1,7 @@
 name: Push specific files to another repo
 
 on:
-  workflow_dispatch: # Adds the "Run workflow" button
+  workflow_dispatch: # Creates the "Run workflow" button in the Actions tab
 
 jobs:
   copy-files:
@@ -10,21 +10,18 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v4
 
-      - name: Stage files listed in include.json
+      - name: Stage files and folders listed in include.json
         run: |
           mkdir -p _staging
-          
-          # Read each path from include.json safely
-          jq -r '.[]' include.json | while IFS= read -r file; do
-            if [ -e "$file" ]; then
-              mkdir -p "_staging/$(dirname "$file")"
-              cp -r "$file" "_staging/$file"
-              echo "Staged: $file"
+          jq -r '.[] | sub("/$"; "")' include.json | while IFS= read -r item; do
+            if [ -e "$item" ]; then
+              mkdir -p "_staging/$(dirname "$item")"
+              cp -r "$item" "_staging/$item"
+              echo "Staged: $item"
             else
-              echo "Warning: '$file' not found, skipping."
+              echo "Warning: '$item' not found, skipping."
             fi
           done
-
 
       - name: Push staged files to target repo
         env:
@@ -45,5 +42,5 @@ jobs:
             echo "No changes to push."
           else
             git commit -m "Sync selected files from Udibite"
-            git push origin main
+            git push -u origin HEAD:main
           fi
