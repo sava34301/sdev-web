@@ -1,7 +1,7 @@
 name: Push specific files to another repo
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Adds the "Run workflow" button
 
 jobs:
   copy-files:
@@ -13,26 +13,37 @@ jobs:
       - name: Stage files listed in include.json
         run: |
           mkdir -p _staging
-          jq -r '.[] | sub("/$"; "")' include.json | while IFS= read -r item; do
-            if [ -e "$item" ]; then
-              mkdir -p "_staging/$(dirname "$item")"
-              cp -r "$item" "_staging/$item"
-              echo "Staged: $item"
+          
+          # Read each path from include.json safely
+          jq -r '.[]' include.json | while IFS= read -r file; do
+            if [ -e "$file" ]; then
+              mkdir -p "_staging/$(dirname "$file")"
+              cp -r "$file" "_staging/$file"
+              echo "Staged: $file"
             else
-              echo "Warning: '$item' not found, skipping."
+              echo "Warning: '$file' not found, skipping."
             fi
           done
+
+      - name: Test git access
+        run: git ls-remote https://x-access-token:${{ secrets.API_TOKEN_GITHUB }}@://github.com
+
 
       - name: Push staged files to target repo
         env:
           TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "ERROR: API_TOKEN_GITHUB secret is completely empty in this repo!"
+          CLEAN_TOKEN=$(printf '%s' "$TOKEN" | tr -d '[:space:]')
+          if [ -z "$CLEAN_TOKEN" ]; then
+            echo "ERROR: API_TOKEN_GITHUB secret is empty!"
             exit 1
           fi
 
-          git clone "https://x-access-token:${TOKEN}@://github.com" _target
+          AUTH_HEADER=$(printf 'x-access-token:%s' "$CLEAN_TOKEN" | base64 -w 0)
+
+          git -c http.https://github.com"AUTHORIZATION: basic ${AUTH_HEADER}" \
+            clone https://github.com _target
+
           cp -r _staging/. _target/
 
           cd _target
@@ -44,5 +55,12 @@ jobs:
             echo "No changes to push."
           else
             git commit -m "Sync selected files from Udibite"
-            git push origin main
+            git -c http.https://github.com"AUTHORIZATION: basic ${AUTH_HEADER}" \
+              push origin main
           fi
+          with:
+          source-directory: '_staging'
+          destination-github-username: 'sdev-org'
+          destination-repository-name: 'sdev'
+          user-email: 'milanov.sava22@gmail.com'
+          target-branch: 'main'
