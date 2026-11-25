@@ -28,7 +28,7 @@ jobs:
       - name: Push staged files to target repo
         uses: cpina/github-action-push-to-another-repository@main
         env:
-          API_TOKEN_GITHUB: ${{ secrets.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 }}
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         with:
           source-directory: '_staging'
           destination-github-username: 'sdev-org'
