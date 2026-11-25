@@ -1,0 +1,37 @@
+name: Push specific files to another repo
+
+on:
+  workflow_dispatch: # Adds the "Run workflow" button
+
+jobs:
+  copy-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+
+      - name: Stage files listed in include.json
+        run: |
+          mkdir -p _staging
+          
+          # Read each path from include.json safely
+          jq -r '.[]' include.json | while IFS= read -r file; do
+            if [ -e "$file" ]; then
+              mkdir -p "_staging/$(dirname "$file")"
+              cp -r "$file" "_staging/$file"
+              echo "Staged: $file"
+            else
+              echo "Warning: '$file' not found, skipping."
+            fi
+          done
+
+      - name: Push staged files to target repo
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.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 }}
+        with:
+          source-directory: '_staging'
+          destination-github-username: 'sdev-org'
+          destination-repository-name: 'sdev'
+          user-email: 'milanov.sava22@gmail.com'
+          target-branch: 'main'
