@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 import { useEffect, useState } from 'react';
 import { SEO } from '@/components/SEO';
 import { Helmet } from 'react-helmet-async';
@@ -114,13 +115,7 @@ export default function Gist() {
           publisher: { "@type": "Organization", name: "sdev" }
         })}</script>
       </Helmet>
-      <header className="border-b border-border/50">
-        <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Home
-          </Link>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="container max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold tracking-tight">{gist.title}</h1>

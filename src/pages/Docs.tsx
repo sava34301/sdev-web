@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { SEO } from '@/components/SEO';
 import { Helmet } from 'react-helmet-async';
@@ -297,7 +298,8 @@ export default function Docs() {
           mainEntityOfPage: "https://web.sdev.codes/docs"
         })}</script>
       </Helmet>
-      <header className="border-b border-border/60 backdrop-blur-xl sticky top-0 z-40 bg-background/80">
+      <SiteNav />
+      <header className="border-b border-border/60 backdrop-blur-xl sticky top-16 z-40 bg-background/80">
         <div className="max-w-[1600px] mx-auto px-6 py-3.5 flex items-center gap-4">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
             <ArrowLeft className="w-4 h-4" /> Home

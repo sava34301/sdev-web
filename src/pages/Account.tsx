@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 import { useEffect, useState } from 'react';
 import { SEO } from '@/components/SEO';
 import { useNavigate, Link } from 'react-router-dom';
@@ -136,7 +137,8 @@ export default function Account() {
   return (
     <div className="min-h-screen bg-background">
       <SEO title="Account — sdev" description="Manage your sdev profile, cloud-saved files, public gists, and recent runs from your personal account dashboard." path="/account" />
-      <header className="border-b border-border/50">
+      <SiteNav />
+      <header className="border-b border-border/50 bg-muted/40">
         <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/ide" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back to IDE

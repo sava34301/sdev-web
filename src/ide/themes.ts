@@ -12,15 +12,15 @@ export const DEFAULT_SETTINGS: IdeSettings = {
 
 export const IDE_THEME_VARS: Record<IdeSettings['theme'], Record<string, string>> = {
   dark: {
-    '--background': '212 45% 6%',  '--foreground': '200 25% 96%',
-    '--card': '212 40% 9%',        '--card-foreground': '200 25% 96%',
-    '--popover': '212 40% 10%',    '--popover-foreground': '200 25% 96%',
-    '--muted': '212 30% 14%',      '--muted-foreground': '210 18% 65%',
-    '--border': '212 30% 18%',     '--input': '212 30% 12%',
-    '--primary': '205 90% 58%',    '--primary-foreground': '212 45% 6%',
-    '--secondary': '188 78% 60%',  '--secondary-foreground': '212 45% 6%',
-    '--accent': '25 92% 58%',      '--accent-foreground': '212 45% 6%',
-    '--ring': '205 90% 58%',
+    '--background': '160 6% 6%',   '--foreground': '60 9% 94%',
+    '--card': '160 5% 8%',         '--card-foreground': '60 9% 94%',
+    '--popover': '160 5% 10%',     '--popover-foreground': '60 9% 94%',
+    '--muted': '160 5% 12%',       '--muted-foreground': '60 4% 64%',
+    '--border': '160 5% 16%',      '--input': '160 5% 13%',
+    '--primary': '156 68% 46%',    '--primary-foreground': '160 6% 6%',
+    '--secondary': '74 100% 58%',  '--secondary-foreground': '160 6% 6%',
+    '--accent': '74 100% 58%',     '--accent-foreground': '160 6% 6%',
+    '--ring': '156 68% 46%',
   },
   midnight: {
     '--background': '230 45% 5%',  '--foreground': '220 25% 94%',

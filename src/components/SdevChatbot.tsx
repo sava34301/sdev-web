@@ -274,7 +274,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       <button
         onClick={() => setIsOpen(true)}
         aria-label="Open SDev Assistant chat"
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-neon-cyan to-neon-violet shadow-neon-cyan flex items-center justify-center transition-all hover:scale-110 ${isOpen ? 'hidden' : ''}`}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-foreground text-[hsl(var(--lime))] shadow-[0_18px_40px_-12px_rgba(20,23,28,0.55)] ring-1 ring-foreground/10 flex items-center justify-center transition-all hover:scale-110 ${isOpen ? 'hidden' : ''}`}
       >
         <MessageCircle className="w-6 h-6 text-primary-foreground" />
       </button>
@@ -283,9 +283,9 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[600px] max-h-[80vh] rounded-xl border border-border/50 glass shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-neon-cyan/10 to-neon-violet/10 border-b border-border/50">
+          <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border/50">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-cyan to-neon-violet flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-foreground text-[hsl(var(--lime))] flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
               <div>

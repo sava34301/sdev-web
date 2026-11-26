@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -125,7 +126,8 @@ export default function SelfHostingGuide() {
         })}</script>
       </Helmet>
 
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+      <SiteNav />
+      <header className="sticky top-16 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1240px] items-center gap-4 px-6 py-3.5">
           <Link to="/docs" className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Documentation

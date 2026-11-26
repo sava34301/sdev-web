@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 /**
  * One place for everything that is yours: your dialects, your extensions,
  * your files and the programs you have shared.
@@ -90,7 +91,8 @@ export default function MySdev() {
     <div className="min-h-screen bg-background">
       <SEO title="My sdev — dialects, extensions and programs" description="Manage your own sdev dialects, extensions, files and shared programs in one place." path="/my" />
 
-      <header className="border-b border-border/50">
+      <SiteNav />
+      <header className="border-b border-border/50 bg-muted/40">
         <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <Link to="/ide" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back to IDE

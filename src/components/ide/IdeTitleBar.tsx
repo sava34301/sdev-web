@@ -16,7 +16,7 @@ import { SUPPORTED_LANGUAGES } from '@/ide/themes';
 import { SNIPPETS } from '@/ide/starterFiles';
 import type { IdeFile, RunMode, SidePanel, BottomPanel } from '@/ide/types';
 import type { TranslationResult } from '@/hooks/useCodeTranslation';
-import sdevLogo from '@/assets/sdev-logo.png';
+import { SdevMark } from '@/components/site/SdevMark';
 
 interface IdeTitleBarProps {
   activeFile?: IdeFile;
@@ -107,9 +107,9 @@ export function IdeTitleBar({
       <div className="flex items-center gap-2">
         <h1 className="flex items-center gap-2 m-0 text-sm font-display font-bold pl-1">
           <span className="relative flex items-center justify-center w-7 h-7">
-            <img src={sdevLogo} alt="" aria-hidden="true" className="w-7 h-7 object-contain" />
+            <SdevMark size={24} />
           </span>
-          <span className="gradient-text hidden sm:block tracking-tight">SDEV IDE</span>
+          <span className="hidden sm:block tracking-tight font-display">sdev <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">IDE</span></span>
           <span className="sr-only">sdev IDE</span>
         </h1>
         <div className="w-px h-4 bg-border/50 mx-1" />

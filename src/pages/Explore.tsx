@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 /**
  * The public shelf: every dialect, extension and program people have shared.
  * Anyone can browse it, signed in or not, and install what they like.
@@ -115,7 +116,8 @@ export default function Explore() {
         path="/explore"
       />
 
-      <header className="border-b border-border/50">
+      <SiteNav />
+      <header className="border-b border-border/50 bg-muted/40">
         <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Home

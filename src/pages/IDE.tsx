@@ -1000,7 +1000,7 @@ export default function IDEPage() {
       <SEO title="IDE — sdev" description="Full-featured sdev IDE in your browser. File tree, terminal, debugger, and live preview for the sdev programming language." path="/ide" />
       <div
         className={`ide-shell ide-theme-${settings.theme} relative flex flex-col h-screen text-foreground overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}
-        style={{ fontFamily: settings.fontFamily, ...(IDE_THEME_VARS[settings.theme] as React.CSSProperties) }}
+        style={{ fontFamily: "'Geist', system-ui, sans-serif", ...(IDE_THEME_VARS[settings.theme] as React.CSSProperties) }}
       >
         {!zenMode && (
           <IdeTitleBar

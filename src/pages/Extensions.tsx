@@ -1,3 +1,4 @@
+import { SiteNav } from '@/components/site/SiteNav';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from '@/components/SEO';
@@ -105,13 +106,7 @@ export default function Extensions() {
     <div className="min-h-screen bg-background">
       <SEO title="Extensions — add to sdev" description="Write new sdev functions and operators, keep them private or publish them, and propose the best ones for inclusion in core sdev." path="/extensions" />
 
-      <header className="border-b border-border/50">
-        <div className="container max-w-5xl mx-auto px-4 py-4">
-          <Link to="/ide" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Back to IDE
-          </Link>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="container max-w-5xl mx-auto px-4 py-8 grid gap-8 lg:grid-cols-[1fr_380px]">
         <section>

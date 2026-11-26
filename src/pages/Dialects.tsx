@@ -1,3 +1,5 @@
+import { SiteNav } from '@/components/site/SiteNav';
+import { DialectMap } from '@/components/home/DialectMap';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from '@/components/SEO';
@@ -172,7 +174,8 @@ export default function Dialects() {
     <div className="min-h-screen bg-background">
       <SEO title="Dialect Studio — build your own sdev" description="Create a personal version of sdev: rename every keyword in any language, choose your own style, add your own functions and operators, then share it." path="/dialects" />
 
-      <header className="border-b border-border/50">
+      <SiteNav />
+      <header className="border-b border-border/50 bg-muted/40">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/ide" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back to IDE
@@ -189,6 +192,17 @@ export default function Dialects() {
       <main className="container max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold tracking-tight mb-1">Dialect Studio</h1>
         <p className="text-muted-foreground mb-8">Build your own syntax as a pure .sdev dialect — translates automatically to canonical sdev v2 without the AI code understander.</p>
+
+        <section className="mb-14" data-testid="dialect-explorer">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="label">Dialect explorer</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight">26 built-in keyword languages</h2>
+            </div>
+            <p className="hidden sm:block max-w-xs text-right text-xs text-muted-foreground">Pick a language on the map to see its keywords and run a sample with the real interpreter.</p>
+          </div>
+          <DialectMap />
+        </section>
 
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
