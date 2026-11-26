@@ -68,8 +68,8 @@ export function DialectMap() {
   const choose = (l: string) => { setLang(l); setRes(null); };
 
   return (
-    <div data-testid="dialect-map" className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border lg:grid-cols-12">
-      <div className="relative bg-card lg:col-span-7 flex flex-col">
+    <div data-testid="dialect-map" className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border lg:grid-cols-12">
+      <div className="relative min-w-0 bg-card lg:col-span-7 flex flex-col">
         <div className="absolute left-4 top-4 z-10 flex rounded-full border border-border bg-background/90 p-1 backdrop-blur">
           {(Object.keys(VIEWS) as View[]).map((v) => (
             <button key={v} data-testid={`dialect-map-view-${v}`} onClick={() => setView(v)}
@@ -104,7 +104,7 @@ export function DialectMap() {
         </div>
       </div>
 
-      <div className="bg-card p-6 sm:p-8 lg:col-span-5">
+      <div className="min-w-0 bg-card p-6 sm:p-8 lg:col-span-5">
         <p className="label">Selected</p>
         <div className="mt-2 flex items-baseline justify-between gap-4">
           <h3 data-testid="dialect-selected-name" className="font-display text-4xl font-bold">{lang}</h3>
