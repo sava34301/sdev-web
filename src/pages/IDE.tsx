@@ -11,6 +11,7 @@ import { DialectSwitcher } from '@/components/ide/DialectSwitcher';
 import { FileInfoPopover } from '@/components/ide/FileInfoPopover';
 import { IdeTitleBar } from '@/components/ide/IdeTitleBar';
 import { IdeActivityBar } from '@/components/ide/IdeActivityBar';
+import { IdeMobileBar } from '@/components/ide/IdeMobileBar';
 import { IdeBreadcrumbs } from '@/components/ide/IdeBreadcrumbs';
 import { IdeGoToLine } from '@/components/ide/IdeGoToLine';
 import { DesktopNativeButton } from '@/components/ide/DesktopNativeButton';
@@ -80,7 +81,15 @@ export default function IDEPage() {
   const [openIds, setOpenIds] = useState<string[]>(() => loadJson(LS_OPEN, ['1']));
   const [settings, setSettings] = useState<IdeSettings>(() => loadJson(LS_SETTINGS, DEFAULT_SETTINGS));
 
-  const [sidePanel, setSidePanel] = useState<SidePanel>('explorer');
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+  const [sidePanel, setSidePanel] = useState<SidePanel>(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? null : 'explorer'));
+  const [showBottom, setShowBottom] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const on = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>('terminal');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
@@ -1071,7 +1080,7 @@ export default function IDEPage() {
 
         {/* ── Activity Bar + Main Body ── */}
         <div className="relative z-10 flex flex-1 min-h-0 overflow-hidden">
-          {!zenMode && (
+          {!zenMode && !isMobile && (
             <IdeActivityBar
               sidePanel={sidePanel}
               onToggleSidePanel={setSidePanel}
@@ -1084,9 +1093,10 @@ export default function IDEPage() {
           )}
 
           <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
+            {sidePanel && isMobile && <div data-testid="ide-mobile-backdrop" className="fixed inset-0 z-40 bg-black/55 md:hidden" onClick={() => setSidePanel(null)} />}
             {sidePanel && (
               <>
-                <ResizablePanel defaultSize={18} minSize={12} maxSize={35} className="ide-sidepanel flex min-h-0 flex-col">
+                <ResizablePanel id="side" order={1} defaultSize={18} minSize={12} maxSize={35} className="ide-sidepanel flex min-h-0 flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:!w-[86vw] max-md:max-w-sm max-md:shadow-2xl max-md:bg-card">
                   <Suspense fallback={<div role="status" className="p-3 text-xs text-muted-foreground">Loading…</div>}>
                     <h2 className="sr-only">Workspace files and tools</h2>
                     {sidePanel === 'explorer' && (
@@ -1094,7 +1104,7 @@ export default function IDEPage() {
                         files={files}
                         folders={folders}
                         activeId={activeId}
-                        onSelect={selectFile}
+                        onSelect={(id) => { selectFile(id); if (isMobile) setSidePanel(null); }}
                         onNewFile={(fid) => newFile(fid)}
                         onNewFolder={(pid) => newFolder(pid)}
                         onDelete={deleteFile}
@@ -1168,13 +1178,13 @@ export default function IDEPage() {
                     )}
                   </Suspense>
                 </ResizablePanel>
-                <ResizableHandle withHandle />
+                <ResizableHandle withHandle className="max-md:hidden" />
               </>
             )}
 
-            <ResizablePanel defaultSize={sidePanel ? 82 : 100} className="flex min-h-0 flex-col">
+            <ResizablePanel id="main" order={2} defaultSize={sidePanel && !isMobile ? 82 : 100} className="flex min-h-0 flex-col">
               <ResizablePanelGroup direction="vertical" className="min-h-0">
-                <ResizablePanel defaultSize={65} minSize={25} className="min-h-0">
+                <ResizablePanel id="editor" order={1} defaultSize={65} minSize={25} className="min-h-0">
                   <div className="flex h-full min-h-0 flex-col">
                     <IdeTabs files={openFiles} activeId={activeId} onSelect={selectFile} onClose={closeTab} />
                     {hasTranslation && (
@@ -1281,9 +1291,9 @@ export default function IDEPage() {
                   </div>
                 </ResizablePanel>
 
-                <ResizableHandle withHandle />
+                {(!isMobile || showBottom) && <ResizableHandle withHandle />}
 
-                <ResizablePanel defaultSize={35} minSize={15} maxSize={65} className="min-h-0 overflow-hidden">
+                {(!isMobile || showBottom) && <ResizablePanel id="bottom" order={2} defaultSize={35} minSize={15} maxSize={65} className="min-h-0 overflow-hidden">
                   <div className="ide-tabsbar flex items-center flex-shrink-0">
                     <button
                       onClick={() => setBottomPanel('terminal')}
@@ -1410,12 +1420,21 @@ export default function IDEPage() {
                       <IdeProblems problems={problems} onJump={(line) => editorRef.current?.jumpToLine(line)} />
                     )}
                   </Suspense>
-                </ResizablePanel>
+                </ResizablePanel>}
               </ResizablePanelGroup>
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
 
+        {isMobile && !zenMode && (
+          <IdeMobileBar
+            sidePanel={sidePanel}
+            onTogglePanel={(p) => setSidePanel((cur) => (cur === p ? null : p))}
+            bottomOpen={showBottom}
+            onToggleBottom={() => setShowBottom((b) => !b)}
+            onRun={() => { setShowBottom(true); runCode(); }}
+          />
+        )}
         <IdeStatusBar
           statusMsg={statusMsg}
           runMode={runMode}

@@ -790,6 +790,37 @@
 .ide-titlebar { background: hsl(var(--card)); border-bottom: 1px solid hsl(var(--border)); box-shadow: none; }
 .ide-activitybar { background: hsl(var(--background)); }
 .ide-statusbar { background: hsl(var(--background)); border-top: 1px solid hsl(var(--border)); }
+@media (max-width: 767px) {
+  .ide-statusbar { white-space: nowrap; overflow-x: auto; scrollbar-width: none; font-size: 10px; gap: 12px; }
+  .ide-statusbar > * { flex-shrink: 0; }
+}
 .ide-shell .cm-editor .cm-cursor { border-left-color: hsl(var(--lime)) !important; border-left-width: 2px !important; }
 .ide-shell .cm-editor .cm-selectionBackground, .ide-shell .cm-editor.cm-focused .cm-selectionBackground { background: hsl(var(--lime) / 0.18) !important; }
+
+
+/* ── Docs: editorial reading view ── */
+.reader { counter-reset: chapter; font-size: 17px; line-height: 1.8; color: hsl(var(--foreground) / 0.86); }
+.reader > * + * { margin-top: 1.15em; }
+.reader p { text-wrap: pretty; }
+.reader .doc-h1 { font-size: 1.1rem; letter-spacing: .14em; text-transform: uppercase; font-family: 'Geist Mono', monospace; font-weight: 500; color: hsl(var(--muted-foreground)); margin-top: 0; }
+.reader h2, .reader h3, .reader h4 { color: hsl(var(--foreground)); scroll-margin-top: 6rem; line-height: 1.15; }
+.reader h2 { font-size: 2rem; margin-top: 3.2em; padding-top: 1.4em; border-top: 1px solid hsl(var(--foreground) / 0.15); }
+.reader h2.chapter { counter-increment: chapter; }
+.reader h2.chapter::before { content: "Chapter " counter(chapter, decimal-leading-zero); display: block; margin-bottom: .7rem; font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: hsl(var(--primary)); }
+.reader h3 { font-size: 1.35rem; margin-top: 2.2em; }
+.reader h4 { font-size: 1.05rem; margin-top: 1.8em; }
+.reader a { color: hsl(var(--primary)); text-decoration: underline; text-decoration-color: hsl(var(--primary) / 0.35); text-underline-offset: 3px; }
+.reader a:hover { text-decoration-color: hsl(var(--primary)); }
+.reader strong { color: hsl(var(--foreground)); font-weight: 600; }
+.reader ul, .reader ol { padding-left: 1.3em; }
+.reader ul { list-style: disc; } .reader ol { list-style: decimal; }
+.reader li + li { margin-top: .35em; }
+.reader li::marker { color: hsl(var(--primary)); }
+.reader :not(pre) > code { font-family: 'Geist Mono', monospace; font-size: .86em; background: hsl(var(--foreground) / 0.06); border: 1px solid hsl(var(--foreground) / 0.08); border-radius: 5px; padding: .1em .38em; color: hsl(var(--foreground)); }
+.reader blockquote { border-left: 3px solid hsl(var(--lime)); padding: .3em 0 .3em 1.2em; font-family: 'Instrument Serif', Georgia, serif; font-size: 1.3em; line-height: 1.5; color: hsl(var(--foreground)); }
+.reader table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.5; }
+.reader th { text-align: left; font-weight: 600; background: hsl(var(--muted)); }
+.reader th, .reader td { padding: .6em .9em; border-bottom: 1px solid hsl(var(--border)); vertical-align: top; }
+.reader hr { border: 0; border-top: 1px solid hsl(var(--border)); margin: 3em 0; }
+.reader img { border-radius: 12px; border: 1px solid hsl(var(--border)); }
 

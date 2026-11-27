@@ -2,19 +2,25 @@ import { Lexer } from '@/lang/core/lexer';
 import { Parser } from '@/lang/core/parser';
 import { Interpreter } from '@/lang/runtime/interpreter';
 import { SdevError } from '@/lang/core/errors';
+import { createGraphicsBuiltins, type GraphicsCommand, type TurtleState } from '@/lang/stdlib/graphics';
 
-export interface RunResult { lines: string[]; error?: string; ms: number }
+export interface RunResult { lines: string[]; error?: string; ms: number; commands: GraphicsCommand[] }
 
-/** Runs sdev source with the real in-repo lexer → parser → interpreter (keywords in any supported language). */
+/** Runs sdev source with the real in-repo lexer → parser → interpreter (keywords in any supported language), incl. canvas/turtle graphics. */
 export function runSdev(code: string): RunResult {
   const lines: string[] = [];
+  const commands: GraphicsCommand[] = [];
+  let turtle: TurtleState = { x: 200, y: 200, angle: -90, penDown: true, color: '#0A7150', width: 2 };
   const t0 = performance.now();
   try {
     const ast = new Parser(new Lexer(code, { sourceLanguage: 'auto' }).tokenize()).parse();
-    new Interpreter((msg) => lines.push(msg)).interpret(ast);
-    return { lines, ms: performance.now() - t0 };
+    const it = new Interpreter((msg) => lines.push(msg));
+    const env = it.getGlobalEnv();
+    createGraphicsBuiltins((c) => commands.push(c), () => turtle, (s) => { turtle = { ...turtle, ...s }; }).forEach((fn, name) => env.define(name, fn));
+    it.interpret(ast);
+    return { lines, commands, ms: performance.now() - t0 };
   } catch (e) {
-    return { lines, error: e instanceof SdevError ? e.message : String(e), ms: performance.now() - t0 };
+    return { lines, commands, error: e instanceof SdevError ? e.message : String(e), ms: performance.now() - t0 };
   }
 }
 

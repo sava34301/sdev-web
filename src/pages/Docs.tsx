@@ -33,7 +33,7 @@ interface DocCategory {
   label: string;
 }
 
-interface DocSource {
+export interface DocSource {
   id: string;
   title: string;
   relPath: string;
@@ -45,7 +45,7 @@ interface DocSource {
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const docUrl = (relPath: string) => `${BASE_URL}documentation/${relPath}`;
 
-const CATEGORIES: DocCategory[] = [
+export const CATEGORIES: DocCategory[] = [
   { id: 'overview',   label: 'Overview & Books' },
   { id: 'language',   label: 'Language & Personal' },
   { id: 'stdlib',     label: 'Stdlib & Accel' },
@@ -56,7 +56,7 @@ const CATEGORIES: DocCategory[] = [
   { id: 'operations', label: 'Ops & History' },
 ];
 
-const SOURCES: DocSource[] = [
+export const SOURCES: DocSource[] = [
   // 01 — Overview & Books
   { id: 'hub',       title: 'Documentation Index',               relPath: 'README.md',                                 url: docUrl('README.md'),                                 category: 'overview', icon: Library },
   { id: 'book-en',   title: 'The sdev Book (EN)',                relPath: '01-overview/the-sdev-book-en.md',           url: docUrl('01-overview/the-sdev-book-en.md'),           category: 'overview', icon: BookOpen },
@@ -143,7 +143,7 @@ const SOURCE_ALIASES: Record<string, string> = {
   'project-history': 'history',
 };
 
-function resolveSourceId(raw: string | null | undefined): string {
+export function resolveSourceId(raw: string | null | undefined): string {
   if (!raw) return 'book-en';
   const key = raw.toLowerCase();
   if (SOURCES.some(s => s.id === key)) return key;
@@ -153,7 +153,7 @@ function resolveSourceId(raw: string | null | undefined): string {
   return 'book-en';
 }
 
-function normalizeRelPath(baseRelPath: string, href: string): string | null {
+export function normalizeRelPath(baseRelPath: string, href: string): string | null {
   const cleanHref = href.split('#')[0].split('?')[0];
   if (!cleanHref || !cleanHref.endsWith('.md')) return null;
   if (cleanHref.startsWith('/documentation/')) {

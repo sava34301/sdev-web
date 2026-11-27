@@ -271,7 +271,7 @@ export function IdeTitleBar({
       </div>
 
       {/* Right: quick actions */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5 max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
