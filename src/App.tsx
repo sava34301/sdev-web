@@ -18,7 +18,7 @@ const MySdev = lazy(() => import("./pages/MySdev"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Account = lazy(() => import("./pages/Account"));
 const Gist = lazy(() => import("./pages/Gist"));
-const Docs = lazy(() => import("./pages/Docs"));
+const Docs = lazy(() => import("./pages/DocsReader"));
 const SelfHostingGuide = lazy(() => import("./pages/SelfHostingGuide"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));

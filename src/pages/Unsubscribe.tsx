@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { SEO } from '@/components/SEO';
+import { SiteNav } from '@/components/site/SiteNav';
+import { SiteFooter } from '@/components/site/SiteFooter';
 
 type State = 'validating' | 'ready' | 'confirming' | 'success' | 'already' | 'invalid';
 
@@ -47,43 +47,61 @@ export default function Unsubscribe() {
   };
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <SEO title="Unsubscribe — SDEV" description="Manage your SDEV email subscription: confirm unsubscribe from sdev product updates, launch news, and release announcements, or re-subscribe anytime." path="/unsubscribe" />
-      <Card className="w-full max-w-md p-8 border-border/50 text-center">
-        {state === 'validating' && (<><h1 className="text-2xl font-bold mb-2">Unsubscribe from SDEV emails</h1><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" /><p className="text-muted-foreground">Checking your link…</p></>)}
-        {state === 'ready' && (
-          <>
-            <h1 className="text-2xl font-bold mb-2">Unsubscribe from SDEV emails?</h1>
-            <p className="text-muted-foreground mb-6">You'll stop receiving updates from us. You can re-subscribe anytime.</p>
-            <Button onClick={confirm} className="w-full">Confirm unsubscribe</Button>
-          </>
-        )}
-        {state === 'confirming' && (<><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" /><p>Processing…</p></>)}
-        {state === 'success' && (
-          <>
-            <CheckCircle2 className="h-10 w-10 mx-auto mb-4 text-primary" />
-            <h1 className="text-2xl font-bold mb-2">You're unsubscribed</h1>
-            <p className="text-muted-foreground mb-6">You won't receive more emails from SDEV.</p>
-            <Link to="/"><Button variant="outline">Back to home</Button></Link>
-          </>
-        )}
-        {state === 'already' && (
-          <>
-            <CheckCircle2 className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-            <h1 className="text-2xl font-bold mb-2">Already unsubscribed</h1>
-            <p className="text-muted-foreground mb-6">This link has already been used.</p>
-            <Link to="/"><Button variant="outline">Back to home</Button></Link>
-          </>
-        )}
-        {state === 'invalid' && (
-          <>
-            <XCircle className="h-10 w-10 mx-auto mb-4 text-destructive" />
-            <h1 className="text-2xl font-bold mb-2">Invalid link</h1>
-            <p className="text-muted-foreground mb-6">This unsubscribe link is invalid or expired.</p>
-            <Link to="/"><Button variant="outline">Back to home</Button></Link>
-          </>
-        )}
-      </Card>
-    </main>
+    <div className="min-h-screen bg-background text-foreground flex flex-col" data-testid="unsubscribe-page">
+      <SEO title="Unsubscribe — sdev" description="Manage your sdev email subscription: confirm unsubscribe from sdev product updates, launch news, and release announcements." path="/unsubscribe" />
+      <SiteNav />
+
+      <main className="wrap flex-1 py-20 flex items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+          {state === 'validating' && (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <h1 className="font-display text-2xl font-bold">Checking your link…</h1>
+              <p className="mt-2 text-sm text-muted-foreground">Validating your email preferences.</p>
+            </>
+          )}
+          {state === 'ready' && (
+            <>
+              <p className="label mb-2">Email preferences</p>
+              <h1 className="font-display text-3xl font-bold">Unsubscribe from sdev emails?</h1>
+              <p className="mt-3 text-sm text-muted-foreground">You will stop receiving product and release updates. Essential account security emails are unaffected.</p>
+              <button onClick={confirm} className="btn-ink mt-6 w-full justify-center">Confirm unsubscribe</button>
+            </>
+          )}
+          {state === 'confirming' && (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Updating preferences…</p>
+            </>
+          )}
+          {state === 'success' && (
+            <>
+              <CheckCircle2 className="h-10 w-10 mx-auto mb-4 text-primary" />
+              <h1 className="font-display text-3xl font-bold">You're unsubscribed</h1>
+              <p className="mt-2 text-sm text-muted-foreground">You won't receive more product emails from sdev.</p>
+              <Link to="/" className="btn-line mt-6">Back home</Link>
+            </>
+          )}
+          {state === 'already' && (
+            <>
+              <CheckCircle2 className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+              <h1 className="font-display text-3xl font-bold">Already unsubscribed</h1>
+              <p className="mt-2 text-sm text-muted-foreground">This unsubscribe link has already been used.</p>
+              <Link to="/" className="btn-line mt-6">Back home</Link>
+            </>
+          )}
+          {state === 'invalid' && (
+            <>
+              <XCircle className="h-10 w-10 mx-auto mb-4 text-destructive" />
+              <h1 className="font-display text-3xl font-bold">Invalid or expired link</h1>
+              <p className="mt-2 text-sm text-muted-foreground">We couldn't verify this unsubscribe token.</p>
+              <Link to="/" className="btn-line mt-6">Back home</Link>
+            </>
+          )}
+        </div>
+      </main>
+
+      <SiteFooter />
+    </div>
   );
 }

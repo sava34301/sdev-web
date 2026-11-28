@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SEO } from '@/components/SEO';
-import { Button } from '@/components/ui/button';
+import { SiteNav } from '@/components/site/SiteNav';
+import { SiteFooter } from '@/components/site/SiteFooter';
 import { Input } from '@/components/ui/input';
-import { LogIn, ArrowRight, Rocket, Calendar, KeyRound, Loader2 } from 'lucide-react';
+import { LogIn, ArrowRight, Calendar, KeyRound, Loader2 } from 'lucide-react';
 import { LAUNCH_DATE, isLaunched } from '@/lib/launchGate';
 import { getCountdownStrings, formatLaunchDate } from '@/lib/countdownI18n';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,47 +59,46 @@ export default function Launch() {
   const alreadyInvited = hasInviteAccess();
 
   return (
-    <main className="min-h-screen bg-background text-foreground relative overflow-hidden flex items-center justify-center px-4 py-12 sky-backdrop">
+    <div className="min-h-screen bg-background text-foreground flex flex-col" data-testid="launch-page">
       <LaunchAnnouncementCarousel />
       <SEO
-        title="sdev — Launching July 12, 2026"
-        description="sdev officially launches on July 12, 2026. Sign in for early access."
-        path="/"
+        title="sdev — Launch Milestone Archive"
+        description="Archived launch milestone page for the sdev self-hosting programming language."
+        path="/launch"
       />
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_60%),radial-gradient(circle_at_70%_80%,hsl(var(--accent)/0.18),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,hsl(var(--background)))]" />
-      </div>
+      <SiteNav />
 
-      <div className="w-full max-w-3xl text-center space-y-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border/50 text-xs text-muted-foreground">
-          <Rocket className="h-3.5 w-3.5" /> {launchLine}
+      <main className="wrap flex-1 py-20 sm:py-28 flex flex-col justify-center">
+        <div className="border-b border-foreground/15 pb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground flex justify-between">
+          <span>Archive · Launch Milestone</span>
+          <span>{launchLine}</span>
         </div>
 
-        <div className="space-y-4">
-          <h1 className="text-5xl sm:text-7xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-            {launched ? `${t.launched} — sdev` : 'sdev — A new programming language for the modern web'}
+        <div className="mt-12 max-w-4xl">
+          <h1 className="font-display text-5xl font-extrabold leading-[0.94] tracking-[-0.04em] sm:text-7xl">
+            {launched ? (
+              <>{t.launched} — <span className="serif-i font-normal text-primary">sdev is live.</span></>
+            ) : (
+              <>A self-hosting language <span className="serif-i font-normal text-primary">for everyone.</span></>
+            )}
           </h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">{t.subtitle}</p>
+          <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed">{t.subtitle}</p>
         </div>
 
         {!launched && (
-          <div className="grid grid-cols-4 gap-3 sm:gap-6 max-w-2xl mx-auto">
-            <h2 className="sr-only col-span-4">Countdown to launch</h2>
+          <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl">
+            <h2 className="sr-only col-span-full">Countdown to launch</h2>
             {([
               [time.days, t.days],
               [time.hours, t.hours],
               [time.minutes, t.minutes],
               [time.seconds, t.seconds],
             ] as const).map(([val, label]) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-border/50 bg-card/40 backdrop-blur p-4 sm:p-6 shadow-lg"
-              >
-                <div className="text-3xl sm:text-5xl font-mono font-bold tabular-nums">
+              <div key={label} className="ink rounded-2xl border border-border p-6">
+                <div className="font-display text-4xl sm:text-5xl font-extrabold tabular-nums text-[hsl(var(--lime))]">
                   {String(val).padStart(2, '0')}
                 </div>
-                <div className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mt-2">
+                <div className="mt-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
                   {label}
                 </div>
               </div>
@@ -106,32 +106,27 @@ export default function Launch() {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-          <h2 className="sr-only w-full">Get early access</h2>
+        <div className="mt-10 flex flex-wrap items-center gap-3">
           {user || launched || alreadyInvited ? (
-            <Button size="lg" onClick={() => navigate('/')} className="gap-2">
+            <button onClick={() => navigate('/')} className="btn-ink">
               {t.enter} <ArrowRight className="h-4 w-4" />
-            </Button>
+            </button>
           ) : (
-            <>
-              <Button asChild size="lg" className="gap-2">
-                <Link to="/auth"><LogIn className="h-4 w-4" /> {t.signIn}</Link>
-              </Button>
-            </>
+            <Link to="/auth" className="btn-ink">
+              <LogIn className="h-4 w-4" /> {t.signIn}
+            </Link>
           )}
-          <Button asChild variant="outline" size="lg" className="gap-2">
-            <a href={calendarUrl} target="_blank" rel="noopener noreferrer" aria-label={t.addToCalendar}>
-              <Calendar className="h-4 w-4" /> {t.addToCalendar}
-            </a>
-          </Button>
-          <a href={icsUrl} download="sdev-launch.ics" className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4">
+          <Link to="/ide" className="btn-line">Open the IDE</Link>
+          <a href={calendarUrl} target="_blank" rel="noopener noreferrer" aria-label={t.addToCalendar} className="btn-line">
+            <Calendar className="h-4 w-4" /> {t.addToCalendar}
+          </a>
+          <a href={icsUrl} download="sdev-launch.ics" className="px-2 font-mono text-xs text-muted-foreground hover:text-foreground underline underline-offset-4">
             .ics
           </a>
         </div>
 
-        {/* Invite code */}
         {!user && !launched && !alreadyInvited && (
-          <div className="pt-4">
+          <div className="mt-8">
             {!showInvite ? (
               <button
                 onClick={() => setShowInvite(true)}
@@ -140,22 +135,25 @@ export default function Launch() {
                 <KeyRound className="h-3.5 w-3.5" /> {t.haveInvite}
               </button>
             ) : (
-              <div className="max-w-sm mx-auto flex gap-2">
+              <div className="max-w-sm flex gap-2">
                 <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder={t.inviteCodePlaceholder}
                   autoFocus
+                  className="rounded-full bg-card"
                   onKeyDown={(e) => e.key === 'Enter' && handleRedeem()}
                 />
-                <Button onClick={handleRedeem} disabled={redeeming || !code.trim()}>
+                <button onClick={handleRedeem} disabled={redeeming || !code.trim()} className="btn-ink shrink-0 disabled:opacity-50">
                   {redeeming ? <Loader2 className="h-4 w-4 animate-spin" /> : t.redeem}
-                </Button>
+                </button>
               </div>
             )}
           </div>
         )}
-      </div>
-    </main>
+      </main>
+
+      <SiteFooter />
+    </div>
   );
 }

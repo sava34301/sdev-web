@@ -274,19 +274,19 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
       <button
         onClick={() => setIsOpen(true)}
         aria-label="Open SDev Assistant chat"
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-neon-cyan to-neon-violet shadow-neon-cyan flex items-center justify-center transition-all hover:scale-110 ${isOpen ? 'hidden' : ''}`}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-foreground text-[hsl(var(--lime))] shadow-[0_18px_40px_-12px_rgba(20,23,28,0.55)] ring-1 ring-foreground/10 flex items-center justify-center transition-all hover:scale-110 ${isOpen ? 'hidden' : ''}`}
       >
-        <MessageCircle className="w-6 h-6 text-primary-foreground" />
+        <MessageCircle className="w-6 h-6" />
       </button>
 
       {/* Chat panel */}
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[600px] max-h-[80vh] rounded-xl border border-border/50 glass shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-neon-cyan/10 to-neon-violet/10 border-b border-border/50">
+          <div className="flex items-center justify-between px-4 py-3 bg-muted/60 border-b border-border/50">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-neon-cyan to-neon-violet flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              <div className="w-8 h-8 rounded-lg bg-foreground text-[hsl(var(--lime))] flex items-center justify-center">
+                <Sparkles className="w-4 h-4" />
               </div>
               <div>
                 <h3 className="font-semibold text-sm">SDev Assistant</h3>
@@ -306,8 +306,8 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-neon-cyan/20 to-neon-violet/20 flex items-center justify-center mb-4">
-                  <Bot className="w-8 h-8 text-primary" />
+                <div className="w-16 h-16 rounded-2xl bg-foreground text-[hsl(var(--lime))] flex items-center justify-center mb-4">
+                  <Bot className="w-8 h-8" />
                 </div>
                 <h4 className="font-semibold mb-2">Hi! I'm SDev Assistant</h4>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -342,14 +342,14 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
                     <div
                       className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center ${
                         msg.role === 'user'
-                          ? 'bg-primary/20'
-                          : 'bg-gradient-to-br from-neon-cyan/30 to-neon-violet/30'
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-foreground text-[hsl(var(--lime))]'
                       }`}
                     >
                       {msg.role === 'user' ? (
-                        <User className="w-4 h-4 text-primary" />
+                        <User className="w-4 h-4" />
                       ) : (
-                        <Bot className="w-4 h-4 text-primary" />
+                        <Bot className="w-4 h-4" />
                       )}
                     </div>
                     <div
@@ -367,8 +367,8 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
                 ))}
                 {isLoading && messages[messages.length - 1]?.role === 'user' && (
                   <div className="flex gap-3">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-neon-cyan/30 to-neon-violet/30 flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-primary" />
+                    <div className="w-7 h-7 rounded-full bg-foreground text-[hsl(var(--lime))] flex items-center justify-center">
+                      <Bot className="w-4 h-4" />
                     </div>
                     <div className="flex-1 rounded-xl px-4 py-3 bg-muted/30 border border-border/50">
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -389,7 +389,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about sdev..."
                 rows={1}
-                className="flex-1 resize-none rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:border-primary/50 focus:shadow-neon-cyan transition-all"
+                className="flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-foreground/40 transition-colors"
                 disabled={isLoading}
               />
               <Button
@@ -397,7 +397,7 @@ export function SdevChatbot({ onInsertCode }: SdevChatbotProps) {
                 disabled={!input.trim() || isLoading}
                 size="icon"
                 aria-label="Send message"
-                className="bg-gradient-to-r from-neon-cyan to-neon-violet hover:shadow-neon-cyan border-0"
+                className="bg-foreground text-background hover:bg-primary hover:text-primary-foreground border-0"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

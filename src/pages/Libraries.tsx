@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { SEO } from '@/components/SEO';
-import { Button } from '@/components/ui/button';
+import { SiteNav } from '@/components/site/SiteNav';
+import { SiteFooter } from '@/components/site/SiteFooter';
+import { GalleryHero, RunPanel } from '@/components/community/Gallery';
+import { SdevCode } from '@/components/home/SdevCode';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { ArrowLeft, Download, HardDriveDownload, Loader2, Package, Search, Trash2, Upload } from 'lucide-react';
+import { Copy, Download, HardDriveDownload, Loader2, Package, Search, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useReveal } from '@/hooks/useReveal';
 import { cachedLibraries, exportOfflineBundle, fetchLibrary, forgetBundle, importOfflineBundle, type LibraryBundle } from '@/lang/dialect/registry';
 import { parseAddress } from '@/lang/dialect/address';
 import { downloadText } from '@/lib/download';
+
+const LIB_SOURCE = 'conjure hello(who) ::\n  yield "hello, " + who + "!"\n;;';
+const LIB_USAGE = 'use "@you/greetings@1.0.0"\n\nspeak(hello("world"))\nspeak(hello("sdev"))';
 
 const db = supabase;
 
@@ -25,7 +29,6 @@ interface PublicLibrary {
   description: string | null;
   latest_version: string;
   download_count: number;
-  /** owner handle, resolved separately — null when unknown */
   username: string | null;
 }
 
@@ -41,7 +44,10 @@ export default function Libraries() {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [version, setVersion] = useState('1.0.0');
-  const [entrySource, setEntrySource] = useState('to hello with who\n  say "hello, " + who\nend\n');
+  const [entrySource, setEntrySource] = useState('conjure greet(who) ::\n  yield "hello, " + who + "!"\n;;\n');
+  const [testCall, setTestCall] = useState('speak(greet("sdev"))');
+
+  useReveal([browse.length]);
 
   const loadBrowse = useCallback(async () => {
     try {
@@ -111,90 +117,169 @@ export default function Libraries() {
   const shown = browse.filter((l) => !query.trim() || l.name.toLowerCase().includes(query.toLowerCase()) || l.slug.includes(query.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground" data-testid="libraries-page">
       <SEO title="Libraries — sdev registry" description={'Publish sdev libraries, import them with use "@user/lib", and download an offline bundle for the native CLI and desktop IDE.'} path="/libraries" />
 
-      <header className="border-b border-border/50">
-        <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/ide" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Back to IDE
-          </Link>
-          <div className="flex items-center gap-2">
-            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="@user/library" className="h-9 w-52 font-mono text-xs" />
-            <Button size="sm" variant="outline" onClick={() => install()} disabled={busy || !reference.trim()}><Download className="h-4 w-4 mr-1.5" />Install</Button>
+      <SiteNav />
+      <GalleryHero label="Libraries" title="Code worth" accent="sharing." intro={'Publish sdev modules once, import them anywhere with use "@user/lib@1.0.0", or export an offline bundle for the native CLI and desktop IDE.'}>
+        <div className="flex gap-2">
+          <Input data-testid="libraries-address" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="@user/library" className="h-11 rounded-full bg-card font-mono text-xs" />
+          <button data-testid="libraries-install-address" onClick={() => install()} disabled={busy || !reference.trim()} className="btn-ink shrink-0 disabled:opacity-50"><Download className="h-4 w-4" />Install</button>
+        </div>
+      </GalleryHero>
+
+      <section className="wrap py-12" data-testid="libraries-live-example">
+        <p className="label mb-5">§01 — How a library works</p>
+        <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-3">
+          {[
+            ['Write', 'greetings.sdev — published as @you/greetings', LIB_SOURCE],
+            ['Import', 'any program, IDE or CLI', LIB_USAGE],
+          ].map(([t, d, c]) => (
+            <div key={t} className="bg-card p-6">
+              <h3 className="font-display text-2xl font-bold">{t}</h3>
+              <p className="mb-4 mt-1 text-xs text-muted-foreground">{d}</p>
+              <div className="ink rounded-xl border border-border p-4"><SdevCode code={c} className="text-[12px]" /></div>
+            </div>
+          ))}
+          <div className="bg-card p-6">
+            <h3 className="font-display text-2xl font-bold">Run</h3>
+            <p className="mb-4 mt-1 text-xs text-muted-foreground">live here — executed by the real interpreter</p>
+            <RunPanel code={`${LIB_SOURCE}\n\n${LIB_USAGE.split('\n').slice(2).join('\n')}`} label="Run example" />
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className="container max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-1">Libraries</h1>
-        <p className="text-muted-foreground mb-8">Share sdev code. Import it with <code className="font-mono text-xs">use "@user/lib@1.0.0"</code>, or take it offline.</p>
+      <main className="wrap pb-24">
+        <p className="label mb-5 border-t border-foreground/15 pt-6">§02 — Registry & studio</p>
 
         <Tabs defaultValue="browse">
           <TabsList>
-            <TabsTrigger value="browse"><Search className="h-3.5 w-3.5 mr-1.5" />Browse</TabsTrigger>
-            <TabsTrigger value="installed"><Package className="h-3.5 w-3.5 mr-1.5" />Installed ({installed.length})</TabsTrigger>
+            <TabsTrigger value="browse"><Search className="h-3.5 w-3.5 mr-1.5" />Browse ({browse.length})</TabsTrigger>
+            <TabsTrigger value="installed"><Package className="h-3.5 w-3.5 mr-1.5" />Cached ({installed.length})</TabsTrigger>
             <TabsTrigger value="publish"><Upload className="h-3.5 w-3.5 mr-1.5" />Publish</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="browse" className="mt-6 space-y-2">
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search libraries…" className="mb-3" />
-            {shown.length === 0 && <p className="text-sm text-muted-foreground">Nothing published yet — be first.</p>}
-            {shown.map((l) => (
-              <Card key={l.id} className="p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{l.name} <Badge variant="secondary" className="ml-1 font-mono">v{l.latest_version}</Badge></div>
-                  <div className="text-xs font-mono text-muted-foreground truncate">{l.username ? `@${l.username}/${l.slug}` : l.slug}</div>
-                  <div className="text-xs text-muted-foreground truncate">{l.description || 'No description'} · {l.download_count} installs</div>
-                </div>
-                {l.username ? (
-                  <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="ghost" onClick={() => setReference(`@${l.username}/${l.slug}`)}>Copy address</Button>
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => install(`@${l.username}/${l.slug}`)}>
-                      <Download className="h-4 w-4 mr-1.5" />Install
-                    </Button>
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground shrink-0">Owner has no handle yet</span>
-                )}
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="installed" className="mt-6 space-y-2">
-            <div className="flex gap-2 mb-3">
-              <Button size="sm" variant="outline" onClick={downloadOffline} disabled={installed.length === 0}>
-                <HardDriveDownload className="h-4 w-4 mr-1.5" />Export offline bundle
-              </Button>
-              <label className="inline-flex">
-                <input type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadOffline(f); }} />
-                <Button size="sm" variant="outline" asChild><span><Upload className="h-4 w-4 mr-1.5" />Load bundle</span></Button>
-              </label>
+          <TabsContent value="browse" className="mt-6">
+            <div className="relative mb-6">
+              <Search className="h-4 w-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search public libraries…" className="h-12 rounded-full bg-card pl-11" />
             </div>
-            {installed.length === 0 && <p className="text-sm text-muted-foreground">No libraries cached on this machine yet.</p>}
-            {installed.map((b) => (
-              <Card key={b.address} className="p-3 flex items-center justify-between">
-                <div className="min-w-0">
-                  <div className="font-mono text-sm truncate">{b.address}@{b.version}</div>
-                  <div className="text-xs text-muted-foreground">{Object.keys(b.modules).length} module(s)</div>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => { forgetBundle(b.address); setInstalled(cachedLibraries()); }} aria-label={`Remove ${b.address}`}><Trash2 className="h-4 w-4" /></Button>
-              </Card>
-            ))}
+            {shown.length === 0 && (
+              <div data-testid="libraries-empty" className="rounded-2xl border border-dashed border-foreground/25 bg-card/50 p-10 text-center">
+                <p className="font-display text-2xl font-bold">No matching public libraries yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Open the Publish tab to release the first version of yours.</p>
+              </div>
+            )}
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {shown.map((l) => (
+                <article key={l.id} data-testid={`library-card-${l.slug}`} className="flex flex-col rounded-2xl border border-border bg-card p-5 transition-[border-color] hover:border-foreground/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="truncate font-display text-xl font-bold">{l.name}</h3>
+                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-mono text-[10px]">v{l.latest_version}</span>
+                  </div>
+                  <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{l.username ? `@${l.username}/${l.slug}` : l.slug} · {l.download_count} installs</p>
+                  <p className="mt-3 flex-1 text-sm text-muted-foreground">{l.description || 'No description'}</p>
+                  {l.username && <div className="ink mt-4 rounded-xl border border-border px-4 py-3"><SdevCode code={`use "@${l.username}/${l.slug}@${l.latest_version}"`} className="text-[12px]" /></div>}
+                  {l.username ? (
+                    <div className="mt-4 flex gap-2">
+                      <button className="btn-ink !h-9 !px-4" disabled={busy} onClick={() => install(`@${l.username}/${l.slug}`)}><Download className="h-3.5 w-3.5" />Install</button>
+                      <button className="btn-line !h-9 !px-4" onClick={() => { navigator.clipboard.writeText(`use "@${l.username}/${l.slug}@${l.latest_version}"`); toast.success('use line copied'); }}><Copy className="h-3.5 w-3.5" />Copy use</button>
+                    </div>
+                  ) : (
+                    <span className="mt-4 text-xs text-muted-foreground">Owner has no handle yet</span>
+                  )}
+                </article>
+              ))}
+            </div>
           </TabsContent>
 
-          <TabsContent value="publish" className="mt-6 space-y-4 max-w-xl">
-            <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Matrix Kit" /></div>
-            <div><Label>Slug</Label><Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="matrixkit" className="font-mono" /></div>
-            <div><Label>Version</Label><Input value={version} onChange={(e) => setVersion(e.target.value)} className="font-mono" /></div>
-            <div><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
-            <div><Label>main.sdev</Label><Textarea value={entrySource} onChange={(e) => setEntrySource(e.target.value)} rows={10} className="font-mono text-xs" /></div>
-            <Button onClick={publish} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}Publish
-            </Button>
+          <TabsContent value="installed" className="mt-6">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5">
+              <div>
+                <h3 className="font-display text-xl font-bold">Offline library cache</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Cached modules work without internet in the Web IDE, CLI, and desktop editor.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={downloadOffline} disabled={installed.length === 0} className="btn-line !h-9 !px-4 !text-xs disabled:opacity-50">
+                  <HardDriveDownload className="h-3.5 w-3.5" /> Export .bundle.json
+                </button>
+                <label className="btn-ink !h-9 !px-4 !text-xs cursor-pointer">
+                  <input type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadOffline(f); }} />
+                  <Upload className="h-3.5 w-3.5" /> Load bundle
+                </label>
+              </div>
+            </div>
+
+            {installed.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-foreground/25 bg-card/50 p-10 text-center">
+                <p className="font-display text-2xl font-bold">Nothing cached on this device yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Install a library from Browse or import an offline <code className="font-mono">.bundle.json</code> file.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {installed.map((b) => (
+                  <div key={b.address} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5">
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-medium truncate">{b.address}@{b.version}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{Object.keys(b.modules).length} module(s) cached locally</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => navigator.clipboard.writeText(`use "${b.address}@${b.version}"`).then(() => toast.success('use line copied'))}
+                        className="btn-line !h-8 !px-3 !text-xs"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copy use
+                      </button>
+                      <button
+                        onClick={() => { forgetBundle(b.address); setInstalled(cachedLibraries()); }}
+                        aria-label={`Remove ${b.address}`}
+                        className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="publish" className="mt-6">
+            <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
+              <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+                <h2 className="font-display text-2xl font-bold">Publish a library</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label>Display name</Label><Input className="mt-1 bg-background" value={name} onChange={(e) => setName(e.target.value)} placeholder="Matrix Kit" /></div>
+                  <div><Label>Slug</Label><Input className="mt-1 font-mono bg-background" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="matrixkit" /></div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label>Version</Label><Input className="mt-1 font-mono bg-background" value={version} onChange={(e) => setVersion(e.target.value)} /></div>
+                  <div><Label>Import preview</Label><div className="mt-1 flex h-10 items-center rounded-md border border-border bg-muted/50 px-3 font-mono text-xs text-muted-foreground truncate">use "@you/{slug || 'library'}@{version || '1.0.0'}"</div></div>
+                </div>
+                <div><Label>Description</Label><Textarea className="mt-1 bg-background" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What functions or utilities does this module export?" /></div>
+                <div><Label>main.sdev</Label><Textarea value={entrySource} onChange={(e) => setEntrySource(e.target.value)} rows={10} className="mt-1 font-mono text-xs bg-background" /></div>
+                <button onClick={publish} disabled={busy} className="btn-ink disabled:opacity-50">
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Publish {slug ? `${slug}@${version}` : 'library'}
+                </button>
+              </div>
+
+              <aside className="lg:sticky lg:top-24 self-start space-y-4">
+                <div className="ink overflow-hidden rounded-2xl border border-border">
+                  <div className="border-b border-border px-4 py-2.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">main.sdev preview</div>
+                  <SdevCode code={entrySource} numbered className="p-4 text-[12px]" />
+                </div>
+                <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                  <p className="label">Test before publishing</p>
+                  <Input value={testCall} onChange={(e) => setTestCall(e.target.value)} className="font-mono text-xs bg-background" placeholder='speak(greet("sdev"))' />
+                  <RunPanel code={`${entrySource}\n\n${testCall}`} label="Run test call" />
+                </div>
+              </aside>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

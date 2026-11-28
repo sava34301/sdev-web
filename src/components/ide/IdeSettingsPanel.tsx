@@ -9,11 +9,11 @@ interface Props {
 
 const FONT_FAMILIES = ['JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'monospace'];
 const THEMES = [
-  { id: 'dark',     label: 'Sky Dark',  color: 'linear-gradient(135deg,#0a1626,#13283f)' },
+  { id: 'dark',     label: 'Graphite',  color: 'linear-gradient(135deg,#0e100f,#1c211f)' },
   { id: 'midnight', label: 'Midnight',  color: 'linear-gradient(135deg,#070a18,#1a1f3e)' },
   { id: 'sky',      label: 'Open Sky',  color: 'linear-gradient(135deg,#0e3a5c,#3aa9e0)' },
   { id: 'sunset',   label: 'Sunset',    color: 'linear-gradient(135deg,#2a1410,#e8742a)' },
-  { id: 'light',    label: 'Cloud',     color: 'linear-gradient(135deg,#eaf4fb,#ffffff)' },
+  { id: 'light',    label: 'Paper',     color: 'linear-gradient(135deg,#f6f4ef,#ffffff)' },
 ];
 
 export function IdeSettingsPanel({ settings, onChange }: Props) {

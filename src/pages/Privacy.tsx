@@ -1,170 +1,155 @@
-import { SEO } from '@/components/SEO';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { SEO } from '@/components/SEO';
+import { SiteNav } from '@/components/site/SiteNav';
+import { SiteFooter } from '@/components/site/SiteFooter';
+
+const TOC = [
+  ['intro', '1. Introduction'],
+  ['collect', '2. Information We Collect'],
+  ['use', '3. How We Use Information'],
+  ['share', '4. Information Sharing'],
+  ['security', '5. Data Security'],
+  ['retention', '6. Data Retention'],
+  ['rights', '7. Your Rights & Choices'],
+  ['children', "8. Children's Privacy"],
+  ['links', '9. Third-Party Links'],
+  ['changes', '10. Policy Updates'],
+  ['contact', '11. Contact Us'],
+] as const;
 
 export default function Privacy() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground" data-testid="privacy-page">
       <SEO
         title="Privacy Policy — sdev"
-        description="SDEV Privacy Policy. Learn how we collect, use, and protect your data."
+        description="sdev Privacy Policy. Learn how we collect, use, and protect your data."
         path="/privacy"
       />
+      <SiteNav />
 
-      <header className="border-b border-border/50">
-        <div className="container max-w-4xl mx-auto px-4 py-4">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Back to Home
-          </Link>
+      <section className="wrap pt-14 sm:pt-20">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-foreground/15 pb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+          <span>Legal · Privacy</span>
+          <span>Last updated: June 2, 2026</span>
         </div>
-      </header>
-
-      <div className="container max-w-4xl mx-auto px-4 py-12">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="h-6 w-6 text-primary" />
-          <h1 className="text-4xl font-bold tracking-tight">Privacy Policy</h1>
-        </div>
-        <p className="text-sm text-muted-foreground mb-10">Last updated: June 2, 2026</p>
-
-        <div className="space-y-10 text-foreground/90 leading-relaxed">
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">1. Introduction</h2>
-            <p className="mb-3">
-              SDEV (“we,” “our,” or “us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website ("sdev.codes"), use our IDE, documentation, cloud services, or any other products or services we offer (collectively, the "Services").
+        <div className="mt-10 flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <h1 className="font-display text-5xl font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-6xl">
+              Privacy <span className="serif-i font-normal text-primary">policy.</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-muted-foreground">
+              Plain-language details on what sdev stores locally in your browser versus in your optional cloud account, and how we protect your data.
             </p>
-            <p>
-              By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with this policy, please do not use our Services.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">2. Information We Collect</h2>
-            <h3 className="text-lg font-semibold mb-2">2.1 Personal Information</h3>
-            <p className="mb-4">
-              We may collect personal information that you voluntarily provide to us when you:
-            </p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Register for an account (email address, display name)</li>
-              <li>Use our cloud file storage or gist sharing features</li>
-              <li>Contact us for support or feedback</li>
-              <li>Participate in surveys, promotions, or community events</li>
-            </ul>
-
-            <h3 className="text-lg font-semibold mt-6 mb-2">2.2 Usage Data</h3>
-            <p className="mb-4">
-              We automatically collect certain information when you visit, use, or navigate our Services. This information does not reveal your specific identity but may include:
-            </p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Device and browser information (type, version, operating system)</li>
-              <li>IP address and general location (country/region level)</li>
-              <li>Pages viewed, time spent, navigation paths</li>
-              <li>Referral source (how you found our site)</li>
-              <li>Error logs and performance metrics</li>
-            </ul>
-
-            <h3 className="text-lg font-semibold mt-6 mb-2">2.3 Cookies and Similar Technologies</h3>
-            <p>
-              We use cookies and similar tracking technologies to collect and store information about your preferences and interactions with our Services. You can set your browser to refuse all cookies or to indicate when a cookie is being sent. However, some features of our Services may not function properly without cookies.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">3. How We Use Your Information</h2>
-            <p className="mb-4">We use the information we collect for various purposes, including:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Providing, operating, and maintaining our Services</li>
-              <li>Authenticating users and managing accounts</li>
-              <li>Personalizing your experience (language, theme preferences)</li>
-              <li>Improving our Services, features, and user experience</li>
-              <li>Analyzing usage patterns and trends</li>
-              <li>Communicating with you (updates, security alerts, support responses)</li>
-              <li>Preventing fraud, abuse, and security incidents</li>
-              <li>Complying with legal obligations</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">4. How We Share Your Information</h2>
-            <p className="mb-4">
-              We do not sell or rent your personal information to third parties. We may share your information only in the following circumstances:
-            </p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li><strong>Service Providers:</strong> We may share data with trusted third-party vendors who perform services on our behalf (e.g., hosting, analytics, email delivery).</li>
-              <li><strong>Legal Requirements:</strong> We may disclose information if required by law, regulation, or legal process, or to protect our rights, property, or safety.</li>
-              <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction.</li>
-              <li><strong>With Your Consent:</strong> We may share information with your explicit permission.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">5. Data Security</h2>
-            <p>
-              We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet or electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your data, we cannot guarantee absolute security.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">6. Data Retention</h2>
-            <p>
-              We retain your personal information only for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required or permitted by law. When we no longer need your data, we will securely delete or anonymize it.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">7. Your Rights and Choices</h2>
-            <p className="mb-4">Depending on your location, you may have the following rights regarding your personal information:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
-              <li><strong>Correction:</strong> Request that we correct inaccurate or incomplete information.</li>
-              <li><strong>Deletion:</strong> Request that we delete your personal data, subject to certain exceptions.</li>
-              <li><strong>Restriction:</strong> Request that we limit the processing of your data.</li>
-              <li><strong>Portability:</strong> Request a copy of your data in a structured, machine-readable format.</li>
-              <li><strong>Objection:</strong> Object to the processing of your data for certain purposes.</li>
-            </ul>
-            <p className="mt-4">
-              To exercise any of these rights, please contact us. We will respond to your request within the timeframe required by applicable law.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">8. Children's Privacy</h2>
-            <p>
-              Our Services are not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us, and we will promptly delete such information.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">9. Third-Party Links</h2>
-            <p>
-              Our Services may contain links to third-party websites or services that are not owned or controlled by us. We are not responsible for the privacy practices of these third parties. We encourage you to review the privacy policies of any third-party sites you visit.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">10. Changes to This Privacy Policy</h2>
-            <p>
-              We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date. You are advised to review this Privacy Policy periodically for any changes.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">11. Contact Us</h2>
-            <p>
-              If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us at <a href="mailto:support@sdev.codes" className="text-primary underline hover:text-primary/90">support@sdev.codes</a>.
-            </p>
-          </section>
-        </div>
-      </div>
-
-      <footer className="border-t border-border/50 mt-12">
-        <div className="container max-w-4xl mx-auto px-4 py-6 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span> SDEV. All rights reserved.</span>
-          <div className="flex gap-6">
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+          </div>
+          <div className="flex gap-2">
+            <span className="btn-ink !h-9 !px-4 !text-xs pointer-events-none">Privacy</span>
+            <Link to="/terms" className="btn-line !h-9 !px-4 !text-xs">Terms of Service</Link>
           </div>
         </div>
-      </footer>
-    </main>
+      </section>
+
+      <div className="wrap grid gap-12 py-14 pb-24 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="hidden lg:block">
+          <nav aria-label="Privacy sections" className="sticky top-24 space-y-1">
+            <p className="label mb-3">Sections</p>
+            {TOC.map(([id, label]) => (
+              <a key={id} href={`#${id}`} className="block border-l-2 border-foreground/10 py-1.5 pl-3 text-[13px] text-muted-foreground hover:border-primary hover:text-foreground transition-colors">
+                {label}
+              </a>
+            ))}
+          </nav>
+        </aside>
+
+        <article className="reader max-w-[70ch]">
+          <h2 id="intro">1. Introduction</h2>
+          <p>
+            sdev (“we,” “our,” or “us”) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website (<code>sdev.codes</code>), use our browser IDE, documentation, cloud services, CLI, or any other products or services we offer (collectively, the “Services”).
+          </p>
+          <p>
+            By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. The sdev compiler, WebAssembly runtime, and browser IDE work locally in your browser without requiring an account.
+          </p>
+
+          <h2 id="collect">2. Information We Collect</h2>
+          <h3>2.1 Personal Information</h3>
+          <p>We collect personal information that you voluntarily provide when you:</p>
+          <ul>
+            <li>Register for an account (email address, username handle, display name)</li>
+            <li>Save workspace files to the cloud or publish dialects, extensions, libraries, or gists</li>
+            <li>Contact us for support or submit core-language proposals</li>
+          </ul>
+
+          <h3>2.2 Usage Data</h3>
+          <p>We may automatically collect minimal operational telemetry when you access hosted Services, including:</p>
+          <ul>
+            <li>Device and browser type, version, and operating system</li>
+            <li>IP address and coarse country/region information</li>
+            <li>Pages viewed, navigation paths, and error diagnostics</li>
+          </ul>
+
+          <h3>2.3 Local Storage & Cookies</h3>
+          <p>
+            We use browser localStorage and session cookies to persist your IDE workspace files, active dialect, theme preferences, and authentication session. You can clear local storage or refuse cookies in your browser settings at any time.
+          </p>
+
+          <h2 id="use">3. How We Use Your Information</h2>
+          <p>We use collected information solely to:</p>
+          <ul>
+            <li>Operate, maintain, and improve the sdev IDE, package registry, and documentation</li>
+            <li>Authenticate accounts and synchronize cloud-saved files</li>
+            <li>Attribute published libraries, dialects, extensions, and shared gists under your chosen <code>@handle</code></li>
+            <li>Prevent abuse, spam, and security incidents, and comply with legal obligations</li>
+          </ul>
+
+          <h2 id="share">4. How We Share Your Information</h2>
+          <p>We never sell or rent your personal information. Information is shared only in these cases:</p>
+          <ul>
+            <li><strong>Public Registry & Gists:</strong> Content you explicitly mark as public (public gists, public dialects, public libraries, or extensions) is readable by other users.</li>
+            <li><strong>Infrastructure Providers:</strong> Trusted hosting, database, and authentication providers operating strictly on our behalf.</li>
+            <li><strong>Legal Compliance:</strong> When required by applicable law, regulation, or valid legal process.</li>
+          </ul>
+
+          <h2 id="security">5. Data Security</h2>
+          <p>
+            We implement technical and organizational safeguards — including TLS encryption in transit and row-level access controls on user data — to protect your personal information against unauthorized access, alteration, or destruction.
+          </p>
+
+          <h2 id="retention">6. Data Retention</h2>
+          <p>
+            We retain account and cloud-stored files for as long as your account remains active or as needed to provide the Services. You may delete individual cloud files, dialects, extensions, or gists at any time from your dashboard.
+          </p>
+
+          <h2 id="rights">7. Your Rights and Choices</h2>
+          <p>Depending on your jurisdiction, you have the right to:</p>
+          <ul>
+            <li><strong>Access & Portability:</strong> Request a copy of your personal data in a machine-readable format.</li>
+            <li><strong>Correction:</strong> Update inaccurate profile details directly in your Account page.</li>
+            <li><strong>Deletion:</strong> Request deletion of your account and associated personal data.</li>
+            <li><strong>Objection & Restriction:</strong> Object to or request restriction of certain processing.</li>
+          </ul>
+
+          <h2 id="children">8. Children's Privacy</h2>
+          <p>
+            Our Services are not directed to children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has submitted personal data, contact us and we will promptly remove it.
+          </p>
+
+          <h2 id="links">9. Third-Party Links</h2>
+          <p>
+            Our Services may link to external sites (such as GitHub repositories or user-linked personal websites). We are not responsible for the privacy practices of external websites.
+          </p>
+
+          <h2 id="changes">10. Policy Updates</h2>
+          <p>
+            We may update this Privacy Policy periodically. Any changes will be posted on this page with an updated revision date.
+          </p>
+
+          <h2 id="contact">11. Contact Us</h2>
+          <p>
+            Questions or data requests can be sent to <a href="mailto:support@sdev.codes">support@sdev.codes</a>.
+          </p>
+        </article>
+      </div>
+
+      <SiteFooter />
+    </div>
   );
 }

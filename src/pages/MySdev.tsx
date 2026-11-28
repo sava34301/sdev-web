@@ -1,16 +1,13 @@
-/**
- * One place for everything that is yours: your dialects, your extensions,
- * your files and the programs you have shared.
- */
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SEO } from '@/components/SEO';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { SiteNav } from '@/components/site/SiteNav';
+import { SiteFooter } from '@/components/site/SiteFooter';
+import { GalleryHero, RunPanel } from '@/components/community/Gallery';
+import { SdevCode } from '@/components/home/SdevCode';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, Copy, Loader2, Share2, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Check, Copy, ExternalLink, Loader2, Plus, Share2, Sparkles, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDialects } from '@/hooks/useDialects';
@@ -34,6 +31,7 @@ interface MyGist {
 }
 
 export default function MySdev() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { dialects, activeSlug, activate, publish, remove, save, refresh } = useDialects();
   const { files, deleteFile } = useCloudFiles();
@@ -87,131 +85,189 @@ export default function MySdev() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground" data-testid="my-sdev-page">
       <SEO title="My sdev — dialects, extensions and programs" description="Manage your own sdev dialects, extensions, files and shared programs in one place." path="/my" />
 
-      <header className="border-b border-border/50">
-        <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-          <Link to="/ide" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Back to IDE
-          </Link>
-          <Button asChild size="sm" variant="ghost"><Link to="/explore">Explore what others shared</Link></Button>
+      <SiteNav />
+      <GalleryHero
+        label="My sdev"
+        title="Your personal"
+        accent="workshop."
+        intro="Everything you have crafted in sdev: your custom dialects, language extensions, cloud-synced files, and public share links."
+      >
+        <div className="flex flex-wrap gap-2">
+          <Link to="/ide" className="btn-ink !h-10">Open IDE <ArrowUpRight className="h-4 w-4" /></Link>
+          <Link to="/explore" className="btn-line !h-10">Explore community</Link>
         </div>
-      </header>
+      </GalleryHero>
 
-      <main className="container max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-1">My sdev</h1>
-        <p className="text-muted-foreground mb-6">Everything you have made: the words you write sdev in, the functions you added, your files and what you have shared.</p>
-
+      <main className="wrap py-12 pb-24">
         {!user && (
-          <Card className="p-4 mb-6 text-sm">
-            You are not signed in, so only the dialects stored on this computer are shown.{' '}
-            <Link to="/auth" className="underline">Sign in</Link> to see your files and published work.
-          </Card>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5">
+            <div>
+              <p className="font-display text-lg font-bold">Working locally on this device</p>
+              <p className="text-sm text-muted-foreground">Local dialects work immediately. Sign in to sync cloud files, extensions, and shared programs across devices.</p>
+            </div>
+            <Link to="/auth" className="btn-ink !h-9 !px-4 !text-xs">Sign in</Link>
+          </div>
         )}
 
         <Tabs defaultValue="dialects">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="dialects">Dialects ({dialects.length})</TabsTrigger>
             <TabsTrigger value="extensions">Extensions ({extensions.length})</TabsTrigger>
-            <TabsTrigger value="files">Files ({files.length})</TabsTrigger>
+            <TabsTrigger value="files">Cloud files ({files.length})</TabsTrigger>
             <TabsTrigger value="shared">Shared ({gists.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dialects" className="mt-4 space-y-2">
-            <Card className="p-4 flex items-center justify-between gap-3">
+          <TabsContent value="dialects" className="mt-6 space-y-6">
+            <div className="rounded-2xl border border-border bg-card p-6 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="font-medium flex items-center gap-2"><Sparkles className="h-4 w-4" /> Ready-made dialects</div>
-                <p className="text-sm text-muted-foreground">Complete, working dialects you can install and run right now.</p>
+                <div className="inline-flex items-center gap-2 font-display text-xl font-bold"><Sparkles className="h-4 w-4 text-primary" /> Ready-made presets</div>
+                <p className="mt-1 text-sm text-muted-foreground">Install a complete dialect in one click and start writing immediately.</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {presetList().map((p) => (
-                  <Button key={p.spec.meta.slug} size="sm" variant="outline" onClick={() => installPreset(p.spec.meta.slug)}>
-                    Install {p.spec.meta.name}
-                  </Button>
+                  <button key={p.spec.meta.slug} onClick={() => installPreset(p.spec.meta.slug)} className="btn-line !h-9 !px-4 !text-xs">
+                    + Install {p.spec.meta.name}
+                  </button>
+                ))}
+                <Link to="/dialects" className="btn-ink !h-9 !px-4 !text-xs"><Plus className="h-3.5 w-3.5" /> Build custom</Link>
+              </div>
+            </div>
+
+            {dialects.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-foreground/25 bg-card/50 p-10 text-center">
+                <p className="font-display text-2xl font-bold">No dialects installed yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Pick a preset above or head to <Link to="/dialects" className="text-primary underline underline-offset-4">Dialect Studio</Link>.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {dialects.map((d) => {
+                  const isActive = activeSlug === d.meta.slug;
+                  return (
+                    <article key={d.meta.slug} className={`flex flex-col justify-between rounded-2xl border bg-card p-5 ${isActive ? 'border-foreground/50 ring-1 ring-[hsl(var(--lime))]' : 'border-border'}`}>
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate font-display text-xl font-bold">{d.meta.name}</h3>
+                            <p className="mt-0.5 font-mono text-xs text-muted-foreground">{d.meta.slug} · v{d.meta.version} · {d.meta.visibility}</p>
+                          </div>
+                          {isActive && <span className="rounded-full bg-[hsl(var(--lime))] px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--ink))]">Active</span>}
+                        </div>
+                        {d.meta.description && <p className="mt-3 text-sm text-muted-foreground">{d.meta.description}</p>}
+                      </div>
+                      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                        <button onClick={() => activate(isActive ? null : d.meta.slug)} className={isActive ? 'btn-line !h-8 !px-3 !text-xs' : 'btn-ink !h-8 !px-3 !text-xs'}>
+                          <Check className="h-3.5 w-3.5" /> {isActive ? 'Switch off' : 'Use in IDE'}
+                        </button>
+                        <button onClick={() => doPublish(d.meta.slug)} disabled={busy === d.meta.slug} className="btn-line !h-8 !px-3 !text-xs disabled:opacity-50">
+                          {busy === d.meta.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Publish
+                        </button>
+                        <Link to="/dialects" className="btn-line !h-8 !px-3 !text-xs">Edit</Link>
+                        <button onClick={() => remove(d.meta.slug)} aria-label={`Delete ${d.meta.name}`} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="extensions" className="mt-6">
+            {extensions.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-foreground/25 bg-card/50 p-10 text-center">
+                <p className="font-display text-2xl font-bold">No extensions saved yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Create new functions and operators on the <Link to="/extensions" className="text-primary underline underline-offset-4">Extensions page</Link>.</p>
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2">
+                {extensions.map((e) => (
+                  <article key={e.id} className="flex flex-col rounded-2xl border border-border bg-card p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-display text-xl font-bold">{e.name}</h3>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{e.kind} · {e.visibility}</p>
+                      </div>
+                      <button onClick={() => removeExtension(e.id)} aria-label={`Delete ${e.name}`} className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {e.about && <p className="mt-2 text-sm text-muted-foreground">{e.about}</p>}
+                    <div className="ink mt-4 overflow-hidden rounded-xl border border-border">
+                      <SdevCode code={e.source.trim()} className="p-4 text-[12px]" />
+                    </div>
+                    <div className="mt-4">
+                      <RunPanel code={e.source} label="Verify syntax" />
+                    </div>
+                  </article>
                 ))}
               </div>
-            </Card>
-
-            {dialects.length === 0 && <p className="text-sm text-muted-foreground">No dialects yet — install a ready-made one above or <Link to="/dialects" className="underline">build your own</Link>.</p>}
-            {dialects.map((d) => (
-              <Card key={d.meta.slug} className="p-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-medium">
-                    {d.meta.name} <span className="font-mono text-xs text-muted-foreground">{d.meta.slug}</span>
-                    {activeSlug === d.meta.slug && <Badge className="ml-2">active</Badge>}
-                  </div>
-                  {d.meta.description && <p className="text-sm text-muted-foreground mt-1">{d.meta.description}</p>}
-                  <div className="flex gap-1.5 mt-2">
-                    <Badge variant="outline">v{d.meta.version}</Badge>
-                    <Badge variant="secondary">{d.meta.visibility}</Badge>
-                    {(d.meta.languages ?? []).map((l) => <Badge key={l} variant="secondary">{l}</Badge>)}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <Button size="sm" variant={activeSlug === d.meta.slug ? 'secondary' : 'outline'} onClick={() => activate(activeSlug === d.meta.slug ? null : d.meta.slug)}>
-                    <Check className="h-4 w-4 mr-1.5" />{activeSlug === d.meta.slug ? 'Switch off' : 'Use it'}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => doPublish(d.meta.slug)} disabled={busy === d.meta.slug}>
-                    {busy === d.meta.slug ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Share2 className="h-4 w-4 mr-1.5" />}Publish
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(d.meta.slug)} aria-label={`Delete ${d.meta.name}`}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </Card>
-            ))}
+            )}
           </TabsContent>
 
-          <TabsContent value="extensions" className="mt-4 space-y-2">
-            {extensions.length === 0 && <p className="text-sm text-muted-foreground">Nothing yet — add one on the <Link to="/extensions" className="underline">Extensions page</Link>.</p>}
-            {extensions.map((e) => (
-              <Card key={e.id} className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium">{e.name} <Badge variant="secondary" className="ml-1">{e.kind}</Badge> <Badge variant="outline">{e.visibility}</Badge></div>
-                    {e.about && <p className="text-sm text-muted-foreground mt-1">{e.about}</p>}
+          <TabsContent value="files" className="mt-6">
+            {files.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-foreground/25 bg-card/50 p-10 text-center">
+                <p className="font-display text-2xl font-bold">No cloud files saved yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Save any file from the <Link to="/ide" className="text-primary underline underline-offset-4">Web IDE</Link> to access it anywhere.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {files.map((f) => (
+                  <div key={f.id} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5">
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-medium truncate">{f.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">Updated {new Date(f.updated_at).toLocaleString()}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => navigate(`/ide?cloud=${f.id}`)} className="btn-ink !h-8 !px-3.5 !text-xs">
+                        <ExternalLink className="h-3.5 w-3.5" /> Open
+                      </button>
+                      <button onClick={() => deleteFile(f.id)} aria-label={`Delete ${f.name}`} className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => removeExtension(e.id)} aria-label={`Delete ${e.name}`}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-                <pre className="text-xs bg-muted/40 rounded p-2 mt-3 overflow-x-auto"><code>{e.source}</code></pre>
-              </Card>
-            ))}
+                ))}
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="files" className="mt-4 space-y-2">
-            {files.length === 0 && <p className="text-sm text-muted-foreground">No saved files yet.</p>}
-            {files.map((f) => (
-              <Card key={f.id} className="p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-mono text-sm truncate">{f.name}</div>
-                  <div className="text-xs text-muted-foreground">saved {new Date(f.updated_at).toLocaleString()}</div>
-                </div>
-                <div className="flex gap-1.5 shrink-0">
-                  <Button asChild size="sm" variant="outline"><Link to="/ide">Open IDE</Link></Button>
-                  <Button size="sm" variant="ghost" onClick={() => deleteFile(f.id)} aria-label={`Delete ${f.name}`}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="shared" className="mt-4 space-y-2">
-            {gists.length === 0 && <p className="text-sm text-muted-foreground">You have not shared a program yet.</p>}
-            {gists.map((g) => (
-              <Card key={g.id} className="p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm truncate">{g.title}</div>
-                  <div className="text-xs text-muted-foreground">{g.view_count ?? 0} views</div>
-                </div>
-                <div className="flex gap-1.5 shrink-0">
-                  <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/g/${g.slug}`); toast.success('Link copied'); }}>
-                    <Copy className="h-4 w-4 mr-1.5" />Copy link
-                  </Button>
-                  <Button asChild size="sm" variant="outline"><Link to={`/g/${g.slug}`}>Open</Link></Button>
-                </div>
-              </Card>
-            ))}
+          <TabsContent value="shared" className="mt-6">
+            {gists.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-foreground/25 bg-card/50 p-10 text-center">
+                <p className="font-display text-2xl font-bold">No shared programs yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Click Share inside the IDE to publish a runnable link.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {gists.map((g) => (
+                  <div key={g.id} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5">
+                    <div className="min-w-0">
+                      <div className="font-display text-lg font-bold truncate">{g.title}</div>
+                      <div className="mt-0.5 font-mono text-xs text-muted-foreground">/g/{g.slug} · {g.view_count ?? 0} views</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/g/${g.slug}`); toast.success('Link copied'); }}
+                        className="btn-line !h-8 !px-3 !text-xs"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copy URL
+                      </button>
+                      <Link to={`/g/${g.slug}`} className="btn-ink !h-8 !px-3.5 !text-xs">View</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

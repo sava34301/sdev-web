@@ -2,7 +2,7 @@ import {
   Play, Zap, Download, Cpu, Save, ChevronDown, Search, Terminal,
   Code, BookOpen, RotateCcw, Maximize2, Minimize2, FolderOpen, Command,
   Bug, Palette, Languages, RefreshCw, Eye, EyeOff, Wand2, ArrowRight,
-  Sparkles, Github, Globe, Boxes,
+  Sparkles, Github, Globe, Boxes, Sun, Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,9 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserMenu } from '@/components/ide/UserMenu';
 import { SUPPORTED_LANGUAGES } from '@/ide/themes';
 import { SNIPPETS } from '@/ide/starterFiles';
-import type { IdeFile, RunMode, SidePanel, BottomPanel } from '@/ide/types';
+import type { IdeFile, RunMode, SidePanel, BottomPanel, IdeSettings } from '@/ide/types';
 import type { TranslationResult } from '@/hooks/useCodeTranslation';
-import sdevLogo from '@/assets/sdev-logo.png';
+import { SdevMark } from '@/components/site/SdevMark';
 
 interface IdeTitleBarProps {
   activeFile?: IdeFile;
@@ -33,6 +33,8 @@ interface IdeTitleBarProps {
   onToggleShowTranslated: () => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  theme?: IdeSettings['theme'];
+  onToggleTheme?: () => void;
   onNewFile: () => void;
   onUploadFile: () => void;
   onDownloadCurrentFile: (variant: 'written' | 'translated') => void;
@@ -75,6 +77,8 @@ export function IdeTitleBar({
   onToggleShowTranslated,
   isFullscreen,
   onToggleFullscreen,
+  theme = 'dark',
+  onToggleTheme,
   onNewFile,
   onUploadFile,
   onDownloadCurrentFile,
@@ -107,9 +111,9 @@ export function IdeTitleBar({
       <div className="flex items-center gap-2">
         <h1 className="flex items-center gap-2 m-0 text-sm font-display font-bold pl-1">
           <span className="relative flex items-center justify-center w-7 h-7">
-            <img src={sdevLogo} alt="" aria-hidden="true" className="w-7 h-7 object-contain" />
+            <SdevMark size={24} />
           </span>
-          <span className="gradient-text hidden sm:block tracking-tight">SDEV IDE</span>
+          <span className="hidden sm:block tracking-tight font-display">sdev <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">IDE</span></span>
           <span className="sr-only">sdev IDE</span>
         </h1>
         <div className="w-px h-4 bg-border/50 mx-1" />
@@ -271,7 +275,24 @@ export function IdeTitleBar({
       </div>
 
       {/* Right: quick actions */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5 max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
+        {onToggleTheme && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid="ide-theme-toggle"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                onClick={onToggleTheme}
+                aria-label={theme === 'light' ? 'Switch to Graphite dark theme' : 'Switch to Paper light theme'}
+              >
+                {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{theme === 'light' ? 'Graphite (dark) theme' : 'Paper (light) theme'}</TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
