@@ -1,7 +1,7 @@
 name: Push specific files to another repo
 
 on:
-  workflow_dispatch: # Adds the "Run workflow" button
+  workflow_dispatch: # Creates the "Run workflow" button in the Actions tab
 
 jobs:
   copy-files:
@@ -10,28 +10,37 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v4
 
-      - name: Stage files listed in include.json
+      - name: Stage files and folders listed in include.json
         run: |
           mkdir -p _staging
-          
-          # Read each path from include.json safely
-          jq -r '.[]' include.json | while IFS= read -r file; do
-            if [ -e "$file" ]; then
-              mkdir -p "_staging/$(dirname "$file")"
-              cp -r "$file" "_staging/$file"
-              echo "Staged: $file"
+          jq -r '.[] | sub("/$"; "")' include.json | while IFS= read -r item; do
+            if [ -e "$item" ]; then
+              mkdir -p "_staging/$(dirname "$item")"
+              cp -r "$item" "_staging/$item"
+              echo "Staged: $item"
             else
-              echo "Warning: '$file' not found, skipping."
+              echo "Warning: '$item' not found, skipping."
             fi
           done
 
       - name: Push staged files to target repo
-        uses: cpina/github-action-push-to-another-repository@main
         env:
-          API_TOKEN_GITHUB: ${{ secrets.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 }}
-        with:
-          source-directory: '_staging'
-          destination-github-username: 'sdev-org'
-          destination-repository-name: 'sdev'
-          user-email: 'milanov.sava22@gmail.com'
-          target-branch: 'main'
+          GH_TOKEN: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          export GH_TOKEN=$(printf '%s' "$GH_TOKEN" | tr -d '[:space:]')
+          gh auth setup-git
+
+          gh repo clone sdev-org/sdev _target
+          cp -r _staging/. _target/
+
+          cd _target
+          git config user.name "sava34301"
+          git config user.email "milanov.sava22@gmail.com"
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes to push."
+          else
+            git commit -m "Sync selected files from Udibite"
+            git push -u origin HEAD:main
+          fi
