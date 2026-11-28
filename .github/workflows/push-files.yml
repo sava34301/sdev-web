@@ -41,6 +41,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to push."
           else
-            git commit -m "Sync selected files from Udibite"
+            git commit -m "Sync new files from SDEV repository."
             git push -u origin HEAD:main
           fi
